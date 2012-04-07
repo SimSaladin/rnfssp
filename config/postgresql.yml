@@ -1,0 +1,24 @@
+Default: &defaults
+  user: rnfssp
+  password: rnfssp
+  host: localhost
+  port: 5432
+  database: rnfssp
+  poolsize: 10
+
+Development:
+  <<: *defaults
+
+Testing:
+  database: rnfssp_test
+  <<: *defaults
+
+Staging:
+  database: rnfssp_staging
+  poolsize: 100
+  <<: *defaults
+
+Production:
+  database: rnfssp_production
+  poolsize: 100
+  <<: *defaults

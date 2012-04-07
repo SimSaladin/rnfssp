@@ -1,0 +1,20 @@
+Default: &defaults
+  host: "localhost"
+  port: 3000
+  copyright: This site and its content is licenced under x unless not otherwise mentioned
+  #analytics: UA-YOURCODE
+
+Development:
+  <<: *defaults
+
+Testing:
+  <<: *defaults
+
+Staging:
+  <<: *defaults
+
+Production:
+  host: "*4" # any IPv4 host
+  port: 3000
+  approot: "http://www.example.com"
+  <<: *defaults
