@@ -1,5 +1,8 @@
 <h1>Imageboard
 
+<form method="post" action=@{BoardR}#form enctype=#{formEnctype}>
+    ^{formWidget}
+    <input type="submit" value="Send!" class="btn">
 <h2>TODO list
 <ol>
    <li>board listing

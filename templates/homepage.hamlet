@@ -31,7 +31,7 @@
         Your file's type was <em>#{fileContentType info}</em>. You say it has: <em>#{con}</em>
     <form method=post action=@{HomeR}#form enctype=#{formEnctype}>
       ^{formWidget}
-      <input type="submit" value="Send it!">
+      <input type="submit" value="Send it!" class="btn">
 
   <li> And last but not least, Testing. In <em>tests/main.hs</em> you will find a #
     test suite that performs tests on this page. #

@@ -1,3 +1,4 @@
+/*
 body {
    font-family: sans-serif;
    font-size: 18px;
@@ -9,15 +10,31 @@ body {
 }
 .required { margin: 1em 0; }
 .optional { margin: 1em 0; }
+*/
 label {
    width: 8em;
    display: inline-block;
    color: #5FAFD7;
 }
-input, textarea { background: #B1B1B1}
-textarea { width: 27em; height: 9em;}
+input,
+textarea {
+   background: #B1B1B1
+}
+pre {
+   background: #262626;
+   color: #A8A8A8;
+}
+/*
 ul { list-style: square; }
 a { color: #A56; }
 a:hover { color: #C58; }
 a:active { color: #C58; }
 a:visited { color: #943; }
+
+input,
+textarea,
+select,
+.uneditable-input {
+   border-color: #689BB4;
+}
+*/

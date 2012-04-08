@@ -7,5 +7,10 @@ Email
     user UserId Maybe
     verkey Text Maybe
     UniqueEmail email
+Boardpost
+    title Text
+    poster Text
+    content Text
+    parent BoardpostId Maybe
 
  -- By default this file is used in Model.hs (which is imported by Foundation.hs)
