@@ -5,4 +5,7 @@
 /robots.txt RobotsR GET
 
 / HomeR GET POST
-/board BoardR GET POST
+
+/board/#Text/post/#BoardpostId ThreadR GET POST
+/board/#Text BoardR GET POST
+/board BoardHomeR GET

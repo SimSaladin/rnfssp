@@ -7,10 +7,16 @@ Email
     user UserId Maybe
     verkey Text Maybe
     UniqueEmail email
+Board
+    name Text
+    description Text
+    UniqueBoard name
 Boardpost
-    title Text
-    poster Text
-    content Text
+    location BoardId
     parent BoardpostId Maybe
+    time UTCTime
+    title Text
+    poster Text Maybe
+    content Textarea Maybe
 
  -- By default this file is used in Model.hs (which is imported by Foundation.hs)

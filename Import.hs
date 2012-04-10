@@ -18,6 +18,7 @@ import Data.Monoid (Monoid (mappend, mempty, mconcat))
 import Control.Applicative ((<$>), (<*>), pure)
 import Data.Text (Text)
 import Settings.StaticFiles
+import Data.Time (getCurrentTime)
 
 #if __GLASGOW_HASKELL__ < 704
 infixr 5 <>
