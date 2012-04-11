@@ -9,6 +9,12 @@ div.reply {
   float:left;
   clear:both;
 }
+input#pagesearch {
+  background-color:#505050;
+}
+input#pagesearch:focus {
+  background-color:#B1B1B1;
+}
 /*
 .required { margin: 1em 0; }
 .optional { margin: 1em 0; }

@@ -12,7 +12,7 @@
                             <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
                 <li><a href="/">Palvelut</a>
             <form .navbar-search .pull-left>
-                <input type="text" class="span3" placeholder="Hae">
+                <input#pagesearch.span3 type="text" placeholder="Hae">
             <ul .nav.pull-right>
                 <li><a href="">UKK</a>
                 <li><a href=@{AdminR}>admin</a>
