@@ -1,3 +1,20 @@
+<div .navbar .navbar-fixed-top>
+    <div .navbar-inner>
+        <div .container>
+            <a .brand href="/">ssdesk</a>
+            <ul .nav>
+                <li .active .dropdown>
+                    <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
+                    <ul .dropdown-menu>
+                        <li><a href="/board">kaikki</a>
+                        <li .divider>
+                          $forall Entity _ val <- boards
+                            <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
+                <li><a href="/">Palvelut</a>
+            <form .navbar-search .pull-left>
+                <input type="text" class="span3" placeholder="Hae">
+            <ul .nav.pull-right>
+                <li><a href="">UKK</a>
 $maybe msg <- mmsg
     <div #message>#{msg}
 ^{widget}

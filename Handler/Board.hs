@@ -1,6 +1,6 @@
-{-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Board
     ( getBoardHomeR
+    , postBoardHomeR
     , getBoardR
     , postBoardR
     , getThreadR
@@ -8,57 +8,86 @@ module Handler.Board
     ) where
 
 import Import
+import Data.Text (append)
 import Data.Time (getCurrentTime)
-import Yesod.Form.Nic (nicHtmlField)
+-- import Yesod.Form.Nic (nicHtmlField)
 
+-- /board/
 getBoardHomeR :: Handler RepHtml
 getBoardHomeR = do
+    (boardAddWidget, encType) <- generateFormPost newboardForm
+    boards <- runDB $ selectList ([] :: [Filter Board]) []
+    let submission = Nothing :: Maybe Board
     defaultLayout $ do
-        setTitle "Welcome SS/board!"
---        $(widgetFile "board")
+        setTitle "Lauta"
+        $(widgetFile "board-home")
 
+postBoardHomeR :: Handler RepHtml
+postBoardHomeR = do
+    ((result, boardAddWidget), encType) <- runFormPost newboardForm
+    boards <- runDB $ selectList ([] :: [Filter Board]) []
+    case result of
+        FormSuccess board -> do
+            boardId <- runDB $ insert board
+            setMessage $ toHtml $ append "Uusi lauta luotu: " (boardName board)
+            defaultLayout $ do
+                setTitle "Lauta"
+                $(widgetFile "board-home")
+        _ -> do
+            setMessage "Mitä oikein yritit?"
+            redirect $ BoardHomeR
+
+-- /board/[b]/
 getBoardR :: Text -> Handler RepHtml
-getBoardR boardName = do
---    (formWidget, formEnctype) <- generateFormPost boardForm
---    let submission = Nothing :: Maybe (Text, Text, Text)
---        handlerName = "getBoardR" :: Text
+getBoardR bname = do
+    board <- runDB $ getBy404 $ UniqueBoard bname
+    (formWidget, encType) <- generateFormPost (postForm (entityKey board))
+    let submission = Nothing :: Maybe Boardpost
     defaultLayout $ do
-        setTitle "SS.board"
---        $(widgetFile "board")
+        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
+        $(widgetFile "board")
 
 postBoardR :: Text -> Handler RepHtml
 postBoardR bname = do
---    ((result, formWidget), formEnctype) <- runFormPost boardForm
---    let handlerName = "postHomeR" :: Text
---        submission = case result of
---            FormSuccess res -> Just res
---            _ -> Nothing
+    board <- runDB $ getBy404 $ UniqueBoard bname
+    ((result, formWidget), encType) <- runFormPost (postForm (entityKey board))
+    let submission = case result of
+           FormSuccess res -> Just res
+           _ -> Nothing
     defaultLayout $ do
-        setTitle "POST: SS/"
---        $(widgetFile "board")
+        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
+        $(widgetFile "board")
 
+-- /board[b]/#[t]/
 getThreadR :: Text -> BoardpostId -> Handler RepHtml
-getThreadR boardName boardpostId = do
+getThreadR bname boardpostId = do
     (op, rest) <- runDB $ do
         op <- get404 boardpostId
         --rest <-
         return (op, Nothing)
     defaultLayout $ do
-        setTitle "SS.board.thread"
+        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
 
 postThreadR :: Text -> BoardpostId -> Handler RepHtml
 postThreadR bname tid = do
     board <- runDB $ getBy404 $ UniqueBoard bname
-    ((res, postWidget), encType) <- runFormPost (postForm (entityKey board))
+    ((res, formWidget), encType) <- runFormPost (postForm (entityKey board))
 --  thread <- runDB $ get tid
     defaultLayout $ do
-        setTitle "POST: SS.board.thread"
+        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
 
 postForm :: BoardId -> Form Boardpost
 postForm bid = renderDivs $ Boardpost
-       <$> pure bid
-       <*> pure Nothing
-       <*> aformM (liftIO getCurrentTime)
-       <*> areq textField "Title" Nothing
-       <*> aopt textField "Who" Nothing
-       <*> aopt textareaField "Content" Nothing
+    <$> pure bid
+    <*> pure Nothing
+    <*> aformM (liftIO getCurrentTime)
+    <*> aopt textField "Name" Nothing
+    <*> aopt emailField "Email" Nothing
+    <*> aopt textField "Title" Nothing
+    <*> aopt textareaField "Content" Nothing
+    <*> areq textField "Password" Nothing
+
+newboardForm :: Form Board
+newboardForm = renderDivs $ Board
+    <$> areq textField "Nimi (== url)" Nothing
+    <*> areq textField "Kuvaus" Nothing

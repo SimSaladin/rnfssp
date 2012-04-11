@@ -1,13 +1,10 @@
-/*
 body {
-   font-family: sans-serif;
-   font-size: 18px;
-   background: #303030;
-   color: #A8A8A8;
+   padding-top:70px;
 }
 #main {
-   padding:0 1em;
+   padding:0 10px;
 }
+/*
 .required { margin: 1em 0; }
 .optional { margin: 1em 0; }
 */
@@ -18,7 +15,8 @@ label {
 }
 input,
 textarea {
-   background: #B1B1B1
+   background: #B1B1B1;
+   margin-bottom:9px;
 }
 pre {
    background: #262626;
@@ -38,3 +36,8 @@ select,
    border-color: #689BB4;
 }
 */
+footer {
+    padding: 35px 0;
+    margin: 50px 30px;
+    border-top:1px solid #E5E5E5;
+ }

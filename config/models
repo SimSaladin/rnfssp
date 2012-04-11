@@ -1,12 +1,8 @@
 User
-    ident Text
-    password Text Maybe
-    UniqueUser ident
-Email
-    email Text
-    user UserId Maybe
-    verkey Text Maybe
-    UniqueEmail email
+    username Text Eq
+    password Text
+    salt Text
+    UniqueUser username
 Board
     name Text
     description Text
@@ -15,8 +11,10 @@ Boardpost
     location BoardId
     parent BoardpostId Maybe
     time UTCTime
-    title Text
     poster Text Maybe
+    email Text Maybe
+    title Text Maybe
     content Textarea Maybe
+    pass Text
 
  -- By default this file is used in Model.hs (which is imported by Foundation.hs)

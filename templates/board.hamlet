@@ -1,10 +1,8 @@
-<h1>Imageboard
+$with Entity _ val <- board
+  <h1>/#{boardName val}/ - #{boardDescription val}
 
-<form method="post" action=@{BoardR}#form enctype=#{formEnctype}>
+<form method="post" action=@{BoardR "a"}#form enctype=#{encType}>
     ^{formWidget}
-    <input type="submit" value="Send!" class="btn">
-<h2>TODO list
-<ol>
-   <li>board listing
-   <li>Database interaction
-   <li>A lot more
+    <label>&nbsp;
+    <input type="submit" value="Aloita uusi lanka" class="btn btn-primary btn-large">
+<hr>
