@@ -1,0 +1,8 @@
+<h1>Ylläpito
+<div .row-fluid>
+  <div .span6>
+    <div .well>
+      <h3>Lisää uusi lauta
+      <form method=post enctype=#{encType}>
+        ^{boardAddWidget}
+        <input type="submit" value="Lisää" class="btn btn-primary">
