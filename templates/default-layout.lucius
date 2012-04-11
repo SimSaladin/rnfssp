@@ -4,6 +4,11 @@ body {
 #main {
    padding:0 10px;
 }
+div.reply {
+  background-color:#505050;
+  float:left;
+  clear:both;
+}
 /*
 .required { margin: 1em 0; }
 .optional { margin: 1em 0; }
@@ -40,4 +45,6 @@ footer {
     padding: 35px 0;
     margin: 50px 30px;
     border-top:1px solid #E5E5E5;
- }
+    clear:both;
+}
+

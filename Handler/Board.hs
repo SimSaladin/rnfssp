@@ -11,7 +11,7 @@ import Data.Text (append)
 import Data.Time (getCurrentTime)
 -- import Yesod.Form.Nic (nicHtmlField)
 
--- /board/
+-- /board
 getBoardHomeR :: Handler RepHtml
 getBoardHomeR = do
     boards <- runDB $ selectList ([] :: [Filter Board]) []
@@ -19,12 +19,12 @@ getBoardHomeR = do
         setTitle "Lauta"
         $(widgetFile "board-home")
 
--- /board/[b]/
+-- /board/b
 getBoardR :: Text -> Handler RepHtml
 getBoardR bname = do
     board <- runDB $ getBy404 $ UniqueBoard bname
+    posts <- runDB $ selectList [BoardpostLocation ==. entityKey board] [Asc BoardpostTime]
     (formWidget, encType) <- generateFormPost (postForm (entityKey board))
-    let submission = Nothing :: Maybe Boardpost
     defaultLayout $ do
         setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
         $(widgetFile "board")
@@ -33,14 +33,19 @@ postBoardR :: Text -> Handler RepHtml
 postBoardR bname = do
     board <- runDB $ getBy404 $ UniqueBoard bname
     ((result, formWidget), encType) <- runFormPost (postForm (entityKey board))
-    let submission = case result of
-           FormSuccess res -> Just res
-           _ -> Nothing
-    defaultLayout $ do
-        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
-        $(widgetFile "board")
+    case result of
+        FormSuccess post -> do
+            postId <- runDB $ insert post
+            setMessage "Postaus onnistui!"
+            redirect $ ThreadR bname postId
+        _ -> do
+            setMessage "Postaus failasi"
+            posts <- runDB $ selectList [BoardpostLocation ==. entityKey board] [Asc BoardpostTime]
+            defaultLayout $ do
+                setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
+                $(widgetFile "board")
 
--- /board[b]/#[t]/
+-- /board/b/1
 getThreadR :: Text -> BoardpostId -> Handler RepHtml
 getThreadR bname boardpostId = do
     (op, rest) <- runDB $ do
