@@ -6,6 +6,8 @@
 
 / HomeR GET POST
 
-/board BoardHomeR GET POST
+/board BoardHomeR GET
 /board/#Text BoardR GET POST
 /board/#Text/post/#BoardpostId ThreadR GET POST
+
+/admin AdminR GET POST

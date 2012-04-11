@@ -2,6 +2,7 @@
 module Handler.Home where
 
 import Import
+import Data.Text (append)
 
 -- This is a handler function for the GET request method on the HomeR
 -- resource pattern. All of your resource patterns are defined in
@@ -37,3 +38,30 @@ sampleForm :: Form (FileInfo, Text)
 sampleForm = renderDivs $ (,)
     <$> fileAFormReq "Choose a file"
     <*> areq textField "What's on the file?" Nothing
+
+getAdminR :: Handler RepHtml
+getAdminR = do
+    (boardAddWidget, encType) <- generateFormPost newboardForm
+    let submission = Nothing :: Maybe Board
+    defaultLayout $ do
+        setTitle "admin"
+        $(widgetFile "admin")
+
+postAdminR :: Handler RepHtml
+postAdminR = do
+    ((result, boardAddWidget), encType) <- runFormPost newboardForm
+    boards <- runDB $ selectList ([] :: [Filter Board]) []
+    case result of
+        FormSuccess board -> do
+            boardId <- runDB $ insert board
+            setMessage $ toHtml $ "Uusi lauta luotu: " `append` (boardName board)
+        _ -> do
+            setMessage "Hmmm.. jokin meni pieleen lautaa luotaessa"
+    defaultLayout $ do
+        setTitle "Lauta"
+        $(widgetFile "admin")
+
+newboardForm :: Form Board
+newboardForm = renderDivs $ Board
+    <$> areq textField "Nimi (== url)" Nothing
+    <*> areq textField "Kuvaus" Nothing

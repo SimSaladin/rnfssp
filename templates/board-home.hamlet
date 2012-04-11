@@ -7,9 +7,3 @@
     <ol>
     $forall Entity _ val <- boards
       <li><a href="@{BoardR (boardName val)}">/#{boardName val}/ - #{boardDescription val}</a>
-  <div .span6>
-    <div .well>
-      <h3>Lisää uusi lauta
-      <form method=post enctype=#{encType}>
-        ^{boardAddWidget}
-        <input type="submit" value="Lisää" class="btn btn-primary">

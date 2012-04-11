@@ -1,6 +1,5 @@
 module Handler.Board
     ( getBoardHomeR
-    , postBoardHomeR
     , getBoardR
     , postBoardR
     , getThreadR
@@ -15,27 +14,10 @@ import Data.Time (getCurrentTime)
 -- /board/
 getBoardHomeR :: Handler RepHtml
 getBoardHomeR = do
-    (boardAddWidget, encType) <- generateFormPost newboardForm
     boards <- runDB $ selectList ([] :: [Filter Board]) []
-    let submission = Nothing :: Maybe Board
     defaultLayout $ do
         setTitle "Lauta"
         $(widgetFile "board-home")
-
-postBoardHomeR :: Handler RepHtml
-postBoardHomeR = do
-    ((result, boardAddWidget), encType) <- runFormPost newboardForm
-    boards <- runDB $ selectList ([] :: [Filter Board]) []
-    case result of
-        FormSuccess board -> do
-            boardId <- runDB $ insert board
-            setMessage $ toHtml $ append "Uusi lauta luotu: " (boardName board)
-            defaultLayout $ do
-                setTitle "Lauta"
-                $(widgetFile "board-home")
-        _ -> do
-            setMessage "Mitä oikein yritit?"
-            redirect $ BoardHomeR
 
 -- /board/[b]/
 getBoardR :: Text -> Handler RepHtml
@@ -86,8 +68,3 @@ postForm bid = renderDivs $ Boardpost
     <*> aopt textField "Title" Nothing
     <*> aopt textareaField "Content" Nothing
     <*> areq textField "Password" Nothing
-
-newboardForm :: Form Board
-newboardForm = renderDivs $ Board
-    <$> areq textField "Nimi (== url)" Nothing
-    <*> areq textField "Kuvaus" Nothing
