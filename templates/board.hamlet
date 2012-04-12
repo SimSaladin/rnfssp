@@ -6,14 +6,5 @@ $with Entity _ val <- board
     <label>&nbsp;
     <input type="submit" value="Aloita uusi lanka" class="btn btn-primary btn-large">
 <hr>
-$forall Entity _ val <- posts
-  <div.reply.well>
-    <div.postinfo>
-      <input name="" type="checkbox">
-      $maybe title <- boardpostTitle val
-        <span.posttitle>#{title}
-      $maybe name <- boardpostPoster val
-        <span.postername>#{name}
-    <div.postcontent>
-      $maybe content <- boardpostContent val
-        #{content}
+$forall Entity key val <- postOps
+  ^{widgetThreadPreview key val}

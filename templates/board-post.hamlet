@@ -1,0 +1,12 @@
+$if isop 
+  <div.postop>
+$else
+  <div.postreply>
+
+  <div.postinfo>
+    <input name="" type="checkbox">
+    <span.posttitle>#{title}
+    <span.postername>#{poster}
+    <span.postnumber>##{number}
+  <div.postcontent>
+    #{content}

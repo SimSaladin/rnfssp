@@ -53,7 +53,7 @@ postAdminR = do
     boards <- runDB $ selectList ([] :: [Filter Board]) []
     case result of
         FormSuccess board -> do
-            boardId <- runDB $ insert board
+            _ <- runDB $ insert board
             setMessage $ toHtml $ "Uusi lauta luotu: " `append` (boardName board)
         _ -> do
             setMessage "Hmmm.. jokin meni pieleen lautaa luotaessa"

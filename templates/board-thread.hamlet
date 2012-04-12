@@ -1,0 +1,5 @@
+$with Entity _ bent <- board
+  <h2>/#{boardName bent}/ - #{boardDescription bent}
+
+  <form method="post" action=@{ThreadR (boardName bent) pid} enctype=#{encType}>
+    ^{postWidget}
