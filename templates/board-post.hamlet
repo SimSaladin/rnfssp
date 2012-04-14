@@ -1,12 +1,13 @@
-$if isop 
-  <div.postop>
-$else
-  <div.postreply>
-
+<div class=#{divClass}>
   <div.postinfo>
     <input name="" type="checkbox">
     <span.posttitle>#{title}
     <span.postername>#{poster}
-    <span.postnumber>##{number}
+    $maybe mail <- boardpostEmail reply
+      <sup><a href="mailto:#{mail}" >#{mail}</a>
+    <span.postdate>#{time}
+    <span.postnumber>No. <a href="">#{number}</a>
+    $if isop
+      <span.postreply><a href=@{ThreadR bname n}>reply</a>
   <div.postcontent>
     #{content}

@@ -4,7 +4,6 @@ module Handler.Board
     , postBoardR
     , getThreadR
     , postThreadR
-    , widgetThreadPreview
     , widgetThreadPost
     ) where
 
@@ -12,6 +11,7 @@ import Import
 import Data.Text (append)
 import Data.Int (Int64)
 import Data.Time (getCurrentTime)
+import Data.Maybe (fromMaybe, isNothing)
 -- import Yesod.Form.Nic (nicHtmlField)
 
 -- /board
@@ -25,14 +25,16 @@ getBoardHomeR = do
 -- /board/b
 getBoardR :: Text -> Handler RepHtml
 getBoardR bname = do
-    (board, postOps) <- runDB $ do
+    (board, ops, replies) <- runDB $ do
         b <- getBy404 $ UniqueBoard bname
         ops <- selectList
                     [ BoardpostLocation ==. entityKey b
                     , BoardpostParent ==. Nothing
                     ]
                     [Asc BoardpostTime]
-        return (b, ops)
+        replies <- mapM (\op -> selectList [BoardpostParent ==. Just (entityKey op)] []) ops
+        return (b, ops, replies)
+    let previews = zip ops replies
     (formWidget, encType) <- generateFormPost (postForm (entityKey board) Nothing)
     defaultLayout $ do
         setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
@@ -53,53 +55,58 @@ postBoardR bname = do
 
 -- /board/b/1
 getThreadR :: Text -> BoardpostId -> Handler RepHtml
-getThreadR bname pid = do
-    (board, postOp, postReplies) <- runDB $ do
+getThreadR bname opKey = do
+    (board, opVal, replies) <- runDB $ do
         board <- getBy404 $ UniqueBoard bname
-        op <- get404 pid
-        replies <- selectList [BoardpostParent ==. Just pid] [Asc BoardpostTime]
+        op <- get404 opKey
+        replies <- selectList [BoardpostParent ==. Just opKey] [Asc BoardpostTime]
         return (board, op, replies)
-    (postWidget, encType) <- generateFormPost (postForm (entityKey board) (Just pid)) --FIXME
+    (postWidget, encType) <- generateFormPost (postForm (entityKey board) (Just opKey))
     defaultLayout $ do
         setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
         $(widgetFile "board-thread")
 
 postThreadR :: Text -> BoardpostId -> Handler RepHtml
-postThreadR bname pid = do
+postThreadR bname opKey = do
     board <- runDB $ getBy404 $ UniqueBoard bname
-    ((result, _), _) <- runFormPost (postForm (entityKey board) Nothing) --FIXME
+    ((result, _), _) <- runFormPost (postForm (entityKey board) (Just opKey))
     case result of
         FormSuccess reply -> do
             _ <- runDB $ insert reply
             setMessage "Postaus onnistui!"
-        _ -> setMessage "Hmm.. jotain meni pieleen"
-    redirect $ ThreadR bname pid
+        FormFailure fails -> do
+            setMessage $ toHtml $ toHtml <$> append "\n" <$> fails
+        FormMissing -> do
+            setMessage "no POST data"
+    redirect $ ThreadR bname opKey
 
-widgetThreadPreview :: Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a ->  Widget
-widgetThreadPreview n op = do
-    widgetThreadPost n op
-    -- TODO: print ~3 replies
+key2text :: Key (PersistEntityBackend Boardpost) Boardpost -> String
+key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
+                Left _ -> "fail!"
+                Right num -> show num
 
-widgetThreadPost :: Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a -> Widget
-widgetThreadPost n reply = do
-    let isop = case boardpostParent reply of
-            Nothing -> False
-            Just _ -> True
+widgetThreadPost :: Text -> Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a -> Widget
+widgetThreadPost bname n reply = do
+--    let location = case fromPersistValue $ unKey (boardpostLocation reply) of
+--            Left _ -> "fail!"
+--            Right loc -> loc
+    let isop = isNothing $ boardpostParent reply
     let time = show $ boardpostTime reply
-    let poster = case boardpostPoster reply of
-            Nothing -> ""
-            Just p -> p
-    -- email in template; no <a> tags if no email
-    let title = case boardpostTitle reply of
-            Nothing -> ""
-            Just t -> t
+    let poster = fromMaybe "anonyymi" (boardpostPoster reply)
+    let title = fromMaybe "" (boardpostTitle reply)
     let content = case boardpostContent reply of
             Nothing -> toHtml ("" :: Text)
             Just c -> toHtml c
-    let number = case fromPersistValue (unKey n) :: Either Text Int64 of
-            Left _ -> "fail!" -- this case :: Text, but String in other case.
-            Right num -> show num
+    let number = key2text n
+    let divClass = if isop then "postop" else "postreply" :: String
     $(widgetFile "board-post")
+
+--postForm' :: RenderMessage master FormMessage =>
+--             BoardId -> Maybe boardpostId -> Maybe D1 -> Html ->
+--             Form sub master (FormResult D1, GWidget sub master ())
+--postForm' bid mpid d = \html -> do
+--    (r1, v1) <- 
+    
 
 postForm :: BoardId -> Maybe BoardpostId -> Form Boardpost
 postForm bid mpid = renderDivs $ Boardpost

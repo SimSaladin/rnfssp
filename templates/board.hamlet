@@ -1,10 +1,13 @@
 $with Entity _ val <- board
-  <h1>/#{boardName val}/ - #{boardDescription val}
+  <h1>/#{bname} - #{boardDescription val}
 
-<form method="post" action=@{BoardR "a"}#form enctype=#{encType}>
+<form method="post" action=@{BoardR bname}#form enctype=#{encType}>
     ^{formWidget}
     <label>&nbsp;
     <input type="submit" value="Aloita uusi lanka" class="btn btn-primary btn-large">
 <hr>
-$forall Entity key val <- postOps
-  ^{widgetThreadPreview key val}
+$forall (op, rest) <- previews
+  ^{widgetThreadPost bname (entityKey op) (entityVal op)}
+  $forall Entity key val <- rest
+    ^{widgetThreadPost bname key val}
+  <hr>

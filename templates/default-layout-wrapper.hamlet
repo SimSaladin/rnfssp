@@ -19,6 +19,8 @@
         \<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
         \<![endif]-->
 
+        <script src=@{StaticR js_jquery_js}>
+        <script src=@{StaticR js_bootstrap_dropdown_js}>
         <script>
           document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/,'js');
     <body>

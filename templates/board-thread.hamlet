@@ -1,5 +1,12 @@
 $with Entity _ bent <- board
-  <h2>/#{boardName bent}/ - #{boardDescription bent}
+  <h2>/#{bname}/ - #{boardDescription bent}
 
-  <form method="post" action=@{ThreadR (boardName bent) pid} enctype=#{encType}>
-    ^{postWidget}
+<h4>Vastataan viestiin No. #{key2text opKey}
+<form method="post" action=@{ThreadR bname opKey} enctype=#{encType}>
+  ^{postWidget}
+  <label>&nbsp;
+  <input type="submit" value="vastaa" .btn.btn-primary>
+<hr>
+^{widgetThreadPost bname opKey opVal}
+$forall Entity key val <- replies
+  ^{widgetThreadPost bname key val}

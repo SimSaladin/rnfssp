@@ -41,6 +41,7 @@ sampleForm = renderDivs $ (,)
 
 getAdminR :: Handler RepHtml
 getAdminR = do
+    aid <- requireAuth
     (boardAddWidget, encType) <- generateFormPost newboardForm
     let submission = Nothing :: Maybe Board
     defaultLayout $ do

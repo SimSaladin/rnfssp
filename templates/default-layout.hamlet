@@ -17,5 +17,5 @@
                 <li><a href="">UKK</a>
                 <li><a href=@{AdminR}>admin</a>
 $maybe msg <- mmsg
-    <div #message>#{msg}
+    <pre #message>#{msg}
 ^{widget}
