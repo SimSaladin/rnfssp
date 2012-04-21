@@ -10,8 +10,9 @@ module Handler.Board
 import Import
 import Data.Text (append)
 import Data.Int (Int64)
-import Data.Time (getCurrentTime)
+import Data.Time (getCurrentTime, UTCTime)
 import Data.Maybe (fromMaybe, isNothing)
+import Data.ByteString.Lazy (writeFile)
 -- import Yesod.Form.Nic (nicHtmlField)
 
 -- /board
@@ -45,10 +46,16 @@ postBoardR bname = do
     board <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost (postForm (entityKey board) Nothing)
     case result of
-        FormSuccess post -> do
-            postId <- runDB $ insert post
-            setMessage "Postaus onnistui!"
-            redirect $ ThreadR bname postId
+        FormSuccess replyD -> do
+            save <- liftIO $ savePost replyD
+            case save of
+                Just p -> do
+                    postId <- runDB $ insert p
+                    setMessage "Postaus onnistui!"
+                    redirect $ ThreadR bname postId
+                Nothing -> do
+                    setMessage "Postaus failasi"
+                    redirect $ BoardR bname
         _ -> do
             setMessage "Postaus failasi"
             redirect $ BoardR bname
@@ -71,9 +78,14 @@ postThreadR bname opKey = do
     board <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost (postForm (entityKey board) (Just opKey))
     case result of
-        FormSuccess reply -> do
-            _ <- runDB $ insert reply
-            setMessage "Postaus onnistui!"
+        FormSuccess replyD -> do
+            save <- liftIO $ savePost replyD
+            case save of
+                Just p -> do
+                    _ <- runDB $ insert p
+                    setMessage "Postaus onnistui!"
+                Nothing -> do
+                    setMessage "Postaus failasi"
         FormFailure fails -> do
             setMessage $ toHtml $ toHtml <$> append "\n" <$> fails
         FormMissing -> do
@@ -87,9 +99,6 @@ key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
 
 widgetThreadPost :: Text -> Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a -> Widget
 widgetThreadPost bname n reply = do
---    let location = case fromPersistValue $ unKey (boardpostLocation reply) of
---            Left _ -> "fail!"
---            Right loc -> loc
     let isop = isNothing $ boardpostParent reply
     let time = show $ boardpostTime reply
     let poster = fromMaybe "anonyymi" (boardpostPoster reply)
@@ -101,20 +110,44 @@ widgetThreadPost bname n reply = do
     let divClass = if isop then "postop" else "postreply" :: String
     $(widgetFile "board-post")
 
---postForm' :: RenderMessage master FormMessage =>
---             BoardId -> Maybe boardpostId -> Maybe D1 -> Html ->
---             Form sub master (FormResult D1, GWidget sub master ())
---postForm' bid mpid d = \html -> do
---    (r1, v1) <- 
-    
+data D1 = D1
+    { d1location :: BoardId
+    , d1parent :: Maybe BoardpostId
+    , d1time :: UTCTime
+    , d1fileinfo :: Maybe FileInfo
+    , d1poster :: Maybe Text
+    , d1email :: Maybe Text
+    , d1title :: Maybe Text
+    , d1content :: Maybe Textarea
+    , d1pass :: Text
+    }
 
-postForm :: BoardId -> Maybe BoardpostId -> Form Boardpost
-postForm bid mpid = renderDivs $ Boardpost
+generateImgFilePath :: IO FilePath
+generateImgFilePath = do
+    return "/tmp/aoeu.bps"
+
+savePost :: D1 -> IO (Maybe Boardpost)
+savePost d = do
+    (path, info) <- case d1fileinfo d of
+        Nothing -> return (Nothing, Nothing) :: IO (Maybe FilePath, Maybe Text)
+        Just fi -> do
+            p <- generateImgFilePath
+            writeFile p $ fileContent fi
+            return (Just p, Just $ fileName fi)
+    
+    return $ Just $ Boardpost
+            (d1location d) (d1parent d) (d1time d)
+            (d1poster d) (d1email d) (d1title d)
+            (d1content d) (d1pass d) path info
+
+postForm :: BoardId -> Maybe BoardpostId -> Form D1
+postForm bid mpid = renderDivs $ D1
     <$> pure bid
     <*> pure mpid
     <*> aformM (liftIO getCurrentTime)
-    <*> aopt textField "Name" Nothing
-    <*> aopt emailField "Email" Nothing
-    <*> aopt textField "Title" Nothing
-    <*> aopt textareaField "Content" Nothing
-    <*> areq textField "Password" Nothing
+    <*> fileAFormOpt "Liite"
+    <*> aopt textField "Nimimerkki" Nothing
+    <*> aopt emailField "Sähköposti" Nothing
+    <*> aopt textField "Aihe" Nothing
+    <*> aopt textareaField "Viesti" Nothing
+    <*> areq passwordField "Salasana" (Just "salasana")

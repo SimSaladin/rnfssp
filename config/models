@@ -16,5 +16,7 @@ Boardpost
     title Text Maybe
     content Textarea Maybe
     pass Text
+    filepath String Maybe
+    fileinfo Text Maybe
 
  -- By default this file is used in Model.hs (which is imported by Foundation.hs)
