@@ -103,6 +103,7 @@ executable         rnfssp
                  , directory                     >= 1.1        && < 1.2
                  , warp                          >= 1.2        && < 1.3
                  , time                          >= 1.4        && < 1.5
+                 , filepath
 
                  , yesod-test
 test-suite integration-tests

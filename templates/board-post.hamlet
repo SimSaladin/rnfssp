@@ -1,5 +1,7 @@
 <div class=#{divClass}>
   <div.postinfo>
+    $maybe img <- boardpostFilepath reply
+      <img src=@{BoardFileR img}>
     <input name="" type="checkbox">
     <span.posttitle>#{title}
     <span.postername>#{poster}

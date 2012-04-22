@@ -4,16 +4,25 @@ module Handler.Board
     , postBoardR
     , getThreadR
     , postThreadR
+    , getBoardFileR
     , widgetThreadPost
     ) where
 
 import Import
-import Data.Text (append)
+import Prelude (tail)
+import System.IO (openBinaryTempFile, hClose)
+import System.FilePath (takeFileName, takeExtension, combine)
+import Data.Text (append, unpack)
 import Data.Int (Int64)
 import Data.Time (getCurrentTime, UTCTime)
+import Data.Time.Clock (utctDay)
+import Data.Time.Calendar (toModifiedJulianDay)
 import Data.Maybe (fromMaybe, isNothing)
-import Data.ByteString.Lazy (writeFile)
+import Data.ByteString.Lazy (hPut)
 -- import Yesod.Form.Nic (nicHtmlField)
+
+imgFilepath :: FilePath
+imgFilepath = "/home/sim/rnfssp/files/board/"
 
 -- /board
 getBoardHomeR :: Handler RepHtml
@@ -92,10 +101,9 @@ postThreadR bname opKey = do
             setMessage "no POST data"
     redirect $ ThreadR bname opKey
 
-key2text :: Key (PersistEntityBackend Boardpost) Boardpost -> String
-key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
-                Left _ -> "fail!"
-                Right num -> show num
+getBoardFileR :: String -> Handler RepHtml
+getBoardFileR fname = do
+    sendFile "" $ combine imgFilepath fname
 
 widgetThreadPost :: Text -> Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a -> Widget
 widgetThreadPost bname n reply = do
@@ -110,6 +118,11 @@ widgetThreadPost bname n reply = do
     let divClass = if isop then "postop" else "postreply" :: String
     $(widgetFile "board-post")
 
+key2text :: Key (PersistEntityBackend Boardpost) Boardpost -> String
+key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
+                Left _ -> "fail!"
+                Right num -> show num
+
 data D1 = D1
     { d1location :: BoardId
     , d1parent :: Maybe BoardpostId
@@ -122,23 +135,23 @@ data D1 = D1
     , d1pass :: Text
     }
 
-generateImgFilePath :: IO FilePath
-generateImgFilePath = do
-    return "/tmp/aoeu.bps"
-
 savePost :: D1 -> IO (Maybe Boardpost)
 savePost d = do
-    (path, info) <- case d1fileinfo d of
+    (fname, info) <- case d1fileinfo d of
         Nothing -> return (Nothing, Nothing) :: IO (Maybe FilePath, Maybe Text)
         Just fi -> do
-            p <- generateImgFilePath
-            writeFile p $ fileContent fi
-            return (Just p, Just $ fileName fi)
-    
+            t <- liftIO getCurrentTime
+            let time = show $ toModifiedJulianDay $ utctDay t
+                ext  = takeExtension $ unpack $ fileName fi
+            (fp, h) <- openBinaryTempFile imgFilepath (time ++ ext)
+            hPut h $ fileContent fi
+            hClose h
+            return (Just $ takeFileName fp, Just $ fileName fi)
+
     return $ Just $ Boardpost
             (d1location d) (d1parent d) (d1time d)
             (d1poster d) (d1email d) (d1title d)
-            (d1content d) (d1pass d) path info
+            (d1content d) (d1pass d) fname info
 
 postForm :: BoardId -> Maybe BoardpostId -> Form D1
 postForm bid mpid = renderDivs $ D1

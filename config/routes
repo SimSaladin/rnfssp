@@ -9,5 +9,6 @@
 /board BoardHomeR GET
 /board/#Text BoardR GET POST
 /board/#Text/#BoardpostId ThreadR GET POST
+/files/board/#String BoardFileR GET
 
 /admin AdminR GET POST
