@@ -11,4 +11,6 @@
 /board/#Text/#BoardpostId ThreadR GET POST
 /files/board/#String BoardFileR GET
 
+/media MediaR GET
+
 /admin AdminR GET POST
