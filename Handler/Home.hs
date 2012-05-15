@@ -3,6 +3,8 @@ module Handler.Home where
 
 import Import
 import Data.Text (append)
+import System.IO.Unsafe (unsafePerformIO)
+import Yesod.Auth.HashDB (setPassword)
 
 -- This is a handler function for the GET request method on the HomeR
 -- resource pattern. All of your resource patterns are defined in
@@ -28,7 +30,6 @@ postHomeR = do
         submission = case result of
             FormSuccess res -> Just res
             _ -> Nothing
-
     defaultLayout $ do
         aDomId <- lift newIdent
         setTitle "Welcome To Yesod!"
@@ -66,3 +67,35 @@ newboardForm :: Form Board
 newboardForm = renderDivs $ Board
     <$> areq textField "Nimi (== url)" Nothing
     <*> areq textField "Kuvaus" Nothing
+
+getRegisterR :: Handler RepHtml
+getRegisterR = do
+    (formWidget, encType) <- generateFormPost registerForm
+    defaultLayout $ do
+        setTitle "Register"
+        $(widgetFile "register")
+
+postRegisterR :: Handler RepHtml
+postRegisterR = do
+    ((creds, formWidget), encType) <- runFormPost registerForm
+    case creds of
+        FormSuccess (username, password) -> do
+            uid <- runDB $ getBy $ UniqueUser username
+            case uid of
+                Just _ -> do
+                    setMessage "Username .. on jo käytössä"
+                    defaultLayout $ do
+                        $(widgetFile "register")
+                Nothing -> do
+                    uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "")
+                    setMessage "Rekisteröinti onnistui"
+                    redirect $ HomeR -- todo: profile page
+        _ -> do
+            setMessage "Annetetut tiedot eivät käy"
+            defaultLayout $ do
+                $(widgetFile "register")
+
+registerForm :: Form (Text, Text)
+registerForm = renderDivs $ (,)
+    <$> areq textField "Username" Nothing
+    <*> areq passwordField "Password" Nothing

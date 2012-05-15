@@ -1,0 +1,4 @@
+<h1>Rekisteröi
+<form method=post enctype=#{encType}>
+  ^{formWidget}
+  <input type="submit" value="Rekisteröidy">
