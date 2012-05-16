@@ -2,7 +2,7 @@
 module Handler.Home where
 
 import Import
-import Data.Text (append)
+import qualified Data.Text as T (append, length)
 import System.IO.Unsafe (unsafePerformIO)
 import Yesod.Auth.HashDB (setPassword)
 
@@ -56,7 +56,7 @@ postAdminR = do
     case result of
         FormSuccess board -> do
             _ <- runDB $ insert board
-            setMessage $ toHtml $ "Uusi lauta luotu: " `append` (boardName board)
+            setMessage $ toHtml $ "Uusi lauta luotu: " `T.append` (boardName board)
         _ -> do
             setMessage "Hmmm.. jokin meni pieleen lautaa luotaessa"
     defaultLayout $ do
@@ -87,6 +87,7 @@ postRegisterR = do
                     defaultLayout $ do
                         $(widgetFile "register")
                 Nothing -> do
+                    -- fixme: other options exist besides unsafePerformIO?
                     uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "")
                     setMessage "Rekisteröinti onnistui"
                     redirect $ HomeR -- todo: profile page
@@ -98,4 +99,21 @@ postRegisterR = do
 registerForm :: Form (Text, Text)
 registerForm = renderDivs $ (,)
     <$> areq textField "Username" Nothing
-    <*> areq passwordField "Password" Nothing
+    <*> areq passwordConfirmField "Password" Nothing
+
+passwordConfirmField :: Field sub master Text
+passwordConfirmField = Field
+    { fieldParse = \rawVals ->
+        case rawVals of
+            [a, b]
+                | T.length a < 4 -> return $ Left "Password must be at least 4 characters"
+                | a == b -> return $ Right $ Just a
+                | otherwise -> return $ Left "Passwords don't match"
+            _ -> return $ Left "You must enter two values"
+    , fieldView = \idAttr nameAttr _ eResult isReq -> [whamlet|
+<input id=#{idAttr} name=#{nameAttr} type=password :isReq:required>
+<div .required>
+    <label>Confirm:
+    <input id=#{idAttr}-confirm name=#{nameAttr} type=password :isReq:required>
+|]
+    }
