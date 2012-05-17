@@ -12,7 +12,9 @@
 /board                     BoardHomeR  GET
 /board/#Text               BoardR      GET POST
 /board/#Text/#BoardpostId  ThreadR     GET POST
-/files/board/#String       BoardFileR  GET
 
-/media MediaR GET
+/media               MediaR      GET
+/media/anime/*Texts  MediaEntryR GET
 
+/files/board/#String BoardFileR GET
+/files/anime/*Texts  MediaAnimeFileR GET

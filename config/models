@@ -2,6 +2,7 @@ User
     username Text Eq
     password Text
     salt Text
+    admin Bool default=false Update
     UniqueUser username
 Board
     name Text

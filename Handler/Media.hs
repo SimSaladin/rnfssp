@@ -1,5 +1,7 @@
 module Handler.Media
     ( getMediaR
+    , getMediaEntryR
+    , getMediaAnimeFileR
     ) where
 
 import Import
@@ -10,6 +12,16 @@ getMediaR = do
         setTitle "Media"
         $(widgetFile "media")
 
-getMediaDirectory :: Widget
-getMediaDirectory = do
+getMediaEntryR :: [Text] -> Handler RepHtml
+getMediaEntryR args = do
+    defaultLayout $ do
+        $(widgetFile "media")
+
+getMediaAnimeFileR :: [Text] -> Handler RepHtml
+getMediaAnimeFileR args = do
+    defaultLayout $ do
+        $(widgetFile "media")
+
+mediaDirWidget :: Widget
+mediaDirWidget = do
     $(widgetFile "media-listing")

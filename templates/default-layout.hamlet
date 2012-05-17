@@ -1,21 +1,36 @@
 <div .navbar .navbar-fixed-top>
-    <div .navbar-inner>
-        <div .container>
-            <a .brand href=@{HomeR}>ssdesk</a>
-            <ul .nav>
-                <li .active .dropdown>
-                    <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
-                    <ul .dropdown-menu>
-                        <li><a href=@{BoardHomeR}>kaikki</a>
-                        <li .divider>
-                          $forall Entity _ val <- boards
-                            <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
-                <li><a href="/">Pingis</a>
-            <form .navbar-search .pull-left>
-                <input#pagesearch.span3 type="text" placeholder="Hae">
-            <ul .nav.pull-right>
-                <li><a href="">UKK</a>
-                <li><a href=@{AdminR}>admin</a>
+  <div .navbar-inner>
+    <div .container>
+      <a href=@{HomeR} .brand>ssdesk
+      <ul .nav>
+        <li .dropdown>
+          <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
+          <ul .dropdown-menu>
+            <li><a href=@{BoardHomeR}>kaikki</a>
+            <li .divider>
+              $forall Entity _ val <- boards
+                <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
+        <li>
+          <a href=@{MediaR}>Media
+        <li>
+          <a href="">UKK
+      <form .navbar-search .pull-left>
+        <input#pagesearch.span3 type="text" placeholder="Hae">
+      <ul .nav.pull-right>
+        $maybe u <- ma
+          $if userAdmin $ entityVal u
+            <li>
+              <a href=@{AdminR}>Admin
+          <li>
+            <a href=@{AuthR LogoutR}>Logout
+          <li .divider-vertical>
+          <li>
+            <a href="/">#{userUsername $ entityVal u}
+        $nothing
+          <li>
+            <a href=@{RegisterR}>Register
+          <li>
+            <a href=@{AuthR LoginR}>Login
 $maybe msg <- mmsg
-    <pre #message>#{msg}
+  <pre #message>#{msg}
 ^{widget}

@@ -87,6 +87,7 @@ instance Yesod App where
         master <- getYesod
         mmsg <- getMessage
         boards <- runDB $ selectList ([] :: [Filter Board]) []
+        ma <- maybeAuth
 
         -- We break up the default layout into two components:
         -- default-layout is the contents of the body tag, and
@@ -109,6 +110,9 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
+    isAuthorized AdminR _ = isAdmin
+    isAuthorized _ _ = return Authorized
+
     messageLogger y loc level msg =
       formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
 
@@ -120,6 +124,14 @@ instance Yesod App where
 
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
+
+isAdmin = do
+    mu <- maybeAuthId
+    return $ case mu of
+        Nothing -> AuthenticationRequired
+        Just admin 
+            | admin == (Key $ Database.Persist.Store.PersistInt64 2) -> Authorized
+            | otherwise -> Unauthorized "You must be an admin"
 
 -- How to run database actions.
 instance YesodPersist App where

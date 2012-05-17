@@ -6,13 +6,6 @@ import qualified Data.Text as T (append, length)
 import System.IO.Unsafe (unsafePerformIO)
 import Yesod.Auth.HashDB (setPassword)
 
--- This is a handler function for the GET request method on the HomeR
--- resource pattern. All of your resource patterns are defined in
--- config/routes
---
--- The majority of the code you will write in Yesod lives in these handler
--- functions. You can spread them across multiple files if you are so
--- inclined, or create a single monolithic file.
 getHomeR :: Handler RepHtml
 getHomeR = do
     (formWidget, formEnctype) <- generateFormPost sampleForm
@@ -42,7 +35,7 @@ sampleForm = renderDivs $ (,)
 
 getAdminR :: Handler RepHtml
 getAdminR = do
-    aid <- requireAuth
+--    aid <- requireAuth
     (boardAddWidget, encType) <- generateFormPost newboardForm
     let submission = Nothing :: Maybe Board
     defaultLayout $ do
@@ -88,7 +81,7 @@ postRegisterR = do
                         $(widgetFile "register")
                 Nothing -> do
                     -- fixme: other options exist besides unsafePerformIO?
-                    uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "")
+                    uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "" False)
                     setMessage "Rekisteröinti onnistui"
                     redirect $ HomeR -- todo: profile page
         _ -> do
