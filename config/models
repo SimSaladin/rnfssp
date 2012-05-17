@@ -1,23 +1,31 @@
 User
-    username Text Eq
-    password Text
-    salt Text
-    admin Bool default=false Update
-    UniqueUser username
+   username Text Eq
+   password Text
+   salt Text
+   admin Bool default=false Update
+   UniqueUser username
 Board
-    name Text
-    description Text
-    UniqueBoard name
+   name Text
+   description Text
+   UniqueBoard name
 Boardpost
-    location BoardId
-    parent BoardpostId Maybe
-    time UTCTime
-    poster Text Maybe
-    email Text Maybe
-    title Text Maybe
-    content Textarea Maybe
-    pass Text
-    filepath String Maybe
-    fileinfo Text Maybe
-
- -- By default this file is used in Model.hs (which is imported by Foundation.hs)
+   location BoardId
+   parent BoardpostId Maybe
+   time UTCTime
+   poster Text Maybe
+   email Text Maybe
+   title Text Maybe
+   content Textarea Maybe
+   pass Text
+   filepath String Maybe
+   fileinfo Text Maybe
+Anime
+   name Text
+   nameJapan Text Maybe
+   nameOther Text Maybe
+AnimeFile
+   filepath String
+   series AnimeId Maybe
+   epnumber Int Maybe
+   description Text Maybe
+   UniqueAnimefile filepath

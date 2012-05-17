@@ -2,17 +2,21 @@ module Handler.Media
     ( getMediaR
     , getMediaEntryR
     , postMediaEntryR
+    , pathAnime
     ) where
 
 import Import
+import Data.List ((\\))
 import qualified System.FilePath as F (joinPath)
+import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
+import System.FilePath (combine)
 
-animeFilePath :: FilePath
-animeFilePath = "/home/sim/anime"
+pathAnime :: FilePath
+pathAnime = "/home/sim/anime"
 
 getMediaR :: Handler RepHtml
 getMediaR = do
-    let dirWidget = mediaDirWidget ["/"]
+    dirWidget <- liftIO $ mediaDirWidget [""]
     defaultLayout $ do
         setTitle "Media"
         $(widgetFile "media")
@@ -23,17 +27,17 @@ getMediaEntryR fps = do
     case dl of
         Just d
             | d == "playlist" -> do
-                setMessage "TODO: download playlist"
+                setMessage "TODO: download playlist only"
                 redirect $ MediaEntryR fps
             | d == "zip" -> do
-                setMessage "TOOD: download as a zip"
+                setMessage "TOOD: download as zip"
                 redirect $ MediaEntryR fps
             | d == "torrent" -> do 
-                setMessage "TODO: download in torrent"
+                setMessage "TODO: download as torrent"
                 redirect $ MediaEntryR fps
             | otherwise -> invalidArgs ["Unknown download type"]
         _ -> do
-            let dirWidget = mediaDirWidget fps
+            dirWidget <- liftIO $ mediaDirWidget fps
             bare <- lookupGetParam "bare"
             case bare of
                 Just _ -> do
@@ -49,7 +53,23 @@ postMediaEntryR :: [String] -> Handler RepHtml
 postMediaEntryR fps = do
     redirect $ MediaEntryR fps
 
-mediaDirWidget :: [FilePath] -> Widget
+mediaDirWidget :: [FilePath] -> IO Widget
 mediaDirWidget fps = do
-    let fp = F.joinPath fps
-    $(widgetFile "media-listing")
+    fp <- case fps of
+        ("anime":xs) -> return $ combine pathAnime $ F.joinPath xs
+        _ -> return ""
+    is_dir <- doesDirectoryExist fp
+    is_file <- doesFileExist fp
+
+    listing <- case is_dir of
+        True -> do
+            list <- getDirectoryContents fp >>= \x -> return $ (\\) x [".",".."]
+            return $ zip list $ map (\x -> fps ++ [x]) list
+        False -> return []
+
+    fileview <- case is_file of
+        True -> return []
+        False -> return []
+    return $(widgetFile "media-listing")
+
+

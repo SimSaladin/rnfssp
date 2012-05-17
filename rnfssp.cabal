@@ -33,6 +33,7 @@ library
                      Settings
                      Settings.StaticFiles
                      Handler.Home
+                     Handler.Admin
                      Handler.Board
                      Handler.Media
 

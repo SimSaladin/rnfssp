@@ -33,34 +33,6 @@ sampleForm = renderDivs $ (,)
     <$> fileAFormReq "Choose a file"
     <*> areq textField "What's on the file?" Nothing
 
-getAdminR :: Handler RepHtml
-getAdminR = do
---    aid <- requireAuth
-    (boardAddWidget, encType) <- generateFormPost newboardForm
-    let submission = Nothing :: Maybe Board
-    defaultLayout $ do
-        setTitle "admin"
-        $(widgetFile "admin")
-
-postAdminR :: Handler RepHtml
-postAdminR = do
-    ((result, boardAddWidget), encType) <- runFormPost newboardForm
-    boards <- runDB $ selectList ([] :: [Filter Board]) []
-    case result of
-        FormSuccess board -> do
-            _ <- runDB $ insert board
-            setMessage $ toHtml $ "Uusi lauta luotu: " `T.append` (boardName board)
-        _ -> do
-            setMessage "Hmmm.. jokin meni pieleen lautaa luotaessa"
-    defaultLayout $ do
-        setTitle "Lauta"
-        $(widgetFile "admin")
-
-newboardForm :: Form Board
-newboardForm = renderDivs $ Board
-    <$> areq textField "Nimi (== url)" Nothing
-    <*> areq textField "Kuvaus" Nothing
-
 getRegisterR :: Handler RepHtml
 getRegisterR = do
     (formWidget, encType) <- generateFormPost registerForm
@@ -83,7 +55,7 @@ postRegisterR = do
                     -- fixme: other options exist besides unsafePerformIO?
                     uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "" False)
                     setMessage "Rekisteröinti onnistui"
-                    redirect $ HomeR -- todo: profile page
+                    redirect $ HomeR -- todo: profile page for uid
         _ -> do
             setMessage "Annetetut tiedot eivät käy"
             defaultLayout $ do

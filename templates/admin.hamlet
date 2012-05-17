@@ -6,3 +6,7 @@
       <form method=post enctype=#{encType}>
         ^{boardAddWidget}
         <input type="submit" value="Lisää" class="btn btn-primary">
+<div>
+  <h2>Media configuration
+  <button.btn id=media_update type="button" value="media_update" onclick="media_update()">
+    update media database

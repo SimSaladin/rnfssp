@@ -23,6 +23,7 @@ import Network.HTTP.Conduit (newManager, def)
 
 -- Import all relevant handler modules here.
 import Handler.Home
+import Handler.Admin
 import Handler.Board
 import Handler.Media
 

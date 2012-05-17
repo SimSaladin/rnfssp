@@ -3,3 +3,8 @@
     / #
     <a href=@{MediaEntryR fps}>#{pp} #
 <table border="1">
+    $forall (fn, up) <- listing
+      <tr>
+        <td>
+          <a href=@{MediaEntryR up}>#{fn}
+        <td>
