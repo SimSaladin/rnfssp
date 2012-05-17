@@ -6,17 +6,18 @@ module Handler.Media
     ) where
 
 import Import
-import Data.List ((\\))
+import Data.List ((\\), zip4)
 import qualified System.FilePath as F (joinPath)
 import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
 import System.FilePath (combine)
+import System.Posix.Files (getFileStatus, fileSize, modificationTime)
 
 pathAnime :: FilePath
 pathAnime = "/home/sim/anime"
 
 getMediaR :: Handler RepHtml
 getMediaR = do
-    dirWidget <- liftIO $ mediaDirWidget [""]
+    dirWidget <- liftIO $ mediaDirWidget ["anime"]
     defaultLayout $ do
         setTitle "Media"
         $(widgetFile "media")
@@ -63,13 +64,18 @@ mediaDirWidget fps = do
 
     listing <- case is_dir of
         True -> do
-            list <- getDirectoryContents fp >>= \x -> return $ (\\) x [".",".."]
-            return $ zip list $ map (\x -> fps ++ [x]) list
+            files <- getDirectoryContents fp >>= \x -> return $ (\\) x [".",".."]
+            urls <- return $ map (\x -> fps ++ [x]) files
+            (sizes, dates) <- do
+                stats <- mapM getFileStatus $ map (combine fp) files
+                return (map fileSize stats, map modificationTime stats)
+            return $ zip4 files urls sizes dates
         False -> return []
 
     fileview <- case is_file of
         True -> return []
         False -> return []
-    return $(widgetFile "media-listing")
+    return $(widgetFile "media-listing") where
+        nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
 
 

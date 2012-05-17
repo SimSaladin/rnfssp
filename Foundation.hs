@@ -113,6 +113,7 @@ instance Yesod App where
     authRoute _ = Just $ AuthR LoginR
 
     isAuthorized AdminR _ = isAdmin
+    isAuthorized (MediaEntryR _) _ = isLoggedIn
     isAuthorized _ _ = return Authorized
 
     messageLogger y loc level msg =
@@ -134,6 +135,10 @@ isAdmin = do
         Just admin 
             | admin == (Key $ Database.Persist.Store.PersistInt64 2) -> Authorized
             | otherwise -> Unauthorized "You must be an admin"
+
+isLoggedIn = do
+    mu <- maybeAuthId
+    return $ maybe AuthenticationRequired (const Authorized) mu
 
 -- How to run database actions.
 instance YesodPersist App where

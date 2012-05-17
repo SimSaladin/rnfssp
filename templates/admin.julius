@@ -1,0 +1,4 @@
+function media_update() {
+  id = document.getElementById("media_update");
+  id.disabled = true;
+}

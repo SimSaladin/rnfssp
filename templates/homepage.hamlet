@@ -1,8 +1,9 @@
 <h1>_{MsgHello}
+<h6>_{MsgHelloDescription}
 
+<hr>
+<h2>Random testing
 <ol>
-  <li ##{aDomId}>If you had javascript enabled then you wouldn't be seeing this.
-
   <li #form>
     $maybe (info,con) <- submission
       <div .message>
@@ -11,8 +12,6 @@
       ^{formWidget}
       <input type="submit" value="Send it!" class="btn">
 
-
-<h1>Random testing
 <ol>
   <li> Buttons:
     <input type="submit" value="Normal" class="btn">

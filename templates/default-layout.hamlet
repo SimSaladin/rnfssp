@@ -6,14 +6,12 @@
         <li .dropdown>
           <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
           <ul .dropdown-menu>
-            <li><a href=@{BoardHomeR}>kaikki</a>
+            <li><a href=@{BoardHomeR}>_{MsgNavAll}</a>
             <li .divider>
               $forall Entity _ val <- boards
                 <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
         <li>
           <a href=@{MediaR}>Media
-        <li>
-          <a href="">UKK
       <form .navbar-search .pull-left>
         <input#pagesearch.span3 type="text" placeholder="Hae">
       <ul .nav.pull-right>
@@ -22,15 +20,15 @@
             <li>
               <a href=@{AdminR}>Admin
           <li>
-            <a href=@{AuthR LogoutR}>Logout
+            <a href=@{AuthR LogoutR}>_{MsgLogout}
           <li .divider-vertical>
           <li>
             <a href="/">#{userUsername $ entityVal u}
         $nothing
           <li>
-            <a href=@{RegisterR}>Register
+            <a href=@{RegisterR}>_{MsgRegister}
           <li>
-            <a href=@{AuthR LoginR}>Login
+            <a href=@{AuthR LoginR}>_{MsgLogin}
 $maybe msg <- mmsg
   <pre #message>#{msg}
 ^{widget}

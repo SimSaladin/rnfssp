@@ -2,7 +2,7 @@
 module Handler.Home where
 
 import Import
-import qualified Data.Text as T (append, length)
+import qualified Data.Text as T (length)
 import System.IO.Unsafe (unsafePerformIO)
 import Yesod.Auth.HashDB (setPassword)
 

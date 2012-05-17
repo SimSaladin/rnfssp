@@ -4,7 +4,7 @@ $with Entity _ val <- board
 <form method="post" action=@{BoardR bname}#form enctype=#{encType}>
     ^{formWidget}
     <label>&nbsp;
-    <input type="submit" value="Aloita uusi lanka" class="btn btn-primary btn-large">
+    <input type="submit" value="_{MsgBoardStartThread}" class="btn btn-primary btn-large">
 <hr>
 $forall (op, rest) <- previews
   ^{widgetThreadPost bname (entityKey op) (entityVal op)}
