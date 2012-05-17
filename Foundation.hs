@@ -46,6 +46,8 @@ data App = App
     , persistConfig :: Settings.PersistConfig
     }
 
+type Strings = [String]
+
 -- Set up i18n messages. See the message folder.
 mkMessage "App" "messages" "en"
 

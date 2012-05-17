@@ -2,19 +2,16 @@
 /auth   AuthR   Auth   getAuth
 
 /favicon.ico FaviconR GET
-/robots.txt RobotsR GET
+/robots.txt  RobotsR  GET
 
-/        HomeR    GET POST
-/admin   AdminR   GET POST
-
+/         HomeR     GET POST
+/admin    AdminR    GET POST
 /register RegisterR GET POST
 
-/board                     BoardHomeR  GET
-/board/#Text               BoardR      GET POST
-/board/#Text/#BoardpostId  ThreadR     GET POST
+/board                    BoardHomeR GET
+/board/#Text              BoardR     GET POST
+/board/#Text/#BoardpostId ThreadR    GET POST
+/files/board/#String      BoardFileR GET
 
-/media               MediaR      GET
-/media/anime/*Texts  MediaEntryR GET
-
-/files/board/#String BoardFileR GET
-/files/anime/*Texts  MediaAnimeFileR GET
+/media                 MediaR      GET
+/media/browse/*Strings MediaEntryR GET POST
