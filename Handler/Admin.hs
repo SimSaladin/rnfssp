@@ -5,10 +5,11 @@ module Handler.Admin
 
 import Import
 import qualified Data.Text as T (append)
-import Handler.Media (pathAnime)
+--import Handler.Media (pathAnime)
 import System.Directory (getDirectoryContents, doesDirectoryExist)
 import System.FilePath (combine)
 
+-- | list (sub)dirs and files
 rDirContents :: FilePath -> IO [FilePath]
 rDirContents fp = do
     is_dir <- doesDirectoryExist fp
@@ -20,26 +21,27 @@ rDirContents fp = do
 
 getAdminR :: Handler RepHtml
 getAdminR = do
-    act <- lookupGetParam "action"
-    case act of
+    users <- runDB $ selectList ([] :: [Filter User]) [] >>= \query ->  return $ map (\x ->
+        ( userUsername $ entityVal x
+        , if userValid $ entityVal x then "disapprove_user" else "approve_user" :: Text))
+        query
+    appr <- lookupGetParam "approve_user"
+    --disappr <- lookupGetParam "disapprove_user"
+    case appr of
+        Just a -> runDB $ do
+            uid <- getBy $ UniqueUser a
+            case uid of
+                Just (Entity k _) -> update k [UserValid =. True]
+                Nothing -> return ()
+        Nothing -> return ()
+    lookupGetParam "action" >>= \act -> case act of
         Just a
             | a == "update_media" -> do
-                -- do smth for this staircase?
-                files <- liftIO $ rDirContents pathAnime
-                _ <- runDB $ do 
-                    found <- mapM (\fp -> do
-                        entry <- getBy $ UniqueAnimefile fp
-                        return entry
-                        ) files
-                    return found
-
-                    --dbFiles <- selectList ([] :: [Filter AnimeFile]) []
                 hamletToRepHtml [hamlet||]
             | otherwise -> do
-                setMessage "Unknown action!"
-                redirect $ AdminR
+                invalidArgs ["Unknown action!"]
         Nothing -> do
-            (boardAddWidget, encType) <- generateFormPost newboardForm
+            (formWidget, encType) <- generateFormPost newboardForm
             let submission = Nothing :: Maybe Board
             defaultLayout $ do
                 setTitle "admin"
@@ -47,20 +49,17 @@ getAdminR = do
 
 postAdminR :: Handler RepHtml
 postAdminR = do
-    ((result, boardAddWidget), encType) <- runFormPost newboardForm
+    ((result, _), _) <- runFormPost newboardForm
     boards <- runDB $ selectList ([] :: [Filter Board]) []
     case result of
         FormSuccess board -> do
             _ <- runDB $ insert board
-            setMessage $ toHtml $ "Uusi lauta luotu: " `T.append` (boardName board)
+            setMessage $ toHtml $ "New board added: " `T.append` (boardName board)
         _ -> do
-            setMessage "Hmmm.. jokin meni pieleen lautaa luotaessa"
-    defaultLayout $ do
-        setTitle "Lauta"
-        $(widgetFile "admin")
+            setMessage "Something went wrong while creating the board"
+    redirect $ AdminR
 
 newboardForm :: Form Board
 newboardForm = renderDivs $ Board
-    <$> areq textField "Nimi" Nothing
-    <*> areq textField "Kuvaus" Nothing
-
+    <$> areq textField "Name" Nothing
+    <*> areq textField "Description" Nothing

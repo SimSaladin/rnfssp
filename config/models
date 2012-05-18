@@ -3,6 +3,7 @@ User
    password Text
    salt Text
    admin Bool default=false Update
+   valid Bool default=False Update
    UniqueUser username
 Board
    name Text

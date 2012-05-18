@@ -53,7 +53,7 @@ postRegisterR = do
                         $(widgetFile "register")
                 Nothing -> do
                     -- fixme: other options exist besides unsafePerformIO?
-                    uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "" False)
+                    uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "" False False)
                     setMessage "Rekisteröinti onnistui"
                     redirect $ HomeR -- todo: profile page for uid
         _ -> do

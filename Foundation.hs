@@ -136,9 +136,16 @@ isAdmin = do
             | admin == (Key $ Database.Persist.Store.PersistInt64 2) -> Authorized
             | otherwise -> Unauthorized "You must be an admin"
 
+isLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
+        YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
+        (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
 isLoggedIn = do
-    mu <- maybeAuthId
-    return $ maybe AuthenticationRequired (const Authorized) mu
+    mu <- maybeAuth
+    return $ case mu of
+        Nothing -> AuthenticationRequired
+        Just (Entity uid uval) 
+            | userValid uval-> Authorized
+            | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
 
 -- How to run database actions.
 instance YesodPersist App where
@@ -162,7 +169,7 @@ instance YesodAuth App where
 
     authPlugins _ = [authHashDB (Just . UniqueUser)]
 
---    authHttpManager = httpManager
+    authHttpManager = httpManager
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.

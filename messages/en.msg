@@ -6,7 +6,7 @@ Logout: Logout
 Login: Login
 Register: Register
 Search: Search
-RegisterNote: Your account must be validated by an admin. Usually happens within 24 hours.
+RegisterNote: Your account must be validated by an admin. This usually happens within 24 hours.
 BoardStartThread: Start new thread
 BoardReplyThread: Replying to thread
 MediaDescription: anime & music

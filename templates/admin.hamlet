@@ -1,12 +1,24 @@
 <h1>Ylläpito
 <div .row-fluid>
   <div .span6>
-    <div .well>
-      <h3>Lisää uusi lauta
-      <form method=post enctype=#{encType}>
-        ^{boardAddWidget}
-        <input type="submit" value="Lisää" class="btn btn-primary">
-<div>
-  <h2>Media configuration
-  <button.btn id=media_update type="button" value="media_update" onclick="media_update()">
-    update media database
+    <h3>Board
+    <form method=post enctype=#{encType}>
+      ^{formWidget}
+      <input.btn.btn-primary type="submit" value="_{MsgGo}">
+  <div.span6>
+    <h2>Media
+    <h6>Does not work
+    <button.btn id=media_update type="button" value="media_update" onclick="media_update()">
+      update media database
+<div.row-fluid>
+  <div.span6>
+    <h3>Users
+    <table border="1">
+      <tr>
+        <th>Username
+        <th>Action
+      $forall (name,action) <- users
+        <tr>
+          <td>#{name}
+          <td>
+            <a href=@{AdminR}?#{action}=#{name}>#{action}
