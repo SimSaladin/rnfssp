@@ -37,6 +37,7 @@ getAdminR = do
     lookupGetParam "action" >>= \act -> case act of
         Just a
             | a == "update_media" -> do
+                -- reply json instead?
                 hamletToRepHtml [hamlet||]
             | otherwise -> do
                 invalidArgs ["Unknown action!"]

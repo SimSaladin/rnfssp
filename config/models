@@ -21,12 +21,12 @@ Boardpost
    filepath String Maybe
    fileinfo Text Maybe
 Anime
-   name Text
+   nameIdent Text
    nameJapan Text Maybe
    nameOther Text Maybe
-AnimeFile
+MediaFileEntry
    filepath String
-   series AnimeId Maybe
-   epnumber Int Maybe
    description Text Maybe
-   UniqueAnimefile filepath
+   info Text Maybe
+   animeBind AnimeId Maybe
+   animeEp Int Maybe

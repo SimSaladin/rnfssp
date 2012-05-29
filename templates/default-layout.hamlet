@@ -15,15 +15,15 @@
       <form .navbar-search .pull-left>
         <input#pagesearch.span3 type="text" placeholder="Hae">
       <ul .nav.pull-right>
-        $maybe u <- ma
-          $if userAdmin $ entityVal u
+        $maybe authent <- ma
+          $if userAdmin $ entityVal authent
             <li>
               <a href=@{AdminR}>Admin
           <li>
             <a href=@{AuthR LogoutR}>_{MsgLogout}
           <li .divider-vertical>
           <li>
-            <a href="/">#{userUsername $ entityVal u}
+            <a href="/">#{userUsername $ entityVal authent}
         $nothing
           <li>
             <a href=@{RegisterR}>_{MsgRegister}

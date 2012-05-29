@@ -107,6 +107,7 @@ executable         rnfssp
                  , time                          >= 1.4        && < 1.5
                  , filepath
                  , unix
+                 , libmpd                        >= 0.8.0      && < 0.9
 
                  , yesod-test
 test-suite integration-tests

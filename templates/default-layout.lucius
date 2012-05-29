@@ -60,4 +60,8 @@ footer {
     border-top:1px solid #E5E5E5;
     clear:both;
 }
-
+hr {
+  background: url(@{StaticR img_hrgeass_png}) no-repeat scroll center;
+  height: 18px;
+  border:none;
+}

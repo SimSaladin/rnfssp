@@ -78,4 +78,7 @@ mediaDirWidget fps = do
     return $(widgetFile "media-listing") where
         nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
 
-
+mediaPlWidget :: UserId -> Widget
+mediaPlWidget pl = do
+    
+    [whamlet| aoeu |]
