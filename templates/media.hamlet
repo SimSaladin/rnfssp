@@ -2,3 +2,8 @@
   <small>_{MsgMediaDescription}
 
 ^{dirWidget}
+
+  <hr>
+  <div>
+    <h2>Playlist
+    ^{mediaPlWidget $ entityKey aent}

@@ -1,11 +1,13 @@
 module Handler.Media
     ( getMediaR
+    , getMediaDataR
     , getMediaEntryR
     , postMediaEntryR
     , pathAnime
     ) where
 
 import Import
+--import Yesod.Json (jsonScalar)
 import Data.List ((\\), zip4)
 import qualified System.FilePath as F (joinPath)
 import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
@@ -17,13 +19,23 @@ pathAnime = "/home/sim/anime"
 
 getMediaR :: Handler RepHtml
 getMediaR = do
+    aent <- requireAuth
     dirWidget <- liftIO $ mediaDirWidget ["anime"]
     defaultLayout $ do
         setTitle "Media"
         $(widgetFile "media")
 
+getMediaDataR :: Text -> Handler RepJson
+getMediaDataR toget = do
+    aent <- requireAuth
+    case toget of
+        "playlist" -> do
+            jsonToRepJson $ array ["aoeu" :: Text] -- FIXME/TODO
+        _ -> invalidArgs ["No get specified"]
+
 getMediaEntryR :: [FilePath] -> Handler RepHtml
 getMediaEntryR fps = do
+    aent <- requireAuth
     dl <- lookupGetParam "download"
     case dl of
         Just d
@@ -79,6 +91,16 @@ mediaDirWidget fps = do
         nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
 
 mediaPlWidget :: UserId -> Widget
-mediaPlWidget pl = do
-    
-    [whamlet| aoeu |]
+mediaPlWidget uid = do
+    plId <- lift newIdent
+    toWidget [lucius|
+    |]
+    toWidget [julius|
+function load_playlist() {
+}
+    |]
+    toWidget [hamlet|
+<div##{plId}>
+    Loading playlist...
+    |]
+
