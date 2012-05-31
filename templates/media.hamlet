@@ -1,9 +1,7 @@
 <h1>Media #
   <small>_{MsgMediaDescription}
 
-^{dirWidget}
+^{mediaDirWidget fps}
 
-  <hr>
-  <div>
-    <h2>Playlist
-    ^{mediaPlWidget $ entityKey aent}
+<hr>
+^{mediaPlWidget $ entityKey aent}

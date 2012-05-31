@@ -7,8 +7,8 @@ module Handler.Media
     ) where
 
 import Import
---import Yesod.Json (jsonScalar)
 import Data.List ((\\), zip4)
+import Data.Maybe (isJust)
 import qualified System.FilePath as F (joinPath)
 import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
 import System.FilePath (combine)
@@ -19,76 +19,64 @@ pathAnime = "/home/sim/anime"
 
 getMediaR :: Handler RepHtml
 getMediaR = do
+    let fps = ["anime"] :: [FilePath]
     aent <- requireAuth
-    dirWidget <- liftIO $ mediaDirWidget ["anime"]
     defaultLayout $ do
         setTitle "Media"
         $(widgetFile "media")
 
+-- | Downloading files/data (user&js)
 getMediaDataR :: Text -> Handler RepJson
 getMediaDataR toget = do
     aent <- requireAuth
     case toget of
         "playlist" -> do
             jsonToRepJson $ array ["aoeu" :: Text] -- FIXME/TODO
-        _ -> invalidArgs ["No get specified"]
+        _ -> invalidArgs ["Target not found"]
 
+-- | Either directory listing or file view. Whole page with widgets or if with
+-- | get parameter `bare' set, only the listing/file view.
 getMediaEntryR :: [FilePath] -> Handler RepHtml
 getMediaEntryR fps = do
     aent <- requireAuth
-    dl <- lookupGetParam "download"
-    case dl of
-        Just d
-            | d == "playlist" -> do
-                setMessage "TODO: download playlist only"
-                redirect $ MediaEntryR fps
-            | d == "zip" -> do
-                setMessage "TOOD: download as zip"
-                redirect $ MediaEntryR fps
-            | d == "torrent" -> do 
-                setMessage "TODO: download as torrent"
-                redirect $ MediaEntryR fps
-            | otherwise -> invalidArgs ["Unknown download type"]
-        _ -> do
-            dirWidget <- liftIO $ mediaDirWidget fps
-            bare <- lookupGetParam "bare"
-            case bare of
-                Just _ -> do
-                    pc <- widgetToPageContent $(widgetFile "media")
-                    hamletToRepHtml [hamlet|^{pageBody pc}|]
-                Nothing -> do
-                    defaultLayout $ do
-                        setTitle "anime"
-                        $(widgetFile "media")
+    bare <- lookupGetParam "bare"
+    if isJust bare
+        then do
+          pc <- widgetToPageContent $(widgetFile "media")
+          hamletToRepHtml [hamlet|^{pageBody pc}|]
+        else do
+          defaultLayout $ do
+              setTitle "anime"
+              $(widgetFile "media")
 
--- |POST is used to make changes to session (playlist etc.)
-postMediaEntryR :: [String] -> Handler RepHtml
+-- | Used to make changes to session (playlist etc.)
+postMediaEntryR :: [FilePath] -> Handler RepHtml
 postMediaEntryR fps = do
     redirect $ MediaEntryR fps
 
-mediaDirWidget :: [FilePath] -> IO Widget
+
+mediaDirWidget :: [FilePath] -> Widget
 mediaDirWidget fps = do
-    fp <- case fps of
-        ("anime":xs) -> return $ combine pathAnime $ F.joinPath xs
-        _ -> return ""
-    is_dir <- doesDirectoryExist fp
-    is_file <- doesFileExist fp
-
-    listing <- case is_dir of
-        True -> do
-            files <- getDirectoryContents fp >>= \x -> return $ (\\) x [".",".."]
-            urls <- return $ map (\x -> fps ++ [x]) files
-            (sizes, dates) <- do
-                stats <- mapM getFileStatus $ map (combine fp) files
-                return (map fileSize stats, map modificationTime stats)
-            return $ zip4 files urls sizes dates
-        False -> return []
-
-    fileview <- case is_file of
-        True -> return []
-        False -> return []
-    return $(widgetFile "media-listing") where
-        nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
+    listId <- lift newIdent
+    fp <- return $ case fps of
+        ("anime":xs) -> combine pathAnime $ F.joinPath xs
+        _ -> ""
+    is_dir <- liftIO $ doesDirectoryExist fp
+    is_file <- liftIO $ doesFileExist fp
+    if is_dir
+        then do
+          files <- liftIO $ getDirectoryContents fp >>= \x -> return $ (\\) x [".",".."]
+          urls <- return $ map (\x -> fps ++ [x]) files
+          (sizes, dates) <- do
+              stats <- liftIO $ mapM getFileStatus $ map (combine fp) files
+              return (map fileSize stats, map modificationTime stats)
+          let listing = zip4 files urls sizes dates
+              nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
+          $(widgetFile "media-listing")
+        else if is_file
+            then do
+              [whamlet|viewing a file {not yet implemented!}|]
+            else [whamlet|(No such file or directory was found)|]
 
 mediaPlWidget :: UserId -> Widget
 mediaPlWidget uid = do
@@ -97,10 +85,19 @@ mediaPlWidget uid = do
     |]
     toWidget [julius|
 function load_playlist() {
+    document.getElementById("#{plId}").innerHTML = "now loaded";
 }
+
+$("##{plId}").ready(load_playlist())
     |]
     toWidget [hamlet|
+<h2>Playlist: #
+    <span>
 <div##{plId}>
     Loading playlist...
     |]
 
+mediaPlayerWidget :: Widget
+mediaPlayerWidget = do
+    [whamlet|
+    |]

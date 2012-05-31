@@ -13,9 +13,12 @@ $if is_dir
     $forall (file, url, size, modified) <- listing
       <tr>
         <td>
-          <span.media-action>add #
-          <span.media-action>dl #
-          <span.media-action>info
+          <a href="">
+            <img.#{listId} height="16" src=@{StaticR img_icons_add_png} alt="add">
+          <a href="">
+            <img.#{listId} height="16" src=@{StaticR img_icons_download_png} alt="download">
+          <a href="">
+            <img.#{listId} height="16" src=@{StaticR img_icons_info_png} alt="info">
         <td>
           <a href=@{MediaEntryR url}>#{file}
         <td>
