@@ -1,7 +1,7 @@
 <h1>Media #
   <small>_{MsgMediaDescription}
 
-^{mediaDirWidget fps}
+<div##{browserId}>
 
 <hr>
 ^{mediaPlWidget $ entityKey aent}

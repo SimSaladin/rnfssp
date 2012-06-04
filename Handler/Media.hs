@@ -9,21 +9,25 @@ module Handler.Media
 import Import
 import Data.List ((\\), zip4)
 import Data.Maybe (isJust)
+import Data.Text (pack)
 import qualified System.FilePath as F (joinPath)
 import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
 import System.FilePath (combine)
 import System.Posix.Files (getFileStatus, fileSize, modificationTime)
+import System.Posix (FileOffset)
+import Text.Printf (printf, PrintfArg)
 
 pathAnime :: FilePath
 pathAnime = "/home/sim/anime"
+pathMusic :: FilePath
+pathMusic = "/home/sim/music"
 
 getMediaR :: Handler RepHtml
 getMediaR = do
-    let fps = ["anime"] :: [FilePath]
-    aent <- requireAuth
+    mauth <- maybeAuth
     defaultLayout $ do
         setTitle "Media"
-        $(widgetFile "media")
+        $(widgetFile "media-home")
 
 -- | Downloading files/data (user&js)
 getMediaDataR :: Text -> Handler RepJson
@@ -42,9 +46,10 @@ getMediaEntryR fps = do
     bare <- lookupGetParam "bare"
     if isJust bare
         then do
-          pc <- widgetToPageContent $(widgetFile "media")
+          pc <- widgetToPageContent $ mediaDirWidget fps
           hamletToRepHtml [hamlet|^{pageBody pc}|]
         else do
+          browserId <- newIdent
           defaultLayout $ do
               setTitle "anime"
               $(widgetFile "media")
@@ -57,35 +62,38 @@ postMediaEntryR fps = do
 
 mediaDirWidget :: [FilePath] -> Widget
 mediaDirWidget fps = do
-    listId <- lift newIdent
+    nav <- return $ zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
     fp <- return $ case fps of
         ("anime":xs) -> combine pathAnime $ F.joinPath xs
+        ("music":xs) -> combine pathMusic $ F.joinPath xs
         _ -> ""
     is_dir <- liftIO $ doesDirectoryExist fp
     is_file <- liftIO $ doesFileExist fp
-    if is_dir
+    listing <- if is_dir
         then do
-          files <- liftIO $ getDirectoryContents fp >>= \x -> return $ (\\) x [".",".."]
+          files <- liftIO $ getDirectoryContents fp >>= \x -> return (x \\ [".",".."])
           urls <- return $ map (\x -> fps ++ [x]) files
           (sizes, dates) <- do
               stats <- liftIO $ mapM getFileStatus $ map (combine fp) files
-              return (map fileSize stats, map modificationTime stats)
-          let listing = zip4 files urls sizes dates
-              nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
-          $(widgetFile "media-listing")
+              return (map (printSize . fileSize) stats, map modificationTime stats)
+          return $ zip4 files urls sizes dates
         else if is_file
-            then do
-              [whamlet|viewing a file {not yet implemented!}|]
-            else [whamlet|(No such file or directory was found)|]
+            then return []
+            else return []
+    $(widgetFile "media-listing")
 
 mediaPlWidget :: UserId -> Widget
 mediaPlWidget uid = do
+    
     plId <- lift newIdent
     toWidget [lucius|
     |]
     toWidget [julius|
 function load_playlist() {
     document.getElementById("#{plId}").innerHTML = "now loaded";
+}
+function upload_playlist() {
+    
 }
 
 $("##{plId}").ready(load_playlist())
@@ -101,3 +109,14 @@ mediaPlayerWidget :: Widget
 mediaPlayerWidget = do
     [whamlet|
     |]
+
+printSize :: FileOffset -> Text
+printSize x | x >= 1024 ^ 4 = pack $ printf "%.0f" (fromIntegral x / 1024 ^ 4 :: Float) ++ "T"
+            | x >= 1024 ^ 3 = pack $ printf "%.0f" (fromIntegral x / 1024 ^ 3 :: Float) ++ "G"
+            | x >= 1024 ^ 2 = pack $ printf "%.0f" (fromIntegral x / 1024 ^ 2 :: Float) ++ "M"
+            | x >= 1024     = pack $ printf "%.0f" (fromIntegral x / 1024 :: Float) ++ "K"
+            | x >= 0        = pack $ printf "%.0f" (fromIntegral x :: Float) ++ "B"
+            | otherwise     = "n/a"
+---printSize x = return x | x >= 1024 ^ 4
+--    >>= \(n, m) -> pack $ printf "%.2f" (fromIntegral x / 1024 ^ n :: Float) ++ m
+
