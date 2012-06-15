@@ -1,0 +1,9 @@
+img.icon {
+  height:20px;
+}
+
+table.style1 th {
+  padding: 10px 8px;
+  color: #039;
+  border-bottom: 2px solid #6678B1;
+}
