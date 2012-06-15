@@ -11,6 +11,8 @@
               $forall Entity _ val <- boards
                 <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
         <li>
+          <a href=@{BlogOverviewR}>Blog
+        <li>
           <a href=@{MediaR}>Media
       <form .navbar-search .pull-left>
         <input#pagesearch.span3 type="text" placeholder="Hae">

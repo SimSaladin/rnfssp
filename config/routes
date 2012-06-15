@@ -8,6 +8,10 @@
 /admin    AdminR    GET POST
 /register RegisterR GET POST
 
+/blog                        BlogOverviewR GET POST
+/blog/view/#BlogpostId/#Text BlogViewR     GET POST
+/blog/edit/#BlogpostId/#Text BlogEditR     GET POST
+
 /board                    BoardHomeR GET
 /board/#Text              BoardR     GET POST
 /board/#Text/#BoardpostId ThreadR    GET POST

@@ -5,6 +5,14 @@ User
    admin Bool default=false Update
    valid Bool default=False Update
    UniqueUser username
+Blogpost
+   title Text
+   sourcefile String
+   rendered Html Maybe
+BlogComment
+   rendered Text
+   post BlogpostId
+   parent BlogCommentId Maybe
 Board
    name Text
    description Text
