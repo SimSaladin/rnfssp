@@ -1,36 +1,44 @@
-<div .navbar .navbar-fixed-top>
-  <div .navbar-inner>
-    <div .container>
-      <a href=@{HomeR} .brand>ssdesk
-      <ul .nav>
-        <li .dropdown>
-          <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
-          <ul .dropdown-menu>
-            <li><a href=@{BoardHomeR}>_{MsgNavAll}</a>
-            <li .divider>
-              $forall Entity _ val <- boards
-                <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
-        <li>
-          <a href=@{BlogOverviewR}>Blog
-        <li>
-          <a href=@{MediaR}>Media
-      <form .navbar-search .pull-left>
-        <input#pagesearch.span3 type="text" placeholder="Hae">
-      <ul .nav.pull-right>
-        $maybe authent <- ma
-          $if userAdmin $ entityVal authent
-            <li>
-              <a href=@{AdminR}>Admin
-          <li>
-            <a href=@{AuthR LogoutR}>_{MsgLogout}
-          <li .divider-vertical>
-          <li>
-            <a href="/">#{userUsername $ entityVal authent}
-        $nothing
-          <li>
-            <a href=@{RegisterR}>_{MsgRegister}
-          <li>
-            <a href=@{AuthR LoginR}>_{MsgLogin}
-$maybe msg <- mmsg
-  <pre #message>#{msg}
-^{widget}
+<div.container-fluid>
+  <div.row-fluid>
+    <div.span12>
+      <div .navbar>
+        <div .navbar-inner>
+          <div .container>
+            <ul .nav>
+              <li>
+                <a href=@{BlogOverviewR}>Home
+              <li .dropdown>
+                <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
+                <ul .dropdown-menu>
+                  <li><a href=@{BoardHomeR}>_{MsgNavAll}</a>
+                  <li .divider>
+                    $forall Entity _ val <- boards
+                      <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
+              <li>
+                <a href=@{MediaR}>Media
+
+            <form .navbar-search .pull-left>
+              <input#pagesearch.span3 type="text" placeholder="Hae">
+
+            <ul .nav.pull-right>
+              $maybe authent <- ma
+                $if userAdmin $ entityVal authent
+                  <li>
+                    <a href=@{AdminR}>Admin
+                <li>
+                  <a href=@{AuthR LogoutR}>_{MsgLogout}
+                <li .divider-vertical>
+                <li>
+                  <a href="/">#{userUsername $ entityVal authent}
+              $nothing
+                <li>
+                  <a href=@{RegisterR}>_{MsgRegister}
+                <li>
+                  <a href=@{AuthR LoginR}>_{MsgLogin}
+      $maybe msg <- mmsg
+        <pre #message>#{msg}
+  <div.row-fluid>
+    <div.span10>
+      ^{widget}
+    <div.span2.page-element>
+      teh sidebar

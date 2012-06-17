@@ -14,6 +14,7 @@ module Foundation
 
 import Prelude
 import Yesod
+import Yesod.Form.Nic
 import Yesod.Static
 import Yesod.Auth
 import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
@@ -113,6 +114,7 @@ instance Yesod App where
     authRoute _ = Just $ AuthR LoginR
 
     isAuthorized AdminR _ = isAdmin
+    isAuthorized BlogOverviewR True = isAdmin
     isAuthorized (MediaEntryR _) _ = isLoggedIn
     isAuthorized _ _ = return Authorized
 
@@ -161,9 +163,9 @@ instance YesodAuth App where
     type AuthId App = UserId
 
     -- Where to send a user after successful login
-    loginDest _ = HomeR
+    loginDest _ = BlogOverviewR
     -- Where to send a user after logout
-    logoutDest _ = HomeR
+    logoutDest _ = BlogOverviewR
 
     getAuthId = getAuthIdHashDB AuthR (Just . UniqueUser)
 
@@ -182,3 +184,5 @@ instance RenderMessage App FormMessage where
 -- wiki:
 --
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
+
+instance YesodNic App

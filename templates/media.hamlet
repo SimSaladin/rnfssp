@@ -1,7 +1,7 @@
-<h1>Media #
-  <small>_{MsgMediaDescription}
-
-<div##{browserId}>
-
+<div.page-element>
+  <h1>Media #
+    <small>_{MsgMediaDescription}
 <hr>
 ^{mediaPlWidget $ entityKey aent}
+<div##{browserId}>
+

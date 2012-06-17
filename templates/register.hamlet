@@ -1,5 +1,6 @@
-<h1>_{MsgRegister}
-<h6>_{MsgRegisterNote}
-<form method=post enctype=#{encType}>
-  ^{formWidget}
-  <input type="submit" value="_{MsgGo}">
+<div.page-element.center-box.small-box>
+  <h1>_{MsgRegister}
+  <h6>_{MsgRegisterNote}
+  <form method=post enctype=#{encType}>
+    ^{formWidget}
+    <input type="submit" value="_{MsgGo}">

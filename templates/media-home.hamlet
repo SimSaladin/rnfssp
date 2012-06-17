@@ -1,15 +1,17 @@
-<h1>Media
-<h3>Uutta
-<small>ei mitään vielä
+<div.page-element>
+  <h1>Media
+  <h3>Uutta
+  <small>ei mitään vielä
 
-<h3>Selaa
-<ul>
-  $with p <- ["anime"]
-    <li>
-      <a href=@{MediaEntryR p}>Anime
-  $with p <- ["music"]
-    <li>
-      <a href=@{MediaEntryR p}>Music
+<div.page-element>
+  <h3>Selaa
+  <ul>
+    $with p <- ["anime"]
+      <li>
+        <a href=@{MediaEntryR p}>Anime
+    $with p <- ["music"]
+      <li>
+        <a href=@{MediaEntryR p}>Music
 
 $maybe ent <- mauth
   ^{mediaPlWidget $ entityKey ent}

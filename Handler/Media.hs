@@ -99,10 +99,11 @@ function upload_playlist() {
 $("##{plId}").ready(load_playlist())
     |]
     toWidget [hamlet|
-<h2>Playlist: #
-    <span>
-<div##{plId}>
-    Loading playlist...
+<div.page-element>
+    <h2>Playlist: #
+        <span>
+    <div##{plId}>
+        Loading playlist...
     |]
 
 mediaPlayerWidget :: Widget

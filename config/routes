@@ -4,13 +4,12 @@
 /favicon.ico FaviconR GET
 /robots.txt  RobotsR  GET
 
-/         HomeR     GET POST
 /admin    AdminR    GET POST
 /register RegisterR GET POST
 
-/blog                        BlogOverviewR GET POST
-/blog/view/#BlogpostId/#Text BlogViewR     GET POST
-/blog/edit/#BlogpostId/#Text BlogEditR     GET POST
+/           BlogOverviewR GET POST
+/view/#Text BlogViewR     GET POST
+/edit/#Text BlogEditR     GET POST
 
 /board                    BoardHomeR GET
 /board/#Text              BoardR     GET POST

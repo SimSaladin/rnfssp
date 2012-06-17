@@ -6,27 +6,27 @@ import qualified Data.Text as T (length)
 import System.IO.Unsafe (unsafePerformIO)
 import Yesod.Auth.HashDB (setPassword)
 
-getHomeR :: Handler RepHtml
-getHomeR = do
-    (formWidget, formEnctype) <- generateFormPost sampleForm
-    let submission = Nothing :: Maybe (FileInfo, Text)
-        handlerName = "getHomeR" :: Text
-    defaultLayout $ do
-        aDomId <- lift newIdent
-        setTitle "Welcome To Yesod!"
-        $(widgetFile "homepage")
-
-postHomeR :: Handler RepHtml
-postHomeR = do
-    ((result, formWidget), formEnctype) <- runFormPost sampleForm
-    let handlerName = "postHomeR" :: Text
-        submission = case result of
-            FormSuccess res -> Just res
-            _ -> Nothing
-    defaultLayout $ do
-        aDomId <- lift newIdent
-        setTitle "Welcome To Yesod!"
-        $(widgetFile "homepage")
+--getHomeR :: Handler RepHtml
+--getHomeR = do
+--    (formWidget, formEnctype) <- generateFormPost sampleForm
+--    let submission = Nothing :: Maybe (FileInfo, Text)
+--        handlerName = "getHomeR" :: Text
+--    defaultLayout $ do
+--        aDomId <- lift newIdent
+--        setTitle "Welcome To Yesod!"
+--        $(widgetFile "homepage")
+--
+--postHomeR :: Handler RepHtml
+--postHomeR = do
+--    ((result, formWidget), formEnctype) <- runFormPost sampleForm
+--    let handlerName = "postHomeR" :: Text
+--        submission = case result of
+--            FormSuccess res -> Just res
+--            _ -> Nothing
+--    defaultLayout $ do
+--        aDomId <- lift newIdent
+--        setTitle "Welcome To Yesod!"
+--        $(widgetFile "homepage")
 
 sampleForm :: Form (FileInfo, Text)
 sampleForm = renderDivs $ (,)
@@ -55,7 +55,7 @@ postRegisterR = do
                     -- fixme: other options exist besides unsafePerformIO?
                     uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "" False False)
                     setMessage "Rekisteröinti onnistui"
-                    redirect $ HomeR -- todo: profile page for uid
+                    redirect $ BlogOverviewR -- todo: profile page for uid
         _ -> do
             setMessage "Annetetut tiedot eivät käy"
             defaultLayout $ do

@@ -1,59 +1,38 @@
-body { padding-top:70px; }
-#main { padding:0 10px; }
-hr { clear:both; }
-div.postop, div.postreply {
-  min-height:80px;
-  padding:0px 10px;
-  float:left;
-  clear:both;
+@colorBodyBg: #FFF;
+@colorFg: #E8DBD6;
+@colorElemBg: rgba(114, 44, 112, 0.7);
+@colorElemHlBg: rgba(163, 71, 134, 0.7);
+@colorElemOtherBg: rgba(114, 44, 112, 0.4);
+/* layout & common */
+body {
+  padding:20px 10px;
+  background-color:#{colorBodyBg};
+  background-image:url('@{StaticR img_senjougahara_jpg}');
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+  background-position:center;
+  color:#{colorFg};
 }
-div.postreply {
-  background-color:#505050;
-  margin-bottom:5px;
+.navbar-inner, .navbar-inner .divider-vertical {
+  background-color:#{colorElemBg};
+  background-image:none;
 }
-.posttitle, .postername, .postdate, .postnumber, .postreply {
-  padding-left:5px;
+.page-element {
+  padding:9px;
+  margin-bottom:7px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing:border-box;
+  box-sizing: border-box;
+  background-color:#{colorElemBg};
+  border-radius:4px;
+  box-shadow:0 1px 3px rgba(0,0,0,0.25), 0 -1px 0 rgba(0,0,0,1) inset;
 }
-span.posttitle { color:#47B979; }
-span.postername { color:#F87C7F; }
-span.postdate { font-size:80%; }
-input#pagesearch { background-color:#505050; }
-input#pagesearch:focus { background-color:#B1B1B1; }
-/*
-.required { margin: 1em 0; }
-.optional { margin: 1em 0; }
-*/
-label {
-   width: 8em;
-   display: inline-block;
-   color: #5FAFD7;
+.center-box {
+  margin: 0 auto;
 }
-input,
-textarea {
-   background: #B1B1B1;
-   margin-bottom:9px;
+.small-box {
+  width:40em;
 }
-pre {
-   background: #262626;
-   color: #A8A8A8;
-}
-pre#message {
-  background:#522525
-}
-/*
-ul { list-style: square; }
-a { color: #A56; }
-a:hover { color: #C58; }
-a:active { color: #C58; }
-a:visited { color: #943; }
-
-input,
-textarea,
-select,
-.uneditable-input {
-   border-color: #689BB4;
-}
-*/
 footer {
     padding: 35px 0;
     margin: 50px 30px;
@@ -64,4 +43,75 @@ hr {
   background: url(@{StaticR img_hrgeass_png}) no-repeat scroll center;
   height: 18px;
   border:none;
+}
+hr {
+  clear:both;
+}
+/* blog */
+cite, .date-box {
+  border-radius:5px;
+  padding:5px;
+  background-color:#{colorElemHlBg};
+}
+.date-box {
+  float:left;
+  font-size:0.99em;
+  text-align:center;
+  height:2.6em;
+  width:2.6em;
+  margin-right:1em;
+  span {
+    display:block;
+    font-size:1.5em;
+  }
+}
+.blogpost h2 {
+  margin-bottom:0.7em;
+}
+/* board */
+div.postop, div.postreply {
+  min-height:80px;
+  padding:0px 10px;
+  float:left;
+  clear:both;
+  margin-bottom:5px;
+}
+.postop {
+  background-color:#{colorElemOtherBg};
+  box-shadow:none;
+}
+.postreply {
+  margin-left:7px;
+}
+.posttitle, .postername, .postdate, .postnumber, .postreply {
+  padding-left:5px;
+}
+span.posttitle { color:#47B979; }
+span.postername { color:#F87C7F; }
+span.postdate { font-size:80%; }
+
+/* input */
+input#pagesearch { background-color:#505050; }
+input#pagesearch:focus { background-color:#B1B1B1; }
+label {
+   width: 8em;
+   display: inline-block;
+   color: #FFF;
+}
+input,
+textarea {
+   background: #DEB4D8;
+   margin-bottom:9px;
+}
+input, textarea, select,.uneditable-input {
+  border-color: #A34786;
+  border-radius:5px;
+}
+/* code */
+pre {
+   background: #262626;
+   color: #A8A8A8;
+}
+pre#message {
+  background:#522525
 }

@@ -1,4 +1,4 @@
-<div class=#{divClass}>
+<div.page-element.#{divClass}>
   <div.postinfo>
     $maybe img <- boardpostFilepath reply
       <img src=@{BoardFileR img}>

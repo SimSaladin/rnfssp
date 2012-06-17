@@ -1,32 +1,33 @@
-<h3>
-  $forall (name, url) <- nav
-    / #
-    <a href=@{MediaEntryR url}>#{name} #
-$if is_dir
-  <table.style1.browser>
-    <thead>
-      <tr>
-        <th scope="col">
-        <th scope="col">_{MsgMediaFilename}
-        <th scope="col">_{MsgMediaType}
-        <th scope="col">_{MsgMediaSize}
-        <th scope="col">_{MsgMediaModified}
-    <tbody>
-      $forall (file, url, size, modified) <- listing
+<div.page-element>
+  <h3>
+    $forall (name, url) <- nav
+      / #
+      <a href=@{MediaEntryR url}>#{name} #
+  $if is_dir
+    <table.style1.browser>
+      <thead>
         <tr>
-          <td>
-            <a href="">
-              <img.icon height="16" src=@{StaticR img_icons_add_png} alt="add">
-            <a href="">
-              <img.icon height="16" src=@{StaticR img_icons_download_png} alt="download">
-            <a href="">
-              <img.icon height="16" src=@{StaticR img_icons_info_png} alt="info">
-          <td>
-            <a href=@{MediaEntryR url}>#{file}
-          <td>
-          <td>
-            #{size}
-          <td>
-            #{show modified}
-$else
-  <div>
+          <th scope="col">
+          <th scope="col">_{MsgMediaFilename}
+          <th scope="col">_{MsgMediaType}
+          <th scope="col">_{MsgMediaSize}
+          <th scope="col">_{MsgMediaModified}
+      <tbody>
+        $forall (file, url, size, modified) <- listing
+          <tr>
+            <td>
+              <a href="">
+                <img.icon height="16" src=@{StaticR img_icons_add_png} alt="add">
+              <a href="">
+                <img.icon height="16" src=@{StaticR img_icons_download_png} alt="download">
+              <a href="">
+                <img.icon height="16" src=@{StaticR img_icons_info_png} alt="info">
+            <td>
+              <a href=@{MediaEntryR url}>#{file}
+            <td>
+            <td>
+              #{size}
+            <td>
+              #{show modified}
+  $else
+    <div>

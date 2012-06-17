@@ -3,16 +3,22 @@ User
    password Text
    salt Text
    admin Bool default=false Update
-   valid Bool default=False Update
+   valid Bool default=false Update
    UniqueUser username
 Blogpost
+   time UTCTime
+   poster Text
    title Text
-   sourcefile String
-   rendered Html Maybe
+   urltitle Text
+   content Html
+   UniqueBlogpost urltitle
 BlogComment
-   rendered Text
+   rendered Html
    post BlogpostId
+   time UTCTime
    parent BlogCommentId Maybe
+BlogTag
+   tag String
 Board
    name Text
    description Text
