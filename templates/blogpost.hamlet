@@ -1,0 +1,13 @@
+<div.page-element.blogpost>
+  <div.date-box>
+      #{month}
+      <span>#{day}
+  <h2>#{blogpostTitle post}
+  $if preview
+    <p>^{toWidget cnt}
+  $else
+    <p>^{toWidget cnt}
+  <cite>
+    Posted by #{blogpostPoster post} under ... | #
+    <a href=@{BlogViewR $ blogpostUrltitle post}>Link #
+    | Comments

@@ -13,10 +13,13 @@ Blogpost
    content Html
    UniqueBlogpost urltitle
 BlogComment
-   rendered Html
    post BlogpostId
-   time UTCTime
    parent BlogCommentId Maybe
+   time UTCTime
+   user UserId Maybe
+   author Text
+   website Text Maybe
+   content Textarea
 BlogTag
    tag String
 Board

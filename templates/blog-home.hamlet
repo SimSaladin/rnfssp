@@ -1,9 +1,18 @@
 $forall pre <- previews
   ^{pre}
 
-<div.page-element.hl>
-  <h2>New post
-  $if isAdmin
-    <form method=post action=@{BlogOverviewR} enctype=#{encType}>
-      ^{widget}
+$if canPost
+  <div.page-element.hl>
+    <h2>New post
+      <form.form-horizontal method=post action=@{BlogOverviewR} enctype=#{encType}>
+        <fieldset>
+          <legend>
+          $case result
+            $of FormFailure reasons
+              $forall reason <- reasons
+                <div.alert.alert-errors>#{reason}
+            $of _
+        ^{widget}
+        <div.form-actions>
+          <input.btn.primary type=submit value="Post it">
 

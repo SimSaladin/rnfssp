@@ -16,34 +16,47 @@ import System.Locale (defaultTimeLocale)
 import Yesod.Form.Nic (nicHtmlField)
 import Text.Blaze.Html.Renderer.Text
 
-titleRender :: [String] -> Widget
-titleRender texts = setTitle $ toHtml $ foldl (++) "blog >>= " texts
-
 getBlogOverviewR :: Handler RepHtml
 getBlogOverviewR = do
-    posts <- runDB $ selectList ([] :: [Filter Blogpost]) []
-    ma <- maybeAuth
-    let previews = map (\x -> blogpostWidget (entityVal x) True) posts
-        isAdmin = case ma of
-            Nothing -> False
-            Just ent -> userAdmin $ entityVal ent
-    (widget, encType) <- generateFormPost newpostForm
+    canPost <- isAdmin
+    previews <- previewWidgets
+    ((result, widget), encType) <- runFormPost newpostForm
     defaultLayout $ do
         titleRender ["blog"]
         $(widgetFile "blog-home")
 
 postBlogOverviewR :: Handler RepHtml
 postBlogOverviewR = do
-    ((result,_),_) <- runFormPost newpostForm
+    ((result,widget),encType) <- runFormPost newpostForm
     case result of
         FormSuccess p -> do
             pid <- runDB $ insert p
-            setMessage "success: added"
             redirect $ BlogViewR $ blogpostUrltitle p
-        FormFailure msg -> do
-            setMessage $ toHtml $ T.intercalate "\n" msg
-            redirect $ BlogOverviewR
-        _ -> redirect $ BlogOverviewR
+        _ -> do
+            canPost <- isAdmin
+            previews <- previewWidgets
+            defaultLayout $ do
+                titleRender ["blog"]
+                $(widgetFile "blog-home")
+
+getBlogViewR :: Text -> Handler RepHtml
+getBlogViewR utitle = do
+    ((result, replyw), encType, postw, commentsw) <- postAndReplies utitle
+    defaultLayout $ do
+        titleRender ["<teh title>"]
+        $(widgetFile "blog-view")
+
+postBlogViewR :: Text -> Handler RepHtml
+postBlogViewR utitle = do
+    ((result, replyw), encType, postw, commentsw) <- postAndReplies utitle
+    case result of
+        FormSuccess r -> do
+            rId <- runDB $ insert r
+            setMessage "Successfully replied"
+        _ -> return ()
+    defaultLayout $ do
+        titleRender ["<teh title>"]
+        $(widgetFile "blog-view")
 
 getBlogEditR :: Text -> Handler RepHtml
 getBlogEditR utitle = do
@@ -54,49 +67,63 @@ getBlogEditR utitle = do
 postBlogEditR :: Text -> Handler RepHtml
 postBlogEditR utitle = redirect $ BlogEditR utitle
 
-getBlogViewR :: Text -> Handler RepHtml
-getBlogViewR utitle = do
-    (post, comments) <- runDB $ do
+isAdmin :: Handler Bool
+isAdmin = maybeAuth >>= \ma -> return $ case ma of
+    Nothing -> False
+    Just ent -> userAdmin $ entityVal ent
+
+titleRender :: [String] -> Widget
+titleRender texts = setTitle $ toHtml $ foldl (++) "blog | " texts
+
+postAndReplies :: Text
+               -> Handler ((FormResult BlogComment, Widget), Enctype, Widget, [Widget])
+postAndReplies utitle = do
+    (p, cs) <- runDB $ do
         p <- getBy404 $ UniqueBlogpost utitle
         cmnts <- selectList
                     [BlogCommentPost ==. entityKey p]
                     [Asc BlogCommentTime]
         return (p, cmnts)
-    let postWidget = blogpostWidget (entityVal post) False
-    defaultLayout $ do
-    titleRender ["<teh title>"]
-    $(widgetFile "blog-view")
+    let pw = blogpostWidget (entityVal p) False
+        cw = map (\x -> blogcommentWidget x cs) cs
+    ((rr, rw), re) <- runFormPost $ replyForm (entityKey p) Nothing
+    return ((rr, rw), re, pw, cw)
 
-postBlogViewR :: Text -> Handler RepHtml
-postBlogViewR utitle = do
-    redirect $ BlogViewR utitle
+previewWidgets :: Handler [Widget]
+previewWidgets = runDB $ selectList ([] :: [Filter Blogpost]) []
+    >>= \xs -> return $ map (\x -> blogpostWidget (entityVal x) True) xs
+
+blogcommentWidget :: Entity BlogComment -> [Entity BlogComment] -> Widget
+blogcommentWidget c cs = do
+    $(widgetFile "blogcomment")
+  where
+    children = filter (\x -> Just (entityKey c) == (blogCommentParent $ entityVal x)) cs
+    parent = entityVal c
+
+blogpostWidget :: Blogpost -> Bool -> Widget
+blogpostWidget post preview = do
+    -- TODO; get the first paragraph or so from the posts in preview mode
+    $(widgetFile "blogpost")
+  where
+    fmt = \x -> formatTime defaultTimeLocale x (blogpostTime post)
+    month = fmt "%b"
+    day = fmt "%d"
+    cnt = blogpostContent post
 
 newpostForm :: Html -> MForm App App (FormResult Blogpost, Widget)
 newpostForm extra = do
+    time <- liftIO getCurrentTime
     (titleRes, titleView) <- mreq textField "Title" Nothing
     (urlpartRes, urlpartView) <- mreq urlpartField "with url" Nothing
     (contentRes, contentView) <- mreq nicHtmlField "Content" Nothing
-    time <- liftIO getCurrentTime
     let blogpostRes = Blogpost
             <$> pure time
             <*> pure "bps"
             <*> titleRes <*> urlpartRes <*> contentRes
-        widget = do
-            toWidget [lucius|##{fvId contentView} { width:54em; }
-|]
-            [whamlet|#{extra}
-<label for=#{fvId titleView}>^{fvLabel titleView}
-^{fvInput titleView}                      #
-<label for=#{fvId urlpartView}>^{fvLabel urlpartView}
-^{fvInput urlpartView}
-<br>
-^{fvInput contentView}
-    <input type=submit value="add new post">
-|]
+        widget = $(widgetFile "blog-form-newpost")
     return (blogpostRes, widget)
   where
     urlpartField = checkM validUrlpart textField
-
     validUrlpart u = do
         dbentry <- runDB $ selectFirst [BlogpostPoster ==. toCheck] []
         if isLegal && isNothing dbentry
@@ -108,35 +135,12 @@ newpostForm extra = do
                       C.isAsciiLower x || C.isDigit x || x == '-' || x == '_'
                       )) toCheck
 
-blogpostWidget :: Blogpost -> Bool -> Widget
-blogpostWidget post preview = do
-    -- TODO; get the first paragraph or so from the posts in preview mode
-    toWidget [whamlet|
-<div.page-element.blogpost>
-    ^{time}
-    <h2>#{blogpostTitle post}
-    $if preview
-        <p>^{toWidget cnt}
-    $else
-        <p>^{toWidget cnt}
-    <cite>
-        Posted by #{blogpostPoster post} under ... | #
-        <a href=@{BlogViewR $ blogpostUrltitle post}>Link #
-        | Comments
-    |]
-  where
-    time = formatTimeBox $ blogpostTime post
-    cnt = blogpostContent post
-
-formatTimeBox :: UTCTime -> Widget
-formatTimeBox t = toWidget [hamlet|
-<div.date-box>
-    #{month}
-    <span>#{day}
-|]
-  where
-    locale = defaultTimeLocale
-    fmt = \x -> formatTime locale x t
-    month = fmt "%b"
-    day = fmt "%d"
-
+replyForm :: BlogpostId -> Maybe BlogCommentId -> Form BlogComment
+replyForm pid mcid = renderBootstrap $ BlogComment
+    <$> pure pid
+    <*> pure mcid
+    <*> aformM (liftIO getCurrentTime)
+    <*> pure Nothing --TODO user creds checking
+    <*> areq textField "Name" Nothing
+    <*> aopt urlField "Webpage" Nothing
+    <*> areq textareaField "Message" Nothing

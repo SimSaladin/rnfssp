@@ -1,0 +1,8 @@
+#{extra}
+<label for=#{fvId titleView}>^{fvLabel titleView}
+^{fvInput titleView}                      #
+<label for=#{fvId urlpartView}>^{fvLabel urlpartView}
+^{fvInput urlpartView}
+<br>
+^{fvInput contentView}
+    <input type=submit value="add new post">

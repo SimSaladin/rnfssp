@@ -1,0 +1,11 @@
+<div>
+    <div.comment-author>
+        <cite>aoeu
+        <span>writes
+    <div.comment-meta>
+        <div.date>#{show $ blogCommentTime parent}
+    <p>#{blogCommentContent parent}
+    <div.reply>reply
+    $forall child <- children
+        <div>
+            ^{blogcommentWidget child cs}

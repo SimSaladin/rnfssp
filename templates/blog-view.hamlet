@@ -1,3 +1,16 @@
-^{postWidget}
-
-i am teh content
+^{postw}
+<div.page-element>
+  $forall wid <- commentsw
+    ^{wid}
+<h3>Leave a comment
+<form.page-element.form-horizontal method=post action=@{BlogViewR utitle} enctype=#{encType}>
+  <fieldset>
+    <legend>
+    $case result
+      $of FormFailure reasons
+        $forall reason <- reasons
+          <div.alert.alert-error>#{reason}
+      $of _
+  ^{replyw}
+  <div.form-actions>
+    <input.btn.primary type=submit value=Reply>

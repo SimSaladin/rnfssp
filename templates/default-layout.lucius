@@ -47,6 +47,9 @@ hr {
 hr {
   clear:both;
 }
+a {
+  color:#FEFEB8;
+}
 /* blog */
 cite, .date-box {
   border-radius:5px;
