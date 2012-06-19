@@ -9,12 +9,11 @@ module Handler.Blog
 
 import Import
 import qualified Data.Char as C
-import Data.Maybe (isJust, isNothing)
+import Data.Maybe (isNothing)
 import qualified Data.Text as T
-import Data.Time (getCurrentTime, formatTime, UTCTime)
+import Data.Time (getCurrentTime, formatTime)
 import System.Locale (defaultTimeLocale)
 import Yesod.Form.Nic (nicHtmlField)
-import Text.Blaze.Html.Renderer.Text
 
 getBlogOverviewR :: Handler RepHtml
 getBlogOverviewR = do
@@ -116,12 +115,13 @@ newpostForm extra = do
     (titleRes, titleView) <- mreq textField "Title" Nothing
     (urlpartRes, urlpartView) <- mreq urlpartField "with url" Nothing
     (contentRes, contentView) <- mreq nicHtmlField "Content" Nothing
-    let blogpostRes = Blogpost
-            <$> pure time
-            <*> pure "bps"
-            <*> titleRes <*> urlpartRes <*> contentRes
+    let blogpostRes = Blogpost <$> pure time
+                               <*> pure "bps"
+                               <*> titleRes
+                               <*> urlpartRes
+                               <*> contentRes
         widget = $(widgetFile "blog-form-newpost")
-    return (blogpostRes, widget)
+        in return (blogpostRes, widget)
   where
     urlpartField = checkM validUrlpart textField
     validUrlpart u = do

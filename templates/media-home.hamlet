@@ -5,13 +5,11 @@
 
 <div.page-element>
   <h3>Selaa
-  <ul>
-    $with p <- ["anime"]
-      <li>
-        <a href=@{MediaEntryR p}>Anime
-    $with p <- ["music"]
-      <li>
-        <a href=@{MediaEntryR p}>Music
+  $with p <- ["anime"]
+    <a href=@{MediaEntryR p}>Anime
+  <br>
+  $with p <- ["music"]
+    <a href=@{MediaEntryR p}>Music
 
 $maybe ent <- mauth
-  ^{mediaPlWidget $ entityKey ent}
+  ^{playlistWidget ent}

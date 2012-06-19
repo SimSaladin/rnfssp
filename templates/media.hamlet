@@ -2,6 +2,5 @@
   <h1>Media #
     <small>_{MsgMediaDescription}
 <hr>
-^{mediaPlWidget $ entityKey aent}
+^{playlistWidget aent}
 <div##{browserId}>
-

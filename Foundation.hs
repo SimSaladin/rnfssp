@@ -130,6 +130,7 @@ instance Yesod App where
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
 
+isAdmin :: GHandler s App AuthResult
 isAdmin = do
     mu <- maybeAuthId
     return $ case mu of

@@ -4,6 +4,7 @@ User
    salt Text
    admin Bool default=false Update
    valid Bool default=false Update
+   currentplaylist PlaylistId Maybe
    UniqueUser username
 Blogpost
    time UTCTime
@@ -22,6 +23,7 @@ BlogComment
    content Textarea
 BlogTag
    tag String
+
 Board
    name Text
    description Text
@@ -37,6 +39,14 @@ Boardpost
    pass Text
    filepath String Maybe
    fileinfo Text Maybe
+
+Playlist
+   title Text
+   owner UserId
+   elems [Text]
+   created UTCTime
+   modified UTCTime
+   UniquePlaylist title
 Anime
    nameIdent Text
    nameJapan Text Maybe

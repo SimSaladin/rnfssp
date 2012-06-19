@@ -52,8 +52,9 @@ postRegisterR = do
                     defaultLayout $ do
                         $(widgetFile "register")
                 Nothing -> do
-                    -- fixme: other options exist besides unsafePerformIO?
-                    uid <- runDB $ insert $ unsafePerformIO $ setPassword password (User username "" "" False False)
+                    newUser <- setPassword password
+                            (User username "" "" False False Nothing)
+                    uid <- runDB $ insert newUser
                     setMessage "Rekisteröinti onnistui"
                     redirect $ BlogOverviewR -- todo: profile page for uid
         _ -> do

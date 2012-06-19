@@ -16,6 +16,6 @@
 /board/#Text/#BoardpostId ThreadR    GET POST
 /files/board/#String      BoardFileR GET
 
-/media                 MediaR      GET
-/media/browse/*Strings MediaEntryR GET POST
-/media/data/#Text      MediaDataR  GET
+/media                  MediaR      GET
+/media/browse/*Strings  MediaEntryR GET POST
+/media/data/#Text/#Text MediaDataR  GET

@@ -1,0 +1,8 @@
+function load_playlist() {
+    document.getElementById("#{plId}").innerHTML = "now loaded";
+}
+function upload_playlist() {
+    
+}
+
+$("##{plId}").ready(load_playlist)

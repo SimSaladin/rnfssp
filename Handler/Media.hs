@@ -8,14 +8,15 @@ module Handler.Media
 
 import Import
 import Data.List ((\\), zip4)
-import Data.Maybe (isJust)
-import Data.Text (pack)
+import Data.Maybe (isJust, fromMaybe)
+import Data.Time (getCurrentTime)
+import qualified Data.Text as T
 import qualified System.FilePath as F (joinPath)
 import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
 import System.FilePath (combine)
 import System.Posix.Files (getFileStatus, fileSize, modificationTime)
 import System.Posix (FileOffset)
-import Text.Printf (printf, PrintfArg)
+import Text.Printf (printf)
 
 pathAnime :: FilePath
 pathAnime = "/home/sim/anime"
@@ -30,13 +31,12 @@ getMediaR = do
         $(widgetFile "media-home")
 
 -- | Downloading files/data (user&js)
-getMediaDataR :: Text -> Handler RepJson
-getMediaDataR toget = do
+getMediaDataR :: Text -> Text -> Handler RepJson
+getMediaDataR what which = do
     aent <- requireAuth
-    case toget of
-        "playlist" -> do
-            jsonToRepJson $ array ["aoeu" :: Text] -- FIXME/TODO
-        _ -> invalidArgs ["Target not found"]
+    case what of
+        "playlist" -> playlistJson which
+        _          -> invalidArgs ["Invalid reply type: " `T.append` what]
 
 -- | Either directory listing or file view. Whole page with widgets or if with
 -- | get parameter `bare' set, only the listing/file view.
@@ -46,7 +46,7 @@ getMediaEntryR fps = do
     bare <- lookupGetParam "bare"
     if isJust bare
         then do
-          pc <- widgetToPageContent $ mediaDirWidget fps
+          pc <- widgetToPageContent $ browserWidget fps
           hamletToRepHtml [hamlet|^{pageBody pc}|]
         else do
           browserId <- newIdent
@@ -59,9 +59,32 @@ postMediaEntryR :: [FilePath] -> Handler RepHtml
 postMediaEntryR fps = do
     redirect $ MediaEntryR fps
 
+playlistJson :: Text -> Handler RepJson
+playlistJson which = do
+    (pl, user) <- runDB $ do
+        pl <- getBy404 $ UniquePlaylist which
+        user <- get (playlistOwner (entityVal pl))
+        return (pl, user)
+    let val    = entityVal pl
+        owner  = case user of
+                        Nothing -> ""
+                        Just a -> userUsername a
+        tosend = object [ ("owner", String owner)
+                        , ("title", String $ playlistTitle val)
+                        , ("elems", array $ playlistElems val)
+                        ]
+        in jsonToRepJson tosend
 
-mediaDirWidget :: [FilePath] -> Widget
-mediaDirWidget fps = do
+playlistsWidget :: Widget
+playlistsWidget = do
+    pls <- lift $ runDB $ do
+        pls <- selectList ([] :: [Filter Playlist]) []
+        return pls
+    toWidget [hamlet|playlist listing: not yet implemented|]
+
+
+browserWidget :: [FilePath] -> Widget
+browserWidget fps = do
     nav <- return $ zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
     fp <- return $ case fps of
         ("anime":xs) -> combine pathAnime $ F.joinPath xs
@@ -82,42 +105,32 @@ mediaDirWidget fps = do
             else return []
     $(widgetFile "media-listing")
 
-mediaPlWidget :: UserId -> Widget
-mediaPlWidget uid = do
-    
+playlistWidget :: Entity User -> Widget
+playlistWidget uent = do
     plId <- lift newIdent
-    toWidget [lucius|
-    |]
-    toWidget [julius|
-function load_playlist() {
-    document.getElementById("#{plId}").innerHTML = "now loaded";
-}
-function upload_playlist() {
-    
-}
+    maybePl <- case userCurrentplaylist $ entityVal uent of
+        Just plid -> lift . runDB $ get plid
+        Nothing   -> return Nothing
+    pl <- case maybePl of
+        Just p  -> return p
+        Nothing -> liftIO getCurrentTime >>= \t -> return
+            $ Playlist "" (entityKey uent) [] t t
+    $(widgetFile "media-playlist")
 
-$("##{plId}").ready(load_playlist())
-    |]
-    toWidget [hamlet|
-<div.page-element>
-    <h2>Playlist: #
-        <span>
-    <div##{plId}>
-        Loading playlist...
-    |]
-
-mediaPlayerWidget :: Widget
-mediaPlayerWidget = do
+playerWidget :: Widget
+playerWidget = do
     [whamlet|
     |]
 
 printSize :: FileOffset -> Text
-printSize x | x >= 1024 ^ 4 = pack $ printf "%.0f" (fromIntegral x / 1024 ^ 4 :: Float) ++ "T"
-            | x >= 1024 ^ 3 = pack $ printf "%.0f" (fromIntegral x / 1024 ^ 3 :: Float) ++ "G"
-            | x >= 1024 ^ 2 = pack $ printf "%.0f" (fromIntegral x / 1024 ^ 2 :: Float) ++ "M"
-            | x >= 1024     = pack $ printf "%.0f" (fromIntegral x / 1024 :: Float) ++ "K"
-            | x >= 0        = pack $ printf "%.0f" (fromIntegral x :: Float) ++ "B"
-            | otherwise     = "n/a"
----printSize x = return x | x >= 1024 ^ 4
---    >>= \(n, m) -> pack $ printf "%.2f" (fromIntegral x / 1024 ^ n :: Float) ++ m
+printSize x = T.pack $ toprint x where
+    f n = printf "%.0f" (fromIntegral x / n :: Float)
+    toprint x | x >= lT   = f lT ++ "T"
+              | x >= lG   = f lG ++ "G"
+              | x >= lM   = f lM ++ "M"
+              | x >= lK   = f lK ++ "K"
+              | x >= lB   = f lB ++ "B"
+              | otherwise = "n/a"
+        where
+            [lB,lK,lM,lG,lT] = scanl (*) 1 $ take 4 $ repeat 1024
 

@@ -1,7 +1,11 @@
 ^{postw}
+<h4>Comments
 <div.page-element>
-  $forall wid <- commentsw
-    ^{wid}
+  $if null commentsw
+    <i>No comments yet...
+  $else
+    $forall wid <- commentsw
+      ^{wid}
 <h3>Leave a comment
 <form.page-element.form-horizontal method=post action=@{BlogViewR utitle} enctype=#{encType}>
   <fieldset>

@@ -5,6 +5,7 @@
 @colorElemOtherBg: rgba(114, 44, 112, 0.4);
 /* layout & common */
 body {
+  min-width:970px;
   padding:20px 10px;
   background-color:#{colorBodyBg};
   background-image:url('@{StaticR img_senjougahara_jpg}');
@@ -49,6 +50,9 @@ hr {
 }
 a {
   color:#FEFEB8;
+}
+a:hover, a:active {
+  color:#EEE;
 }
 /* blog */
 cite, .date-box {
