@@ -35,7 +35,8 @@ getMediaDataR :: Text -> Text -> Handler RepJson
 getMediaDataR what which = do
     aent <- requireAuth
     case what of
-        "playlist" -> playlistJson which
+        "playlist" -> do pl <- runDB $ getBy404 $ UniquePlaylist which
+                         jsonToRepJson $ playlistToJson $ entityVal pl
         _          -> invalidArgs ["Invalid reply type: " `T.append` what]
 
 -- | Either directory listing or file view. Whole page with widgets or if with
@@ -59,30 +60,6 @@ postMediaEntryR :: [FilePath] -> Handler RepHtml
 postMediaEntryR fps = do
     redirect $ MediaEntryR fps
 
-playlistJson :: Text -> Handler RepJson
-playlistJson which = do
-    (pl, user) <- runDB $ do
-        pl <- getBy404 $ UniquePlaylist which
-        user <- get (playlistOwner (entityVal pl))
-        return (pl, user)
-    let val    = entityVal pl
-        owner  = case user of
-                        Nothing -> ""
-                        Just a -> userUsername a
-        tosend = object [ ("owner", String owner)
-                        , ("title", String $ playlistTitle val)
-                        , ("elems", array $ playlistElems val)
-                        ]
-        in jsonToRepJson tosend
-
-playlistsWidget :: Widget
-playlistsWidget = do
-    pls <- lift $ runDB $ do
-        pls <- selectList ([] :: [Filter Playlist]) []
-        return pls
-    toWidget [hamlet|playlist listing: not yet implemented|]
-
-
 browserWidget :: [FilePath] -> Widget
 browserWidget fps = do
     nav <- return $ zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
@@ -105,9 +82,11 @@ browserWidget fps = do
             else return []
     $(widgetFile "media-listing")
 
-playlistWidget :: Entity User -> Widget
-playlistWidget uent = do
-    plId <- lift newIdent
+-- | a widget for a single playlist/player
+playerWidget :: Entity User -> Widget
+playerWidget uent = do
+    idPlaylist <- lift newIdent
+    idPlayer <- lift newIdent
     maybePl <- case userCurrentplaylist $ entityVal uent of
         Just plid -> lift . runDB $ get plid
         Nothing   -> return Nothing
@@ -115,12 +94,24 @@ playlistWidget uent = do
         Just p  -> return p
         Nothing -> liftIO getCurrentTime >>= \t -> return
             $ Playlist "" (entityKey uent) [] t t
-    $(widgetFile "media-playlist")
+    let elems = playlistElems pl
+        title = playlistTitle pl
+        in $(widgetFile "media-playlist")
 
-playerWidget :: Widget
-playerWidget = do
-    [whamlet|
-    |]
+-- | encode playlist's title, owner and elements in a json object
+playlistToJson :: Playlist -> Value
+playlistToJson pl = object [ ("title", title)
+                           , ("elems", elems)
+                           ] where title = String $ playlistTitle pl
+                                   elems = array $ playlistElems pl
+
+-- | Lists every playlist and show information about them
+playlistsWidget :: Widget
+playlistsWidget = do
+    pls <- lift $ runDB $ do
+        pls <- selectList ([] :: [Filter Playlist]) []
+        return pls
+    toWidget [hamlet|playlist listing: not yet implemented|]
 
 printSize :: FileOffset -> Text
 printSize x = T.pack $ toprint x where

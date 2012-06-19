@@ -1,5 +1,2 @@
-<div.page-element>
-    <h2>Playlist: #
-        <span>
-    <div##{plId}>
-        Loading playlist...
+<div##{idPlayer}>
+<div##{idPlaylist}.page-element>Loading playlist...

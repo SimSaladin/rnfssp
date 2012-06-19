@@ -1,8 +1,9 @@
 function load_playlist() {
-    document.getElementById("#{plId}").innerHTML = "now loaded";
+    document.getElementById("#{idPlaylist}").innerHTML =
+    "<h2>Playlist: #{title}</h2><span>n items</span>";
 }
-function upload_playlist() {
+function save_playlist() {
     
 }
 
-$("##{plId}").ready(load_playlist)
+$("##{idPlaylist}").ready(load_playlist)
