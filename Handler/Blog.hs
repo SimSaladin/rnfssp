@@ -9,7 +9,7 @@ module Handler.Blog
 
 import Import
 import qualified Data.Char as C
-import Data.Maybe (isNothing)
+import Data.Maybe
 import qualified Data.Text as T
 import Data.Time (getCurrentTime, formatTime)
 import System.Locale (defaultTimeLocale)
@@ -113,8 +113,8 @@ newpostForm :: Html -> MForm App App (FormResult Blogpost, Widget)
 newpostForm extra = do
     time <- liftIO getCurrentTime
     (titleRes, titleView) <- mreq textField "Title" Nothing
-    (urlpartRes, urlpartView) <- mreq urlpartField "with url" Nothing
-    (contentRes, contentView) <- mreq nicHtmlField "Content" Nothing
+    (urlpartRes, urlpartView) <- mreq urlpartField "Title (in URL)" Nothing
+    (contentRes, contentView) <- mreq nicHtmlField "Content (HTML)" Nothing
     let blogpostRes = Blogpost <$> pure time
                                <*> pure "bps"
                                <*> titleRes
@@ -126,9 +126,11 @@ newpostForm extra = do
     urlpartField = checkM validUrlpart textField
     validUrlpart u = do
         dbentry <- runDB $ selectFirst [BlogpostPoster ==. toCheck] []
-        if isLegal && isNothing dbentry
-            then return $ Right toCheck
-            else return $ Left ("Url part is not valid"::Text)
+        let ret
+                | isJust dbentry = Left ("Post with url `` already exists"::Text)
+                | not isLegal = Left ("URL part contains illegal characters"::Text)
+                | otherwise = Right toCheck
+            in return ret
       where
         toCheck = T.toLower u
         isLegal = isNothing $ T.find (\x -> not $ (

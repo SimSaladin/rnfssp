@@ -1,15 +1,10 @@
-<div.page-element>
-  <h1>Media
-  <h3>Uutta
-  <small>ei mitään vielä
-
-<div.page-element>
-  <h3>Selaa
-  $with p <- ["anime"]
-    <a href=@{MediaEntryR p}>Anime
-  <br>
-  $with p <- ["music"]
-    <a href=@{MediaEntryR p}>Music
-
+<h1>Media #
+  <small>_{MsgMediaDescription}
 $maybe ent <- mauth
   ^{playerWidget ent}
+  ^{mediaBrowser}
+$nothing
+  <div.page-element>
+    <i>
+      <a href="AuthR LoginR">Login
+        to see further

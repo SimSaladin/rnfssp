@@ -3,4 +3,4 @@
   <h6>_{MsgRegisterNote}
   <form method=post enctype=#{encType}>
     ^{formWidget}
-    <input type="submit" value="_{MsgGo}">
+    <input.btn.btn-primary type="submit" value="_{MsgGo}">

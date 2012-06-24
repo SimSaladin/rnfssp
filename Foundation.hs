@@ -113,10 +113,11 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    isAuthorized AdminR _ = isAdmin
+    isAuthorized AdminR _           = isAdmin
     isAuthorized BlogOverviewR True = isAdmin
-    isAuthorized (MediaEntryR _) _ = isLoggedIn
-    isAuthorized _ _ = return Authorized
+    isAuthorized (MediaR []) False  = return Authorized
+    isAuthorized (MediaR _) _       = isLoggedIn
+    isAuthorized _ _                = return Authorized
 
     messageLogger y loc level msg =
       formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
@@ -173,6 +174,9 @@ instance YesodAuth App where
     authPlugins _ = [authHashDB (Just . UniqueUser)]
 
     authHttpManager = httpManager
+
+    loginHandler = defaultLayout $ do
+        $(widgetFile "login")
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.

@@ -1,0 +1,14 @@
+<div.page-element.center-box.small-box>
+  <form.form-horizontal method="post" action="/auth/page/hashdb/login">
+    <fieldset>
+      <legend>Login
+      <div.control-group>
+        <label.control-label for="username">Username
+        <div.controls>
+          <input name="username" type="text">
+      <div.control-group>
+        <label.control-label for="password">Password
+        <div.controls>
+          <input name="password" type="password">
+      <div.form-actions>
+        <input.btn.btn-primary type="submit" value="Login">

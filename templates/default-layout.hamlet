@@ -15,10 +15,12 @@
                     $forall Entity _ val <- boards
                       <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
               <li>
-                <a href=@{MediaR}>Media
-
-            <form .navbar-search .pull-left>
-              <input#pagesearch.span3 type="text" placeholder="Hae">
+                $with a <- []
+                  <a href=@{MediaR a}>Media
+              <li.divider-vertical>
+              <li>
+                <form.navbar-search.pull-left>
+                  <input.search-query type="search" placeholder="Hae">
 
             <ul .nav.pull-right>
               $maybe authent <- ma
@@ -43,16 +45,17 @@
     <div.span2.page-element>
       <h4>TODO:
       <ul>
-        <li>fix bootstrap submit-part color (see reply form)
-        <li>install niceditor with custom image upload
+        <li>local niceditor; image upload
         <li>move these todo's somewhere
-        <li>implement search
-        <li>implement playlist
-        <li>implement playing
-        <li>implement user profiles
-        <li>add MPD support
-        <li>add blog editing
-        <li>prettify add-new-blogpost-form
-        <li>materialize blog deletion
-        <li>add rss feed
-        <li>function to easily ProfileR user
+        <li>search
+        <li>playlist manipulation
+        <li>web play
+        <li>localplay
+        <li>MPD support
+        <li>user profiles
+        <li>easy ProfileR user
+        <li>blog post editing
+        <li>blog post deletion
+        <li>news feed
+        <li>clean up default-layout.lucius
+        <li>themes and changer

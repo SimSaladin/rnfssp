@@ -1,6 +1,0 @@
-<div.page-element>
-  <h1>Media #
-    <small>_{MsgMediaDescription}
-<hr>
-^{playerWidget aent}
-<div##{browserId}>

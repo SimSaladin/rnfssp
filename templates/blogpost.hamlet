@@ -7,7 +7,7 @@
     <p>^{toWidget cnt}
   $else
     <p>^{toWidget cnt}
-  <cite>
+  <cite.info-block>
     Posted by #{blogpostPoster post} under ... | #
     <a href=@{BlogViewR $ blogpostUrltitle post}>Link #
     | Comments

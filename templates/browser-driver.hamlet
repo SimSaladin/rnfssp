@@ -1,0 +1,6 @@
+<h2>browse: #
+  $with p <- ["anime"]
+    <a.btn href=@{MediaR p}>Anime
+  $with p <- ["music"]
+    <a.btn href=@{MediaR p}>Music
+<div##{browserId}>

@@ -1,8 +1,10 @@
 module Handler.Media
     ( getMediaR
+    , postMediaR
     , getMediaDataR
-    , getMediaEntryR
-    , postMediaEntryR
+    , postMediaDataR
+--    , getMediaEntryR
+--    , postMediaEntryR
     , pathAnime
     ) where
 
@@ -23,12 +25,30 @@ pathAnime = "/home/sim/anime"
 pathMusic :: FilePath
 pathMusic = "/home/sim/music"
 
-getMediaR :: Handler RepHtml
-getMediaR = do
+-- | The root and heart of media section. Loads browser, playlist and other
+--   possibly widgets. 
+getMediaR :: [FilePath] -> Handler RepHtml
+getMediaR fps = do
     mauth <- maybeAuth
-    defaultLayout $ do
-        setTitle "Media"
-        $(widgetFile "media-home")
+    bare <- lookupGetParam "bare"
+    case bare of
+        Just _ -> bareLs fps
+        Nothing -> defaultLayout $ do
+            setTitle "Media"
+            $(widgetFile "media-home")
+          where mediaBrowser = browserWidget fps
+
+-- | Used to modify media -- TODO TODO TODO --
+postMediaR :: [FilePath] -> Handler RepHtml
+postMediaR fps = do
+    setMessage "This is not yet supported"
+    redirect $ MediaR fps
+
+bareLs :: [FilePath] -> Handler RepHtml
+bareLs fps = do
+    rauth <- requireAuth
+    pc <- widgetToPageContent $ directoryContentsWidget fps
+    hamletToRepHtml [hamlet|^{pageBody pc}|]
 
 -- | Downloading files/data (user&js)
 getMediaDataR :: Text -> Text -> Handler RepJson
@@ -39,34 +59,27 @@ getMediaDataR what which = do
                          jsonToRepJson $ playlistToJson $ entityVal pl
         _          -> invalidArgs ["Invalid reply type: " `T.append` what]
 
--- | Either directory listing or file view. Whole page with widgets or if with
--- | get parameter `bare' set, only the listing/file view.
-getMediaEntryR :: [FilePath] -> Handler RepHtml
-getMediaEntryR fps = do
-    aent <- requireAuth
-    bare <- lookupGetParam "bare"
-    if isJust bare
-        then do
-          pc <- widgetToPageContent $ browserWidget fps
-          hamletToRepHtml [hamlet|^{pageBody pc}|]
-        else do
-          browserId <- newIdent
-          defaultLayout $ do
-              setTitle "anime"
-              $(widgetFile "media")
-
--- | Used to make changes to session (playlist etc.)
-postMediaEntryR :: [FilePath] -> Handler RepHtml
-postMediaEntryR fps = do
-    redirect $ MediaEntryR fps
+postMediaDataR :: Text -> Text -> Handler RepJson
+postMediaDataR _ _ = do
+    r <- parseJsonBody_
+    liftIO $ putStrLn "teh value:"
+    liftIO $ putStrLn $ show (r :: Value)
+    jsonToRepJson r
 
 browserWidget :: [FilePath] -> Widget
 browserWidget fps = do
-    nav <- return $ zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
-    fp <- return $ case fps of
-        ("anime":xs) -> combine pathAnime $ F.joinPath xs
-        ("music":xs) -> combine pathMusic $ F.joinPath xs
-        _ -> ""
+    browserId <- lift newIdent
+    $(widgetFile "browser-driver")
+
+-- | requires the browser script already on the page
+directoryContentsWidget :: [FilePath] -> Widget
+directoryContentsWidget fps = do
+    let nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
+        fp = combine root $ F.joinPath xs where
+            (root, xs) = case fps of
+                ("anime":xs) -> (pathAnime,xs)
+                ("music":xs) -> (pathMusic,xs)
+                _ -> ("",[])
     is_dir <- liftIO $ doesDirectoryExist fp
     is_file <- liftIO $ doesFileExist fp
     listing <- if is_dir
@@ -80,7 +93,7 @@ browserWidget fps = do
         else if is_file
             then return []
             else return []
-    $(widgetFile "media-listing")
+    $(widgetFile "browser-bare")
 
 -- | a widget for a single playlist/player
 playerWidget :: Entity User -> Widget
@@ -98,13 +111,6 @@ playerWidget uent = do
         title = playlistTitle pl
         in $(widgetFile "media-playlist")
 
--- | encode playlist's title, owner and elements in a json object
-playlistToJson :: Playlist -> Value
-playlistToJson pl = object [ ("title", title)
-                           , ("elems", elems)
-                           ] where title = String $ playlistTitle pl
-                                   elems = array $ playlistElems pl
-
 -- | Lists every playlist and show information about them
 playlistsWidget :: Widget
 playlistsWidget = do
@@ -112,6 +118,13 @@ playlistsWidget = do
         pls <- selectList ([] :: [Filter Playlist]) []
         return pls
     toWidget [hamlet|playlist listing: not yet implemented|]
+
+-- | encode playlist's title, owner and elements in a json object
+playlistToJson :: Playlist -> Value
+playlistToJson pl = object [ ("title", title)
+                           , ("elems", elems)
+                           ] where title = String $ playlistTitle pl
+                                   elems = array $ playlistElems pl
 
 printSize :: FileOffset -> Text
 printSize x = T.pack $ toprint x where

@@ -1,9 +1,13 @@
 function load_playlist() {
     document.getElementById("#{idPlaylist}").innerHTML =
-    "<h2>Playlist: #{title}</h2><span>n items</span>";
+    "<span>n items</span>";
+    save_playlist();
 }
 function save_playlist() {
-    
+    $.post( "@{MediaDataR "a" "a"}"
+             , '{"name":[0,1,2]}'
+             , function success(d, s, x){alert(d);}
+             );
 }
 
 $("##{idPlaylist}").ready(load_playlist)

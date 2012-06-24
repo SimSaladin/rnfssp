@@ -1,8 +1,21 @@
 #{extra}
-<label for=#{fvId titleView}>^{fvLabel titleView}
-^{fvInput titleView}                      #
-<label for=#{fvId urlpartView}>^{fvLabel urlpartView}
-^{fvInput urlpartView}
-<br>
-^{fvInput contentView}
-    <input type=submit value="add new post">
+<div.control-group>
+  <label.control-label for=#{fvId titleView}>
+    ^{fvLabel titleView}
+  <div.controls>
+    ^{fvInput titleView}
+
+<div.control-group>
+  <label.control-label for=#{fvId urlpartView}>
+    ^{fvLabel urlpartView}
+  <div.controls>
+    ^{fvInput urlpartView}
+
+<div.control-group>
+  <label.control-label for=#{fvId contentView}>
+    ^{fvLabel contentView}
+  <div.controls>
+    ^{fvInput contentView}
+
+<div.form-actions>
+  <input.btn.primary type=submit value="Post it">
