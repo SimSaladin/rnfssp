@@ -6,5 +6,5 @@ $maybe ent <- mauth
 $nothing
   <div.page-element>
     <i>
-      <a href="AuthR LoginR">Login
-        to see further
+      <a href="@{AuthR LoginR}" style="padding-right:5px">Login
+      to peek further

@@ -2,34 +2,59 @@ $if null nav
   <i>Select a category
 $else
   <ul.breadcrumb>
-    $forall (name, url) <- nav
+    $forall (name, url) <- init nav
       <li>
-        <a href=@{MediaR url}>#{name}
+        <a.browser-link href=@{MediaR url}>#{name}
         <span.divider>/
-$if is_dir
-  <div.page-element.functional>
-    <table.browser>
-      <thead>
-        <tr>
-          <th scope="col">
-          <th scope="col">_{MsgMediaFilename}
-          <th scope="col">_{MsgMediaSize}
-          <th scope="col">_{MsgMediaModified}
-      <tbody>
-        $forall (file, url, size, modified) <- listing
+    $with (name, url) <- last nav
+      <li>
+        <i>#{name}
+  $if is_dir
+    <div.page-element.functional>
+      <table.browser>
+        <thead>
           <tr>
-            <td>
-              <a href="">
-                <i.icon-plus.icon-white>
-              <a href="">
-                <i.icon-download-alt.icon-white>
-              <a href="">
-                <i.icon-th-list.icon-white>
-            <td>
-              <a href=@{MediaR url}>#{file}
-            <td>
-              #{size}
-            <td>
-              #{show modified}
-$else
-  <div>
+            <th scope="col">
+            <th scope="col">_{MsgMediaFilename}
+            <th scope="col">_{MsgMediaSize}
+            <th scope="col">_{MsgMediaModified}
+        <tbody>
+          $forall (file, url, size, modified) <- listing
+            <tr>
+              <td>
+                <a href=@{MediaDataR "to-playlist" "list" url} onclick="alert('playlist is not yet supported'); return false">
+                  <i.icon-plus.icon-white>
+                <a href=@{MediaDataR "download" "original-force" url} onclick="; return false">
+                  <i.icon-download-alt.icon-white>
+              <td>
+                <a.browser-link href=@{MediaR url}>
+                  <tt>#{file}
+              <td>
+                #{size}
+              <td>
+                #{show modified}
+  $elseif is_file
+    $with (name, url) <- last nav
+      <div.page-element.row-fluid>
+        <div.span7>
+          <h2>Details
+          <h5>#{name}
+          <div>
+            <i>Info?
+
+          <h2>Comments
+          <div>
+            <i>comments?
+
+        <div.span5>
+          <h3>Play in browser
+            <small>if supported
+          <video src="@{MediaDataR "download" "original" url}">
+          <h3>Download
+          <a.btn.btn-primary href="@{MediaDataR "download" "original" url}">
+            Direct link
+          <a.btn href="@{MediaDataR "download" "original-force" url}">
+            Download
+
+  $else
+    <i>Invalid request

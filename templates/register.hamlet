@@ -1,6 +1,13 @@
 <div.page-element.center-box.small-box>
-  <h1>_{MsgRegister}
-  <h6>_{MsgRegisterNote}
-  <form method=post enctype=#{encType}>
-    ^{formWidget}
-    <input.btn.btn-primary type="submit" value="_{MsgGo}">
+  <form.form-horizontal method=post enctype=#{encType}>
+    <fieldset>
+      <legend>
+        _{MsgRegister}
+        <small>
+          <span.label.label-important>_{MsgLabelImportant}
+          _{MsgRegisterNote}
+      $forall fail <- fails
+        <div.alert>#{fail}
+      ^{widget}
+      <div.form-actions>
+        <input.btn.btn-primary.btn-large type="submit" value="_{MsgGo}">

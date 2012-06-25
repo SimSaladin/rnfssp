@@ -22,16 +22,16 @@ function browser_load_page(browserDom, href, browse_history) {
 
     browser_from = to;
 
-    $("##{browserId}").hide("drop", animOptOne, 200, function() {
-      $("##{browserId}").show("drop", animOptSec, 200);
+    browserDom.fadeOut(300, function() {
       browserDom.html(data);
       browser_register_links(browserDom);
+      browserDom.fadeIn(300);
     });
   });
 }
 
 function browser_register_links(browserDom) {
-  browserDom.find("a").click(function() {
+  browserDom.find("a.browser-link").click(function() {
     browser_load_page(browserDom, $(this).attr("href"), true);
     return false;
   });
@@ -47,8 +47,14 @@ $(document).ready(function() {
 });
 
 window.onpopstate = function(e) {
-  if (browser_ready)
+  /*alert("onpopstate");
+  if (browser_ready) */
     browser_load_page($("##{browserId}"), location.href, false);
-  else
-    browser_ready = true;
+  /* else
+    browser_ready = true; */
 }
+
+$(document).ready(function(){
+  $("##{browserId}").hide();
+  $("##{browserId}").fadeIn(700);
+});

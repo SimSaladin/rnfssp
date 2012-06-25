@@ -2,84 +2,64 @@
 module Handler.Home where
 
 import Import
-import qualified Data.Text as T (length)
-import System.IO.Unsafe (unsafePerformIO)
+import qualified Data.Text as T
+import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)
-
---getHomeR :: Handler RepHtml
---getHomeR = do
---    (formWidget, formEnctype) <- generateFormPost sampleForm
---    let submission = Nothing :: Maybe (FileInfo, Text)
---        handlerName = "getHomeR" :: Text
---    defaultLayout $ do
---        aDomId <- lift newIdent
---        setTitle "Welcome To Yesod!"
---        $(widgetFile "homepage")
---
---postHomeR :: Handler RepHtml
---postHomeR = do
---    ((result, formWidget), formEnctype) <- runFormPost sampleForm
---    let handlerName = "postHomeR" :: Text
---        submission = case result of
---            FormSuccess res -> Just res
---            _ -> Nothing
---    defaultLayout $ do
---        aDomId <- lift newIdent
---        setTitle "Welcome To Yesod!"
---        $(widgetFile "homepage")
-
-sampleForm :: Form (FileInfo, Text)
-sampleForm = renderDivs $ (,)
-    <$> fileAFormReq "Choose a file"
-    <*> areq textField "What's on the file?" Nothing
 
 getRegisterR :: Handler RepHtml
 getRegisterR = do
-    (formWidget, encType) <- generateFormPost registerForm
-    defaultLayout $ do
-        setTitle "Register"
-        $(widgetFile "register")
+    (widget, encType) <- generateFormPost registerForm
+    let fails = [] :: [Text]
+        in defaultLayout $ do setTitle "Register"
+                              $(widgetFile "register")
 
 postRegisterR :: Handler RepHtml
 postRegisterR = do
-    ((creds, formWidget), encType) <- runFormPost registerForm
-    case creds of
-        FormSuccess (username, password) -> do
-            uid <- runDB $ getBy $ UniqueUser username
-            case uid of
-                Just _ -> do
-                    setMessage "Username .. on jo käytössä"
-                    defaultLayout $ do
-                        $(widgetFile "register")
-                Nothing -> do
-                    newUser <- setPassword password
-                            (User username "" "" False False Nothing)
-                    uid <- runDB $ insert newUser
-                    setMessage "Rekisteröinti onnistui"
-                    redirect $ BlogOverviewR -- todo: profile page for uid
-        _ -> do
-            setMessage "Annetetut tiedot eivät käy"
-            defaultLayout $ do
-                $(widgetFile "register")
+    ((res, widget), encType) <- runFormPost registerForm
+    let reperr fails = defaultLayout $ do setTitle "Register ERROR"
+                                          $(widgetFile "register")
+    case res of
+        FormSuccess user -> let name = userUsername user in do
+            muid <- runDB $ getBy $ UniqueUser name
+            if isJust muid
+               then reperr [T.intercalate " " ["Username", name, "on jo käytössä"]]
+               else do newUser <- setPassword (userPassword user) user
+                       uid <- runDB $ insert newUser
+                       setMessage "Rekisteröinti onnistui"
+                       redirect $ AuthR LoginR
+        FormFailure fails -> reperr fails
+        FormMissing -> redirect $ RegisterR
 
-registerForm :: Form (Text, Text)
-registerForm = renderDivs $ (,)
-    <$> areq textField "Username" Nothing
-    <*> areq passwordConfirmField "Password" Nothing
-
-passwordConfirmField :: Field sub master Text
-passwordConfirmField = Field
-    { fieldParse = \rawVals ->
-        case rawVals of
-            [a, b]
-                | T.length a < 4 -> return $ Left "Password must be at least 4 characters"
-                | a == b -> return $ Right $ Just a
-                | otherwise -> return $ Left "Passwords don't match"
-            _ -> return $ Left "You must enter two values"
-    , fieldView = \idAttr nameAttr _ eResult isReq -> [whamlet|
-<input id=#{idAttr} name=#{nameAttr} type=password :isReq:required>
-<div .required>
-    <label>Confirm:
-    <input id=#{idAttr}-confirm name=#{nameAttr} type=password :isReq:required>
-|]
+registerForm :: Html -> MForm App App (FormResult User, Widget)
+registerForm extra = do
+    (resName, viewName) <- mreq textField "Username" Nothing
+    (resComm, viewComm) <- mreq textareaField "Comment" Nothing
+    (resPass, viewPass) <- mreq passwordAndConfirmField "Password" Nothing
+    let resUser = User <$> resName
+                       <*> pure ""
+                       <*> pure ""
+                       <*> pure False
+                       <*> pure False
+                       <*> pure Nothing
+                       <*> resComm
+        in return (resUser, $(widgetFile "form-register"))
+    
+passwordAndConfirmField :: Field sub master Text
+passwordAndConfirmField = Field
+    { fieldParse = \raw -> case raw of
+        [a, b]
+            | T.length a < 4 -> return $ Left "Password must be at least 4 characters"
+            | a == b -> return $ Right $ Just a
+            | otherwise -> return $ Left "Passwords don't match"
+        _ -> return $ Left "You must enter two values"
+    , fieldView = \aId aName _ eRes isReq -> [whamlet|
+<div.control-group>
+  <div.control-label for=#{aId}> Password
+  <div.controls>
+    <input id=#{aId} name=#{aName} type=password :isReq:required>
+<div.control-group>
+  <div.control-label for=#{aId}-confirm> Confirm password
+  <div.controls>
+    <input id=#{aId}-confirm name=#{aName}-confirm type=password :isReq:required>
+    |]
     }

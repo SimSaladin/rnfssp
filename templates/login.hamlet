@@ -2,6 +2,10 @@
   <form.form-horizontal method="post" action="/auth/page/hashdb/login">
     <fieldset>
       <legend>Login
+        <small>
+          Need an account?
+          <a.btn.btn-mini.btn-inverse href="@{RegisterR}">
+            Register!
       <div.control-group>
         <label.control-label for="username">Username
         <div.controls>
@@ -11,4 +15,4 @@
         <div.controls>
           <input name="password" type="password">
       <div.form-actions>
-        <input.btn.btn-primary type="submit" value="Login">
+        <input.btn.btn-primary.btn-large type="submit" value="Login">

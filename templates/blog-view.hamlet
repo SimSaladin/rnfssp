@@ -17,4 +17,4 @@
       $of _
   ^{replyw}
   <div.form-actions>
-    <input.btn.primary type=submit value=Reply>
+    <input.btn.btn-primary type=submit value=Reply>

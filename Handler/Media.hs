@@ -9,9 +9,10 @@ module Handler.Media
     ) where
 
 import Import
-import Data.List ((\\), zip4)
+import Data.List ((\\), zip4, init, last)
 import Data.Maybe (isJust, fromMaybe)
 import Data.Time (getCurrentTime)
+import Data.Time.Clock.POSIX (POSIXTime, posixSecondsToUTCTime)
 import qualified Data.Text as T
 import qualified System.FilePath as F (joinPath)
 import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
@@ -47,20 +48,21 @@ postMediaR fps = do
 bareLs :: [FilePath] -> Handler RepHtml
 bareLs fps = do
     rauth <- requireAuth
-    pc <- widgetToPageContent $ directoryContentsWidget fps
+    pc <- widgetToPageContent $ browserViewWidget fps
     hamletToRepHtml [hamlet|^{pageBody pc}|]
 
 -- | Downloading files/data (user&js)
-getMediaDataR :: Text -> Text -> Handler RepJson
-getMediaDataR what which = do
+getMediaDataR :: Text -> Text -> [String] -> Handler RepJson
+getMediaDataR what which file = do
     aent <- requireAuth
     case what of
         "playlist" -> do pl <- runDB $ getBy404 $ UniquePlaylist which
                          jsonToRepJson $ playlistToJson $ entityVal pl
+        "download" -> sendFile "" $ toRealPath file
         _          -> invalidArgs ["Invalid reply type: " `T.append` what]
 
-postMediaDataR :: Text -> Text -> Handler RepJson
-postMediaDataR _ _ = do
+postMediaDataR :: Text -> Text -> [String] -> Handler RepJson
+postMediaDataR _ _ _ = do
     r <- parseJsonBody_
     liftIO $ putStrLn "teh value:"
     liftIO $ putStrLn $ show (r :: Value)
@@ -72,27 +74,21 @@ browserWidget fps = do
     $(widgetFile "browser-driver")
 
 -- | requires the browser script already on the page
-directoryContentsWidget :: [FilePath] -> Widget
-directoryContentsWidget fps = do
+browserViewWidget :: [FilePath] -> Widget
+browserViewWidget fps = do
     let nav = zip fps $ foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps
-        fp = combine root $ F.joinPath xs where
-            (root, xs) = case fps of
-                ("anime":xs) -> (pathAnime,xs)
-                ("music":xs) -> (pathMusic,xs)
-                _ -> ("",[])
+        fp  = toRealPath fps
     is_dir <- liftIO $ doesDirectoryExist fp
     is_file <- liftIO $ doesFileExist fp
     listing <- if is_dir
         then do
           files <- liftIO $ getDirectoryContents fp >>= \x -> return (x \\ [".",".."])
-          urls <- return $ map (\x -> fps ++ [x]) files
-          (sizes, dates) <- do
-              stats <- liftIO $ mapM getFileStatus $ map (combine fp) files
-              return (map (printSize . fileSize) stats, map modificationTime stats)
+          stats <- liftIO $ mapM getFileStatus $ map (combine fp) files
+          let urls  = map (\x -> fps ++ [x]) files
+              sizes = map (printSize . fileSize) stats
+              dates = map (\x -> posixSecondsToUTCTime (realToFrac $ modificationTime x)) stats
           return $ zip4 files urls sizes dates
-        else if is_file
-            then return []
-            else return []
+        else return []
     $(widgetFile "browser-bare")
 
 -- | a widget for a single playlist/player
@@ -109,6 +105,7 @@ playerWidget uent = do
             $ Playlist "" (entityKey uent) [] t t
     let elems = playlistElems pl
         title = playlistTitle pl
+        rout  = MediaDataR "a" "a" [""]
         in $(widgetFile "media-playlist")
 
 -- | Lists every playlist and show information about them
@@ -125,6 +122,13 @@ playlistToJson pl = object [ ("title", title)
                            , ("elems", elems)
                            ] where title = String $ playlistTitle pl
                                    elems = array $ playlistElems pl
+
+toRealPath :: [FilePath] -> FilePath
+toRealPath fps = combine root $ F.joinPath xs
+    where (root, xs) = case fps of
+            ("anime":xs) -> (pathAnime,xs)
+            ("music":xs) -> (pathMusic,xs)
+            _ -> ("",[])
 
 printSize :: FileOffset -> Text
 printSize x = T.pack $ toprint x where

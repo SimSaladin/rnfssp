@@ -10,4 +10,6 @@
   <cite.info-block>
     Posted by #{blogpostPoster post} under ... | #
     <a href=@{BlogViewR $ blogpostUrltitle post}>Link #
-    | Comments
+    | #
+    <a href=@{BlogViewR $ blogpostUrltitle post}>
+      #{show commentCount} Comments

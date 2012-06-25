@@ -113,11 +113,12 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    isAuthorized AdminR _           = isAdmin
-    isAuthorized BlogOverviewR True = isAdmin
-    isAuthorized (MediaR []) False  = return Authorized
-    isAuthorized (MediaR _) _       = isLoggedIn
-    isAuthorized _ _                = return Authorized
+    isAuthorized AdminR _             = isAdmin
+    isAuthorized BlogOverviewR True   = isAdmin
+    isAuthorized (MediaR []) False    = return Authorized
+    isAuthorized (MediaR _) _         = isLoggedIn
+    isAuthorized (MediaDataR _ _ _) _ = isLoggedIn
+    isAuthorized _ _                  = return Authorized
 
     messageLogger y loc level msg =
       formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
@@ -148,7 +149,7 @@ isLoggedIn = do
     return $ case mu of
         Nothing -> AuthenticationRequired
         Just (Entity uid uval) 
-            | userValid uval-> Authorized
+            | userValid uval -> Authorized
             | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
 
 -- How to run database actions.

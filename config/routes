@@ -18,4 +18,4 @@
 
 /media/*Strings   MediaR GET POST
 
-/data/#Text/#Text MediaDataR  GET POST
+/data/#Text/#Text/*Strings MediaDataR  GET POST

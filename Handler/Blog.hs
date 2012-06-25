@@ -83,14 +83,22 @@ postAndReplies utitle = do
                     [BlogCommentPost ==. entityKey p]
                     [Asc BlogCommentTime]
         return (p, cmnts)
-    let pw = blogpostWidget (entityVal p) False
+    let pw = blogpostWidget (entityVal p) (-1) False
         cw = map (\x -> blogcommentWidget x cs) cs
     ((rr, rw), re) <- runFormPost $ replyForm (entityKey p) Nothing
     return ((rr, rw), re, pw, cw)
 
 previewWidgets :: Handler [Widget]
-previewWidgets = runDB $ selectList ([] :: [Filter Blogpost]) []
-    >>= \xs -> return $ map (\x -> blogpostWidget (entityVal x) True) xs
+previewWidgets = do
+    (posts, ccount) <- runDB $ do
+        posts <- selectList ([] :: [Filter Blogpost]) [Asc BlogpostTime]
+        comments <- mapM count (map getFilter posts)
+        return (posts, comments)
+    let widgets = zipWith toWidget posts ccount
+        in return widgets
+  where
+    toWidget p cc = blogpostWidget (entityVal p) cc True
+    getFilter x = [BlogCommentPost ==. entityKey x]
 
 blogcommentWidget :: Entity BlogComment -> [Entity BlogComment] -> Widget
 blogcommentWidget c cs = do
@@ -99,9 +107,10 @@ blogcommentWidget c cs = do
     children = filter (\x -> Just (entityKey c) == (blogCommentParent $ entityVal x)) cs
     parent = entityVal c
 
-blogpostWidget :: Blogpost -> Bool -> Widget
-blogpostWidget post preview = do
+blogpostWidget :: Blogpost -> Int -> Bool -> Widget
+blogpostWidget post commentCount preview = do
     -- TODO; get the first paragraph or so from the posts in preview mode
+    -- COMMENT: really needed?
     $(widgetFile "blogpost")
   where
     fmt = \x -> formatTime defaultTimeLocale x (blogpostTime post)

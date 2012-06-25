@@ -5,6 +5,7 @@ User
    admin Bool default=false Update
    valid Bool default=false Update
    currentplaylist PlaylistId Maybe
+   comment Textarea
    UniqueUser username
 Blogpost
    time UTCTime
