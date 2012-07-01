@@ -1,7 +1,7 @@
 <div.page-element.center-box.small-box>
   <form.form-horizontal method="post" action="/auth/page/hashdb/login">
     <fieldset>
-      <legend>Login
+      <legend.clearfix>Login
         <small>
           Need an account?
           <a.btn.btn-mini.btn-inverse href="@{RegisterR}">
