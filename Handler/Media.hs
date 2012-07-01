@@ -22,9 +22,9 @@ import System.Posix (FileOffset)
 import Text.Printf (printf)
 
 pathAnime :: FilePath
-pathAnime = "/home/sim/anime"
+pathAnime = "/home/media/anime"
 pathMusic :: FilePath
-pathMusic = "/home/sim/music"
+pathMusic = "/home/media/music"
 
 -- | The root and heart of media section. Loads browser, playlist and other
 --   possibly widgets. 
