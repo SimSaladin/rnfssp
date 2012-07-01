@@ -1,5 +1,5 @@
 <div.page-element.center-box.small-box>
-  <form.form-horizontal method="post" action="/auth/page/hashdb/login">
+  <form.form-horizontal method="post" action="@{AuthR forwardUrl}">
     <fieldset>
       <legend>Login
         <small>
