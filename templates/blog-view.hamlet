@@ -9,7 +9,7 @@
 <h3>Leave a comment
 <form.page-element.form-horizontal method=post action=@{BlogViewR utitle} enctype=#{encType}>
   <fieldset>
-    <legend>
+    <legend.clearfix>
     $case result
       $of FormFailure reasons
         $forall reason <- reasons

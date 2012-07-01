@@ -1,7 +1,7 @@
 <div.page-element.center-box.small-box>
   <form.form-horizontal method=post enctype=#{encType}>
     <fieldset>
-      <legend>
+      <legend.clearfix>
         _{MsgRegister}
         <small>
           <span.label.label-important>_{MsgLabelImportant}

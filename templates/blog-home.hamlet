@@ -11,6 +11,6 @@ $if canPost
             <div.alert.alert-errors>#{reason}
         $of _
       <fieldset>
-        <legend>Teh post info
+        <legend.clearfix>Teh post info
         ^{widget}
 
