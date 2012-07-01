@@ -36,7 +36,7 @@ registerForm extra = do
     (resComm, viewComm) <- mreq textareaField "Comment" Nothing
     (resPass, viewPass) <- mreq passwordAndConfirmField "Password" Nothing
     let resUser = User <$> resName
-                       <*> pure ""
+                       <*> resPass
                        <*> pure ""
                        <*> pure False
                        <*> pure False
