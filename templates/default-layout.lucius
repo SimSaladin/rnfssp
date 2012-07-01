@@ -93,11 +93,13 @@ table.browser {
 }
 
 /* texts */
+p {color:#{colorLightBgFg};}
 .page-element h1, .page-element h2, .page-element h3,
 .page-element h4, .page-element h5, .page-element h6 { color:#{colorFg}; }
 h1, h2, h3, h4, h5, h6, a { color:#{colorLightBgFg}; }
 i { color:#{colorLightBgFg}; }
 .page-element i {color:#{colorFg}}
+.page-element p {color:#{colorFg}}
 
 a:hover, a:active { color:#EEE; }
 a.btn { color:#000; margin-right:5px;}
