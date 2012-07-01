@@ -16,7 +16,7 @@ Staging:
   <<: *defaults
 
 Production:
-  host: "*4" # any IPv4 host
+  host: "*4"
   port: 3000
   approot: "https://ssdesk.paivola.fi"
   <<: *defaults
