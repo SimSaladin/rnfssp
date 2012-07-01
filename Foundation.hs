@@ -134,12 +134,14 @@ instance Yesod App where
 
 isAdmin :: GHandler s App AuthResult
 isAdmin = do
-    mu <- maybeAuthId
+    mu <- maybeAuth
     return $ case mu of
         Nothing -> AuthenticationRequired
-        Just admin 
-            | admin == (Key $ Database.Persist.Store.PersistInt64 2) -> Authorized
-            | otherwise -> Unauthorized "You must be an admin"
+        Just admin -> if userAdmin $ entityVal admin
+            then Authorized
+            else Unauthorized "You must be an admin!"
+--            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
+--            | otherwise -> Unauthorized "You must be an admin"
 
 isLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
         YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
