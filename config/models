@@ -58,3 +58,8 @@ MediaFileEntry
    info Text Maybe
    animeBind AnimeId Maybe
    animeEp Int Maybe
+
+LogDownload
+   user UserId
+   time UTCTime
+   file String

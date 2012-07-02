@@ -21,7 +21,7 @@ getBlogOverviewR = do
     previews <- previewWidgets
     ((result, widget), encType) <- runFormPost newpostForm
     defaultLayout $ do
-        titleRender ["blog"]
+        titleRender []
         $(widgetFile "blog-home")
 
 postBlogOverviewR :: Handler RepHtml
@@ -35,7 +35,7 @@ postBlogOverviewR = do
             canPost <- isAdmin
             previews <- previewWidgets
             defaultLayout $ do
-                titleRender ["blog"]
+                titleRender []
                 $(widgetFile "blog-home")
 
 getBlogViewR :: Text -> Handler RepHtml
@@ -72,7 +72,7 @@ isAdmin = maybeAuth >>= \ma -> return $ case ma of
     Just ent -> userAdmin $ entityVal ent
 
 titleRender :: [String] -> Widget
-titleRender texts = setTitle $ toHtml $ foldl (++) "blog | " texts
+titleRender texts = setTitle $ toHtml $ foldr (++) "blog" texts
 
 postAndReplies :: Text
                -> Handler ((FormResult BlogComment, Widget), Enctype, Widget, [Widget])

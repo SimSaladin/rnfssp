@@ -47,7 +47,7 @@ getBoardR bname = do
     let previews = zip ops replies
     (formWidget, encType) <- generateFormPost (postForm (entityKey board) Nothing)
     defaultLayout $ do
-        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
+        setTitle $ toHtml $ "/" `append` bname `append` "/ :: Lauta"
         $(widgetFile "board")
 
 postBoardR :: Text -> Handler RepHtml
@@ -79,7 +79,7 @@ getThreadR bname opKey = do
         return (board, op, replies)
     (postWidget, encType) <- generateFormPost (postForm (entityKey board) (Just opKey))
     defaultLayout $ do
-        setTitle $ toHtml $ "/" `append` bname `append` "/ | Lauta"
+        setTitle $ toHtml $ "/" `append` bname `append` "/ :: Lauta"
         $(widgetFile "board-thread")
 
 postThreadR :: Text -> BoardpostId -> Handler RepHtml

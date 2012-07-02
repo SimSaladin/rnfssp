@@ -7,7 +7,9 @@ module Foundation
     , Widget
     , Form
     , maybeAuth
+    , maybeAuthId
     , requireAuth
+    , requireAuthId
     , module Settings
     , module Model
     ) where

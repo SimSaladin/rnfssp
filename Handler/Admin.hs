@@ -8,16 +8,6 @@ import qualified Data.Text as T (append)
 import System.Directory (getDirectoryContents, doesDirectoryExist)
 import System.FilePath (combine)
 
--- | list (sub)dirs and files
-rDirContents :: FilePath -> IO [FilePath]
-rDirContents fp = do
-    is_dir <- doesDirectoryExist fp
-    dirc <- case is_dir of
-        True -> getDirectoryContents fp
-        False -> pure []
-    contents <- mapM (\x -> rDirContents $ combine fp x) $ drop 2 dirc
-    return $ concat contents ++ [fp]
-
 getAdminR :: Handler RepHtml
 getAdminR = do
     action <- lookupGetParam "action"
@@ -32,7 +22,7 @@ getAdminR = do
             userEnts <- runDB $ selectList ([] :: [Filter User]) []
             let users = map usert userEnts
             defaultLayout $ do
-                setTitle "admin"
+                setTitle "Admin"
                 $(widgetFile "admin")
     where
         usert ent = (userUsername val, userComment val, act) where
@@ -62,3 +52,13 @@ newboardForm :: Form Board
 newboardForm = renderDivs $ Board
     <$> areq textField "Name" Nothing
     <*> areq textField "Description" Nothing
+
+-- | list (sub)dirs and files
+rDirContents :: FilePath -> IO [FilePath]
+rDirContents fp = do
+    is_dir <- doesDirectoryExist fp
+    dirc <- case is_dir of
+        True -> getDirectoryContents fp
+        False -> pure []
+    contents <- mapM (\x -> rDirContents $ combine fp x) $ drop 2 dirc
+    return $ concat contents ++ [fp]

@@ -10,13 +10,13 @@ getRegisterR :: Handler RepHtml
 getRegisterR = do
     (widget, encType) <- generateFormPost registerForm
     let fails = [] :: [Text]
-        in defaultLayout $ do setTitle "Register"
+        in defaultLayout $ do setTitle "Registration"
                               $(widgetFile "register")
 
 postRegisterR :: Handler RepHtml
 postRegisterR = do
     ((res, widget), encType) <- runFormPost registerForm
-    let reperr fails = defaultLayout $ do setTitle "Register ERROR"
+    let reperr fails = defaultLayout $ do setTitle "Registration: ERROR"
                                           $(widgetFile "register")
     case res of
         FormSuccess user -> let name = userUsername user in do

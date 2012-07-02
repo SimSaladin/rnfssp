@@ -54,12 +54,16 @@ bareLs fps = do
 -- | Downloading files/data (user&js)
 getMediaDataR :: Text -> Text -> [String] -> Handler RepJson
 getMediaDataR what which file = do
-    aent <- requireAuth
+    entid <- requireAuthId
     case what of
         "playlist" -> do pl <- runDB $ getBy404 $ UniquePlaylist which
                          jsonToRepJson $ playlistToJson $ entityVal pl
-        "download" -> sendFile "" $ toRealPath file
+        "download" -> do time <- liftIO getCurrentTime
+                         _ <- runDB $ insert $ LogDownload entid time rp
+                         sendFile "" rp
         _          -> invalidArgs ["Invalid reply type: " `T.append` what]
+    where
+        rp = toRealPath file
 
 postMediaDataR :: Text -> Text -> [String] -> Handler RepJson
 postMediaDataR _ _ _ = do
