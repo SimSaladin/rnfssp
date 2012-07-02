@@ -5,7 +5,6 @@ module Handler.Admin
 
 import Import
 import qualified Data.Text as T (append)
---import Handler.Media (pathAnime)
 import System.Directory (getDirectoryContents, doesDirectoryExist)
 import System.FilePath (combine)
 
@@ -21,32 +20,31 @@ rDirContents fp = do
 
 getAdminR :: Handler RepHtml
 getAdminR = do
-    users <- runDB $ selectList ([] :: [Filter User]) [] >>= \query ->  return $ map (\x ->
-        ( userUsername $ entityVal x
-        , if userValid $ entityVal x then "disapprove_user" else "approve_user" :: Text))
-        query
-    appr <- lookupGetParam "approve_user"
-    --disappr <- lookupGetParam "disapprove_user"
-    case appr of
-        Just a -> runDB $ do
-            uid <- getBy $ UniqueUser a
-            case uid of
-                Just (Entity k _) -> update k [UserValid =. True]
-                Nothing -> return ()
-        Nothing -> return ()
-    lookupGetParam "action" >>= \act -> case act of
-        Just a
-            | a == "update_media" -> do
-                -- reply json instead?
-                hamletToRepHtml [hamlet||]
-            | otherwise -> do
-                invalidArgs ["Unknown action!"]
-        Nothing -> do
+    action <- lookupGetParam "action"
+    target <- lookupGetParam "target"
+    case (action, target) of
+        (Just "noapprove_user", Just u) -> setApprove u False >> redirect AdminR
+        (Just "approve_user"  , Just u) -> setApprove u True >> redirect AdminR
+        (Just "update_media", _) -> hamletToRepHtml [hamlet||]
+        (Just _, _) -> invalidArgs ["Unknown action!"]
+        (_, _) -> do
             (formWidget, encType) <- generateFormPost newboardForm
-            let submission = Nothing :: Maybe Board
+            userEnts <- runDB $ selectList ([] :: [Filter User]) []
+            let users = map usert userEnts
             defaultLayout $ do
                 setTitle "admin"
                 $(widgetFile "admin")
+    where
+        usert ent = (userUsername val, userComment val, act) where
+            val = entityVal ent
+            act = if userValid val
+                    then "disapprove_user" else "approve_user" :: Text
+
+        setApprove name v = runDB $ do
+            ent <- getBy $ UniqueUser name
+            case ent of 
+               Just x -> update (entityKey x) [UserValid =. v]
+               Nothing -> return ()
 
 postAdminR :: Handler RepHtml
 postAdminR = do

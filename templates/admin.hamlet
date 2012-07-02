@@ -1,24 +1,28 @@
 <h1>Ylläpito
-<div .row-fluid>
-  <div .span6>
+<div.row-fluid>
+  <div.span6.page-element>
     <h3>Board
     <form method=post enctype=#{encType}>
       ^{formWidget}
       <input.btn.btn-primary type="submit" value="_{MsgGo}">
-  <div.span6>
+
+  <div.span6.page-element>
     <h2>Media
     <h6>Does not work
     <button.btn id=media_update type="button" value="media_update" onclick="media_update()">
       update media database
+
 <div.row-fluid>
-  <div.span6>
+  <div.span6.page-element>
     <h3>Users
     <table border="1">
       <tr>
         <th>Username
+        <th>Comment
         <th>Action
-      $forall (name,action) <- users
+      $forall (name, comment, action) <- users
         <tr>
           <td>#{name}
+          <td>#{comment}
           <td>
-            <a href=@{AdminR}?#{action}=#{name}>#{action}
+            <a href=@{AdminR}?action=#{action}&target=#{name}>#{action}
