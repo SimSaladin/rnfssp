@@ -9,6 +9,12 @@ function browser_load_page(browserDom, href, browse_history) {
     if (from.charAt(from.length - 1) == "/") { from = from.slice(0, -1); }
     if (to.charAt(to.length - 1) == "/") { to = to.slice(0, -1); }
 
+    // update history
+    if (browse_history)
+      window.history.pushState('', '', href);
+    browser_from = to;
+
+    // animate
     if (to.split("/").length >= from.split("/").length) {
       animOptOne = { direction : "left" };
       animOptSec = { direction : "right" };
@@ -16,14 +22,9 @@ function browser_load_page(browserDom, href, browse_history) {
       animOptOne = { direction : "right" };
       animOptSec = { direction : "left" };
     }
-
-    if (browse_history)
-      window.history.pushState('', '', href);
-
-    browser_from = to;
-
     browserDom.fadeOut(300, function() {
       browserDom.html(data);
+      $("#mediaTable").tablesorter()
       browser_register_links(browserDom);
       browserDom.fadeIn(300);
     });

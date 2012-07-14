@@ -22,6 +22,7 @@
         <script src=@{StaticR js_jquery_js}>
         <script src=@{StaticR js_jquery_ui_js}>
         <script src=@{StaticR js_bootstrap_dropdown_js}>
+        <script src=@{StaticR js_jquery_tablesorter_min_js}>
         <script>
           document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/,'js');
     <body>

@@ -1,0 +1,6 @@
+<h1>Media
+<h6>admin interface
+<div>
+  <form method=post>
+    ^{widget}
+    <input type="submit">

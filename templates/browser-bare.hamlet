@@ -11,7 +11,7 @@ $else
         <i>#{name}
   $if is_dir
     <div.page-element.functional>
-      <table.browser>
+      <table#mediaTable.browser.tablesorter>
         <thead>
           <tr>
             <th scope="col">

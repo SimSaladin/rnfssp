@@ -48,16 +48,16 @@ Playlist
    created UTCTime
    modified UTCTime
    UniquePlaylist title
+
 Anime
    nameIdent Text
    nameJapan Text Maybe
    nameOther Text Maybe
-MediaFileEntry
-   filepath String
-   description Text Maybe
-   info Text Maybe
-   animeBind AnimeId Maybe
-   animeEp Int Maybe
+Filenode
+   parent FilenodeId Maybe
+   isdir Bool
+   path String
+   UniqueFilenode path
 
 LogDownload
    user UserId
