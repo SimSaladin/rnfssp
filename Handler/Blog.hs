@@ -91,7 +91,7 @@ postAndReplies utitle = do
 previewWidgets :: Handler [Widget]
 previewWidgets = do
     (posts, ccount) <- runDB $ do
-        posts <- selectList ([] :: [Filter Blogpost]) [Asc BlogpostTime]
+        posts <- selectList ([] :: [Filter Blogpost]) [Desc BlogpostTime]
         comments <- mapM count (map getFilter posts)
         return (posts, comments)
     let widgets = zipWith toWidget posts ccount
