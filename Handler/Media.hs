@@ -246,7 +246,7 @@ updateListing dest dir = do
       toNode :: Maybe FilenodeId -> (FilePath, FileStatus) -> IO Filenode
       toNode parent (path, stat) = do
          details <- if guessFiletype path `elem` ["video", "audio"]
-            then Just <$> readProcess "mediainfo" [path] ""
+            then return $ Just "Calling mediainfo for every file easily timeouts the request, so it is disabled until a workaround is found" -- <$> readProcess "o" [path] ""
             else return Nothing
          let isdir = isDirectory stat
              size  = prettyFilesize $ fileSize stat
