@@ -19,4 +19,6 @@ Production:
   host: "*4"
   port: 3000
   approot: "https://ssdesk.paivola.fi"
+  animedir: "/home/media/anime"
+  musicdir: "/home/media/music"
   <<: *defaults
