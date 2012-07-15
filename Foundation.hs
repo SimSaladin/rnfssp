@@ -116,6 +116,7 @@ instance Yesod App where
     authRoute _ = Just $ AuthR LoginR
 
     isAuthorized AdminR _             = isAdmin
+    isAuthorized MediaAdminR _        = isAdmin
     isAuthorized BlogOverviewR True   = isAdmin
     isAuthorized (MediaR []) False    = return Authorized
     isAuthorized (MediaR _) _         = isLoggedIn

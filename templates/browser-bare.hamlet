@@ -14,47 +14,50 @@ $else
       <table#mediaTable.browser.tablesorter>
         <thead>
           <tr>
-            <th scope="col">
-            <th scope="col">_{MsgMediaFilename}
-            <th scope="col">_{MsgMediaSize}
-            <th scope="col">_{MsgMediaModified}
+            <td scope="col">
+            <td scope="col">_{MsgMediaFilename}
+            <td scope="col">_{MsgMediaSize}
+            <td scope="col">_{MsgMediaModified}
         <tbody>
-          $forall (file, url, size, modified) <- listing
+          $forall (file, ftype, url, size, modified) <- listing
             <tr>
               <td>
-                <a href=@{MediaDataR "to-playlist" "list" url} onclick="alert('playlist is not yet supported'); return false">
+                <a href=@{MediaDataR "add-playlist" "TODO" url} onclick="alert('playlist is not yet supported'); return false">
                   <i.icon-plus.icon-white>
-                <a href=@{MediaDataR "download" "original-force" url} onclick="; return false">
-                  <i.icon-download-alt.icon-white>
+                $if not $ isdir ftype
+                  <a href=@{MediaDataR "download" "force" url} onclick="">
+                    <i.icon-download-alt.icon-white>
+                  <a href=@{MediaDataR "download" "auto" url} onclick="" target="_blank">
+                    <i.icon-play.icon-white>
               <td>
-                <a.browser-link href=@{MediaR url}>
+                <a.#{ftype} href=@{MediaR url}>
                   <tt>#{file}
               <td>
                 #{size}
               <td>
-                #{show modified}
+                #{modified}
   $elseif is_file
     $with (name, url) <- last nav
-      <div.page-element.row-fluid>
-        <div.span7>
-          <h2>Details
-          <h5>#{name}
-          <div>
-            <i>Info?
-
-          <h2>Comments
-          <div>
-            <i>comments?
-
-        <div.span5>
-          <h3>Play in browser
-            <small>if supported
-          <video src="@{MediaDataR "download" "original" url}">
-          <h3>Download
-          <a.btn.btn-primary href="@{MediaDataR "download" "original" url}">
-            Direct link
-          <a.btn href="@{MediaDataR "download" "original-force" url}">
-            Download
+      <div.page-element>
+        <div..row-fluid>
+          <div.span7>
+            <h3>General
+            <div>
+              <i>...
+            <h3>Comments
+            <i>coming maybe some day
+          <div.span5>
+            <h3>Download
+            <a.btn.btn-primary href="@{MediaDataR "download" "auto" url}" target="_blank">
+              <i.icon-white.icon-play> #
+              Auto-open
+            <a.btn href="@{MediaDataR "download" "force" url}">
+              <i.icon.icon-download-alt> #
+              Download
+        <h3>Details
+        <h4>Mediainfo
+        $maybe s <- details
+          <pre>#{s}
 
   $else
     <i>Invalid request

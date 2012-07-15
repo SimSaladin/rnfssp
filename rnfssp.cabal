@@ -111,6 +111,7 @@ executable         rnfssp
                  , libmpd                        >= 0.8.0      && < 0.9
                  , old-locale
                  , blaze-html
+                 , process
 
                  , yesod-test
 test-suite integration-tests

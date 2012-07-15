@@ -24,7 +24,7 @@ function browser_load_page(browserDom, href, browse_history) {
     }
     browserDom.fadeOut(300, function() {
       browserDom.html(data);
-      $("#mediaTable").tablesorter()
+//      $("#mediaTable").tablesorter()
       browser_register_links(browserDom);
       browserDom.fadeIn(300);
     });
