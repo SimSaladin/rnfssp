@@ -40,22 +40,25 @@
       $maybe msg <- mmsg
         <pre #message>#{msg}
   <div.row-fluid>
-    <div.span10>
+    <div.span9>
       ^{widget}
-    <div.span2.page-element>
-      <h4>TODO:
-      <ul>
-        <li>local niceditor; image upload
-        <li>move these todo's somewhere
-        <li>search
-        <li>playlist manipulation
-        <li>web play
-        <li>localplay
-        <li>MPD support
-        <li>user profiles
-        <li>easy ProfileR user
-        <li>blog post editing
-        <li>blog post deletion
-        <li>news feed
-        <li>clean up default-layout.lucius
-        <li>themes and changer
+    <div.span3>
+      <div.page-element>
+        ^{cwidget}
+      <div.page-element>
+        <h4>TODO:
+        <ul>
+          <li>local niceditor; image upload
+          <li>move these todo's somewhere
+          <li>search
+          <li>playlist manipulation
+          <li>web play
+          <li>localplay
+          <li>MPD support
+          <li>user profiles
+          <li>easy ProfileR user
+          <li>blog post editing
+          <li>blog post deletion
+          <li>news feed
+          <li>clean up default-layout.lucius
+          <li>themes and changer
