@@ -81,7 +81,7 @@ postAndReplies utitle = do
         p <- getBy404 $ UniqueBlogpost utitle
         cmnts <- selectList
                     [BlogCommentPost ==. entityKey p]
-                    [Asc BlogCommentTime]
+                    [Desc BlogCommentTime]
         return (p, cmnts)
     let pw = blogpostWidget (entityVal p) (-1) False
         cw = map (\x -> blogcommentWidget x cs) cs
