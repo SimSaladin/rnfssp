@@ -36,6 +36,8 @@ import Text.Hamlet (hamletFile)
 
 import Data.Text (Text)
 
+import Chat
+
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
 -- starts running, such as database connections. Every handler will have
@@ -47,6 +49,7 @@ data App = App
     , connPool :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
     , httpManager :: Manager
     , persistConfig :: Settings.PersistConfig
+    , getChat :: Chat
     }
 
 type Strings = [String]
@@ -86,7 +89,7 @@ instance Yesod App where
     -- default session idle timeout is 120 minutes
     makeSessionBackend _ = do
         key <- getKey "config/client_session_key.aes"
-        return . Just $ clientSessionBackend key 120
+        return . Just $ clientSessionBackend key 2160
 
     defaultLayout widget = do
         master <- getYesod
@@ -103,6 +106,7 @@ instance Yesod App where
         pc <- widgetToPageContent $ do
             $(widgetFile "normalize")
             addStylesheet $ StaticR css_bootstrap_css
+            let cwidget = chatWidget ChatR
             $(widgetFile "default-layout")
         hamletToRepHtml $(hamletFile "templates/default-layout-wrapper.hamlet")
 
@@ -119,8 +123,8 @@ instance Yesod App where
     isAuthorized MediaAdminR _        = isAdmin
     isAuthorized BlogOverviewR True   = isAdmin
     isAuthorized (MediaR []) False    = return Authorized
-    isAuthorized (MediaR _) _         = isLoggedIn
-    isAuthorized (MediaDataR _ _ _) _ = isLoggedIn
+    isAuthorized (MediaR _) _         = isValidLoggedIn
+    isAuthorized (MediaDataR _ _ _) _ = isValidLoggedIn
     isAuthorized _ _                  = return Authorized
 
     messageLogger y loc level msg =
@@ -146,10 +150,10 @@ isAdmin = do
 --            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
 --            | otherwise -> Unauthorized "You must be an admin"
 
-isLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
+isValidLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
         YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
         (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
-isLoggedIn = do
+isValidLoggedIn = do
     mu <- maybeAuth
     return $ case mu of
         Nothing -> AuthenticationRequired
@@ -197,3 +201,9 @@ instance RenderMessage App FormMessage where
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
 
 instance YesodNic App
+
+instance YesodChat App where
+   getUserName = requireAuth >>= return . userUsername . entityVal
+   isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
+      Authorized -> True
+      _          -> False

@@ -20,6 +20,7 @@ import Network.Wai.Middleware.RequestLogger (logCallback)
 import qualified Database.Persist.Store
 import Database.Persist.GenericSql (runMigration)
 import Network.HTTP.Conduit (newManager, def)
+import Control.Concurrent.Chan (newChan)
 
 -- Import all relevant handler modules here.
 import Handler.Home
@@ -27,6 +28,7 @@ import Handler.Admin
 import Handler.Blog
 import Handler.Board
 import Handler.Media
+import Chat
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see
@@ -53,6 +55,7 @@ makeApplication conf logger = do
 
 makeFoundation :: AppConfig DefaultEnv Extra -> Logger -> IO App
 makeFoundation conf setLogger = do
+    chan <- newChan
     manager <- newManager def
     s <- staticSite
     dbconf <- withYamlEnvironment "config/postgresql.yml" (appEnv conf)
@@ -60,7 +63,7 @@ makeFoundation conf setLogger = do
               Database.Persist.Store.applyEnv
     p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
     Database.Persist.Store.runPool dbconf (runMigration migrateAll) p
-    return $ App conf setLogger s p manager dbconf
+    return $ App conf setLogger s p manager dbconf (Chat chan)
 
 -- for yesod devel
 getApplicationDev :: IO (Int, Application)
