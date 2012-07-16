@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 15 2012 [16:28:31]
+-- Last Modified: Jul 16 2012 [22:02:29]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -85,6 +85,7 @@ getReceiveR = do
     -- WAI response, which we can return with sendWaiResponse.
     req <- waiRequest
     res <- lift $ eventSourceAppChan chan req
+    setHeader "X-Accel-Buffering" "no"
     sendWaiResponse res
 
 -- | Provide a widget that the master site can embed on any page.
