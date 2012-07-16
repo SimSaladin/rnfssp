@@ -115,6 +115,7 @@ executable         rnfssp
                  , blaze-html
                  , process
                  , blaze-builder
+                 , wai
 
                  , yesod-test
 test-suite integration-tests

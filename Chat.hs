@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 16 2012 [22:02:29]
+-- Last Modified: Jul 16 2012 [22:37:36]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -21,6 +21,7 @@ import Prelude (Bool, ($), Maybe(..))
 import Control.Monad (return)
 import Control.Concurrent.Chan (Chan, dupChan, writeChan)
 import Data.Text (Text)
+import Network.Wai (Request(..))
 import Network.Wai.EventSource (ServerEvent (..), eventSourceAppChan)
 import Language.Haskell.TH.Syntax (Type (VarT), Pred (ClassP), mkName)
 import Blaze.ByteString.Builder.Char.Utf8 (fromText)
@@ -83,9 +84,10 @@ getReceiveR = do
     -- Now we use the event source API. eventSourceAppChan takes two parameters:
     -- the channel of events to read from, and the WAI request. It returns a
     -- WAI response, which we can return with sendWaiResponse.
-    req <- waiRequest
+    -- XXX: setHeader "X-Accel-Buffering" "no" -- for nginx reverse-proxying
+    req' <- waiRequest
+    let req = req' { requestHeaders = ("X-Accel-Buffering", "no"):(requestHeaders req') }
     res <- lift $ eventSourceAppChan chan req
-    setHeader "X-Accel-Buffering" "no"
     sendWaiResponse res
 
 -- | Provide a widget that the master site can embed on any page.
