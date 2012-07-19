@@ -29,6 +29,7 @@ import Handler.Blog
 import Handler.Board
 import Handler.Media
 import Chat
+import Mpd
 
 -- This line actually creates our YesodSite instance. It is the second half
 -- of the call to mkYesodData which occurs in Foundation.hs. Please see
@@ -63,7 +64,7 @@ makeFoundation conf setLogger = do
               Database.Persist.Store.applyEnv
     p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
     Database.Persist.Store.runPool dbconf (runMigration migrateAll) p
-    return $ App conf setLogger s p manager dbconf (Chat chan)
+    return $ App conf setLogger s p manager dbconf (Chat chan) Mpd
 
 -- for yesod devel
 getApplicationDev :: IO (Int, Application)

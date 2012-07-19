@@ -38,6 +38,7 @@ library
                      Handler.Board
                      Handler.Media
                      Chat
+                     Mpd
 
     ghc-options:   -Wall -threaded -O0
     cpp-options:   -DDEVELOPMENT
@@ -116,6 +117,7 @@ executable         rnfssp
                  , process
                  , blaze-builder
                  , wai
+                 , libmpd
 
                  , yesod-test
 test-suite integration-tests

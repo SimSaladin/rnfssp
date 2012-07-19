@@ -1,0 +1,28 @@
+// Set up the receiving end
+var output = document.getElementById("#{output}");
+var src = new EventSource("@{toMaster ReceiveR}");
+src.onmessage = function(msg) {
+    // This function will be called for each new message.
+    var p = document.createElement("p");
+    p.appendChild(document.createTextNode(msg.data));
+    output.appendChild(p);
+
+    // And now scroll down within the output div so the most recent message
+    // is displayed.
+    output.scrollTop = output.scrollHeight;
+};
+
+// Set up the sending end: send a message via Ajax whenever the user hits
+// enter.
+var input = document.getElementById("#{input}");
+input.onkeyup = function(event) {
+    var keycode = (event.keyCode ? event.keyCode : event.which);
+    if (keycode == '13') {
+        var xhr = new XMLHttpRequest();
+        var val = input.value;
+        input.value = "";
+        var params = "?message=" + encodeURI(val);
+        xhr.open("POST", "@{toMaster SendR}" + params);
+        xhr.send(null);
+    }
+}

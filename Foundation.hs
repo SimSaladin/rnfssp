@@ -37,6 +37,7 @@ import Text.Hamlet (hamletFile)
 import Data.Text (Text)
 
 import Chat
+import Mpd
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -50,6 +51,7 @@ data App = App
     , httpManager :: Manager
     , persistConfig :: Settings.PersistConfig
     , getChat :: Chat
+    , getMpd :: Mpd
     }
 
 type Strings = [String]
