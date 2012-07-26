@@ -1,32 +1,78 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Handler.Media
     ( getMediaR
     , postMediaR
+
     , getMediaDataR
     , postMediaDataR
+
     , getMediaAdminR
     , postMediaAdminR
+
+    , getMediaPlaylistR
+    , postMediaPlaylistR
     ) where
 
 import Import
-import Data.List ((\\), zip4, init, last, head, tail)
-import Data.Maybe (isJust, fromMaybe)
+import qualified Data.Aeson.Types as A
+import Data.List ((\\), init, last, head, tail)
+import Data.Maybe (isJust)
 import Data.Time (getCurrentTime)
-import Data.Time.Clock.POSIX (POSIXTime, posixSecondsToUTCTime)
+import Data.Time.Clock (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Format (formatTime)
+import Control.Monad
 import qualified Data.Text as T
 import qualified System.FilePath as F (joinPath)
 import System.Locale (defaultTimeLocale)
-import System.Process (readProcess)
-import System.Directory (getDirectoryContents, doesFileExist, doesDirectoryExist)
+import System.Directory (getDirectoryContents)
 import System.FilePath -- (combine)
 import System.Posix.Files -- (getFileStatus, fileSize, modificationTime, isDirectory)
 import System.Posix (FileOffset)
 import Text.Printf (printf)
+import Yesod.Json
 import Yesod.Default.Config (appExtra)
 
+instance A.ToJSON Playlist where
+    toJSON (Playlist title owner elems create mod) = object
+        [ "title" .= title
+        , "owner" .= owner
+        , "elems" .= elems
+        , "created" .= create
+        , "modified" .= mod
+        ]
+
+-- * Confs & Utilities
+
+viewable :: [Text]
 viewable = ["audio", "video"]
+
+isdir :: Text -> Bool
 isdir = (==) "directory"
 
+-- | File size prettified
+prettyFilesize :: FileOffset -> Text
+prettyFilesize off = T.pack $ toprint off
+  where
+    f n = printf "%.0f" (fromIntegral off / n :: Float)
+    toprint x | x >= lT   = f lT ++ "T"
+              | x >= lG   = f lG ++ "G"
+              | x >= lM   = f lM ++ "M"
+              | x >= lK   = f lK ++ "K"
+              | x >= lB   = f lB ++ "B"
+              | otherwise = "n/a"
+        where
+            [lB,lK,lM,lG,lT] = scanl (*) 1 $ take 4 $ repeat 1024
+
+guessFiletype :: FilePath -> Text
+guessFiletype fp = if ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"])
+   then "video"
+   else if ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"])
+      then "audio"
+      else "unknown"
+   where ext = takeExtension fp
+
+-- | Get real filepath for @which@ master directory.
 gdir :: String -> Handler FilePath
 gdir which = do
    master <- getYesod
@@ -34,6 +80,16 @@ gdir which = do
       in return $ case which of
             "anime" -> extraDirAnime set
             "music" -> extraDirMusic set
+            -- XXX: fails for any other runtime!
+
+widgetOnly :: Widget -> Handler RepHtml
+widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
+
+-- | convienience
+timeNow :: Handler UTCTime
+timeNow = liftIO getCurrentTime
+
+-- * Userspace / General
 
 -- | The root and heart of media section. Loads browser, playlist and other
 --   possibly widgets. 
@@ -42,7 +98,7 @@ getMediaR fps = do
     mauth <- maybeAuth
     bare <- lookupGetParam "bare"
     case bare of
-        Just _ -> bareLs fps
+        Just _ -> browserTable fps
         Nothing -> defaultLayout $ do
             setTitle "Media"
             $(widgetFile "media-home")
@@ -63,10 +119,6 @@ getMediaDataR what which fp = do
    entid <- requireAuthId
 
    case what of
-      "playlist" -> do
-         pl <- runDB $ getBy404 $ UniquePlaylist which
-         jsonToRepJson $ playlistToJson $ entityVal pl
-
       -- TODO: use "Header Range" and sendResponse (type, toContent {ByteString})
       -- ... allows the download to be continued?
       "download" -> if null fp
@@ -92,29 +144,11 @@ postMediaDataR _ _ _ = do
     liftIO $ putStrLn $ show (r :: Value)
     jsonToRepJson r
 
-getMediaAdminR :: Handler RepHtml
-getMediaAdminR = do
-   (widget, encType) <- generateFormPost adminForm
-   defaultLayout $ do
-      setTitle "media :: admin"
-      $(widgetFile "media-admin")
-
-postMediaAdminR :: Handler RepHtml
-postMediaAdminR = do
-   path <- gdir "anime"
-   path' <- gdir "music"
-   updateListing "anime" path
-   updateListing "music" path'
-   redirect MediaAdminR
-
-adminForm :: Form (Bool, Bool)
-adminForm = renderBootstrap $ (,)
-   <$> areq boolField "Update all" (Just False)
-   <*> areq boolField "Not used" (Just False)
+-- * Browser
 
 -- | the <table> element only
-bareLs :: [FilePath] -> Handler RepHtml
-bareLs fps = do
+browserTable :: [FilePath] -> Handler RepHtml
+browserTable fps = do
     rauth <- requireAuth
     pc <- widgetToPageContent $ browserViewWidget fps
     hamletToRepHtml [hamlet|^{pageBody pc}|]
@@ -161,58 +195,102 @@ browserViewWidget fps = do
                     in return (file, filetype, split, size, modified)
          $(widgetFile "browser-bare")
 
-guessFiletype :: FilePath -> Text
-guessFiletype fp = if ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"])
-   then "video"
-   else if ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"])
-      then "audio"
-      else "unknown"
-   where ext = takeExtension fp
+-- * Playing & Playlists
 
--- | a widget for a single playlist/player
-playerWidget :: Entity User -> Widget
-playerWidget uent = do
-    idPlaylist <- lift newIdent
-    idPlayer <- lift newIdent
-    maybePl <- case userCurrentplaylist $ entityVal uent of
-        Just plid -> lift . runDB $ get plid
-        Nothing   -> return Nothing
-    pl <- case maybePl of
-        Just p  -> return p
-        Nothing -> liftIO getCurrentTime >>= \t -> return
-            $ Playlist "" (entityKey uent) [] t t
-    let elems = playlistElems pl
-        title = playlistTitle pl
-        rout  = MediaDataR "playlist" "a" [""]
-        in $(widgetFile "media-playlist")
+-- | JSON-encoded playlists for ajax.
+-- XXX: try cookie first instead of db if no playlist given?
+-- TODO: support hidden playlists?
+getMediaPlaylistR :: Handler RepJson
+getMediaPlaylistR = do
+  playlist <- getPlaylist404
+  jsonToRepJson playlist
 
--- | Lists every playlist and show information about them
-playlistsWidget :: Widget
-playlistsWidget = do
+-- | creating, deleting, modifying playlists.
+postMediaPlaylistR :: Handler RepJson
+postMediaPlaylistR = do
+  uent <- requireAuth
+  mt <- lookupPostParam "title"
+  ma <- lookupPostParam "action"
+  case (mt, ma) of
+    (Nothing,_) -> invalidArgs ["no title given"]
+    (_,Nothing) -> invalidArgs ["no action given"]
+    (Just title, Just action) -> do
+        jsonToRepJson =<< case action of
+          "insert" -> insertPlaylist title uent >>= \pl -> return $ array [pl]
+          "delete" -> deletePlaylist title >>= return . Bool
+          "update" -> parseJsonBody_ >>= updatePlaylist title >>= \pl -> return $ array [pl]
+
+insertPlaylist :: Text -> Entity User -> Handler Playlist
+insertPlaylist title (Entity uid _) = do
+    date <- timeNow
+    let pl = Playlist title uid [] date date
+    mid <- runDB $ insertUnique pl
+    case mid of
+      Nothing -> invalidArgs ["Playlist with identical title already exists"]
+      Just _  -> return pl
+
+-- | true if deleted, false if didn't exist
+deletePlaylist :: Text -> Handler Bool
+deletePlaylist title = fmap isJust $
+    runDB $ getBy upl >>= \ment -> deleteBy upl >> return ment
+  where upl = UniquePlaylist title
+
+updatePlaylist :: Text -> [Text] -> Handler Playlist
+updatePlaylist title newElements = do
+    Entity _ val <- runDB $ getBy404 $ UniquePlaylist title
+    return val
+
+widPlaylist :: Entity User -> Widget
+widPlaylist (Entity _ uval) = do
+  [main, actions, content] <- replicateM 3 (lift newIdent)
+  $(widgetFile "media-playlist")
+
+-- | getparam OR cookie OR database
+getPlaylist404 :: Handler Playlist
+getPlaylist404 = do
+    mt <- lookupGetParam "title"
+    mc <- lookupCookie "playlist-title"
+    case mt of
+      Just title -> get title
+      Nothing -> do
+          case mc of
+            Just title -> get title
+            Nothing -> do
+                Entity _ val <- requireAuth
+                case userCurrentplaylist val of
+                  Just plid -> runDB $ get404 plid
+                  Nothing -> notFound
+  where get t = return . entityVal =<< (runDB $ getBy404 $ UniquePlaylist t)
+
+-- | Lists every playlist and their information.
+widPlaylists :: Widget
+widPlaylists = do
     pls <- lift $ runDB $ do
         pls <- selectList ([] :: [Filter Playlist]) []
         return pls
     toWidget [hamlet|playlist listing: not yet implemented|]
 
--- | encode playlist's title, owner and elements in a json object.
-playlistToJson :: Playlist -> Value
-playlistToJson pl = object [ ("title", title)
-                           , ("elems", elems)
-                           ] where title = String $ playlistTitle pl
-                                   elems = array $ playlistElems pl
+-- * Adminspace
 
--- | File size prettified
-prettyFilesize :: FileOffset -> Text
-prettyFilesize x = T.pack $ toprint x where
-    f n = printf "%.0f" (fromIntegral x / n :: Float)
-    toprint x | x >= lT   = f lT ++ "T"
-              | x >= lG   = f lG ++ "G"
-              | x >= lM   = f lM ++ "M"
-              | x >= lK   = f lK ++ "K"
-              | x >= lB   = f lB ++ "B"
-              | otherwise = "n/a"
-        where
-            [lB,lK,lM,lG,lT] = scanl (*) 1 $ take 4 $ repeat 1024
+getMediaAdminR :: Handler RepHtml
+getMediaAdminR = do
+   (widget, encType) <- generateFormPost adminForm
+   defaultLayout $ do
+      setTitle "media :: admin"
+      $(widgetFile "media-admin")
+
+postMediaAdminR :: Handler RepHtml
+postMediaAdminR = do
+   path <- gdir "anime"
+   path' <- gdir "music"
+   updateListing "anime" path
+   updateListing "music" path'
+   redirect MediaAdminR
+
+adminForm :: Form (Bool, Bool)
+adminForm = renderBootstrap $ (,)
+   <$> areq boolField "Update all" (Just False)
+   <*> areq boolField "Not used" (Just False)
 
 -- | update recursively
 find :: FilePath -> IO [(FilePath, FileStatus)]
@@ -223,7 +301,10 @@ find dir = do
    other <- mapM (find . fst) (filter (isDirectory . snd) this)
    return (this ++ concat other)
 
-updateListing :: String -> FilePath -> Handler ()
+-- | This function is very memory-inefficient!! TODO: do something about it.
+updateListing :: String
+              -> FilePath
+              -> Handler ()
 updateListing dest dir = do
    infs <- liftIO $ do
       stat <- getFileStatus dir
@@ -235,7 +316,7 @@ updateListing dest dir = do
        newNodes = filter (not . existsDb) infs
        existsDb (path,_) = path `elem` (map (filenodePath . entityVal) indb)
        existsFs ent = (filenodePath $ entityVal ent) `elem` (map fst infs)
-   runDB $ do
+   _ <- runDB $ do
       mapM delete todelete
       mapM insert' newNodes
       tocheck <- selectList [FilenodeParent ==. Nothing] []
@@ -248,10 +329,10 @@ updateListing dest dir = do
          details <- if guessFiletype path `elem` ["video", "audio"]
             then return $ Just "Calling mediainfo for every file easily timeouts the request, so it is disabled until a workaround is found" -- <$> readProcess "o" [path] ""
             else return Nothing
-         let isdir = isDirectory stat
+         let isDir = isDirectory stat
              size  = prettyFilesize $ fileSize stat
              time  = posixSecondsToUTCTime $ realToFrac $ modificationTime stat
-         return $ Filenode dest parent isdir path size time details
+         return $ Filenode dest parent isDir path size time details
 
       insert' (path, stat) = do
          parent <- selectFirst [FilenodePath ==. (takeDirectory path)] []
@@ -262,4 +343,3 @@ updateListing dest dir = do
          let path = takeDirectory $ filenodePath $ entityVal ent
          parent <- selectFirst [FilenodePath ==. path] []
          update (entityKey ent) [FilenodeParent =. (fmap entityKey parent)]
-

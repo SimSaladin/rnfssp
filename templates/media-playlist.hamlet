@@ -1,2 +1,15 @@
-<div##{idPlayer}>
-<div##{idPlaylist}.page-element>Loading playlist...
+<div##{main}.page-element>
+  <div##{content}>
+    Loading playlist...
+
+  <div##{actions}>
+    <button.btn>Save
+    <button.btn>Save as...
+
+    <div.btn-group.dropup>
+      <button.btn>Load
+      <button.btn.dropdown-toggle data-toggle="dropdown">
+        <span.caret>
+      <ul.dropdown-menu>
+        <li>
+          <a href="#">TODO

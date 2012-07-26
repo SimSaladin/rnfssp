@@ -1,13 +1,26 @@
+/* Loads active playlist to the playlist element. */
 function load_playlist() {
-    document.getElementById("#{idPlaylist}").innerHTML =
-    "<span>n items</span>";
-    save_playlist();
-}
-function save_playlist() {
-    $.post( "@{rout}"
-             , '{"name":[0,1,2]}'
-             , function success(d, s, x){}
-             );
+  var cont = $("##{content}");
+  $.ajax(
+    { url: "@{MediaPlaylistR}"
+    , dataType: 'json'
+    , success: function(data) {
+        cont.empty();
+        data.appendTo(cont);
+      }
+    , error: function() {
+        cont.empty();
+        $("<i>Playlist not found</i>").appendTo(cont);
+      }
+    }
+  )
 }
 
-$("##{idPlaylist}").ready(load_playlist)
+/* POST to save the current playlist. */
+function save_playlist() {
+}
+
+function save_playlist_custom(title) {
+}
+
+$("##{content}").ready(load_playlist)

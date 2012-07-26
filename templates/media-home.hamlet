@@ -1,7 +1,7 @@
 <h1>Media #
   <small>_{MsgMediaDescription}
 $maybe ent <- mauth
-  ^{playerWidget ent}
+  ^{widPlaylist ent}
   ^{mediaBrowser}
 $nothing
   <div.page-element>

@@ -1,6 +1,6 @@
 Default: &defaults
   host: "localhost"
-  port: 3000
+  port: 3001
   copyright: "BPS"
   #analytics: UA-YOURCODE
   animedir: "/home/sim/anime"
