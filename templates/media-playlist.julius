@@ -23,4 +23,8 @@ function save_playlist() {
 function save_playlist_custom(title) {
 }
 
+function to_playlist(what) {
+  alert("TODO: add to playlist; "+what);
+}
+
 $("##{content}").ready(load_playlist)

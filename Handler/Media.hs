@@ -16,7 +16,7 @@ module Handler.Media
 import Import
 import qualified Data.Aeson.Types as A
 import Data.List ((\\), init, last, head, tail)
-import Data.Maybe (isJust)
+import Data.Maybe (isJust, isNothing)
 import Data.Time (getCurrentTime)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -29,6 +29,7 @@ import System.Directory (getDirectoryContents)
 import System.FilePath -- (combine)
 import System.Posix.Files -- (getFileStatus, fileSize, modificationTime, isDirectory)
 import System.Posix (FileOffset)
+import System.Process (readProcessWithExitCode)
 import Text.Printf (printf)
 import Yesod.Json
 import Yesod.Default.Config (appExtra)
@@ -166,7 +167,7 @@ browserViewWidget fps = do
    let real = root </> (F.joinPath $ tail fps)
        nav  = zip fps (foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps)
    liftIO $ print (root, real)
-   node' <- lift $ runDB $ getBy $ UniqueFilenode real
+   node' <- lift $ runDB $ getBy $ UniqueFilenode (T.pack real)
    case node' of
       Nothing -> let is_dir  = False
                      is_file = False
@@ -184,7 +185,7 @@ browserViewWidget fps = do
             else return []
          let listing = do
                 val <- map entityVal nodes
-                let file     = takeFileName $ filenodePath val
+                let file     = takeFileName $ T.unpack $ filenodePath val
                     filetype = if filenodeIsdir val
                                  then "directory"
                                  else guessFiletype file
@@ -220,6 +221,7 @@ postMediaPlaylistR = do
           "delete" -> deletePlaylist title >>= return . Bool
           "update" -> parseJsonBody_ >>= updatePlaylist title >>= \pl -> return $ array [pl]
 
+-- | completely new playlist.
 insertPlaylist :: Text -> Entity User -> Handler Playlist
 insertPlaylist title (Entity uid _) = do
     date <- timeNow
@@ -229,8 +231,9 @@ insertPlaylist title (Entity uid _) = do
       Nothing -> invalidArgs ["Playlist with identical title already exists"]
       Just _  -> return pl
 
--- | true if deleted, false if didn't exist
-deletePlaylist :: Text -> Handler Bool
+-- |
+deletePlaylist :: Text
+               -> Handler Bool -- ^ true if deleted, false if never existed XXX: unmodifiable playlists?
 deletePlaylist title = fmap isJust $
     runDB $ getBy upl >>= \ment -> deleteBy upl >> return ment
   where upl = UniquePlaylist title
@@ -240,6 +243,7 @@ updatePlaylist title newElements = do
     Entity _ val <- runDB $ getBy404 $ UniquePlaylist title
     return val
 
+-- | user specific playlist widget
 widPlaylist :: Entity User -> Widget
 widPlaylist (Entity _ uval) = do
   [main, actions, content] <- replicateM 3 (lift newIdent)
@@ -252,17 +256,17 @@ getPlaylist404 = do
     mc <- lookupCookie "playlist-title"
     case mt of
       Just title -> get title
-      Nothing -> do
-          case mc of
-            Just title -> get title
-            Nothing -> do
-                Entity _ val <- requireAuth
-                case userCurrentplaylist val of
-                  Just plid -> runDB $ get404 plid
-                  Nothing -> notFound
+      Nothing -> case mc of
+        Just title -> get title
+        Nothing -> do
+            Entity _ val <- requireAuth
+            case userCurrentplaylist val of
+              Just plid -> runDB $ get404 plid
+              Nothing -> notFound
   where get t = return . entityVal =<< (runDB $ getBy404 $ UniquePlaylist t)
 
 -- | Lists every playlist and their information.
+-- XXX: implement hidden/private playlists?
 widPlaylists :: Widget
 widPlaylists = do
     pls <- lift $ runDB $ do
@@ -292,7 +296,8 @@ adminForm = renderBootstrap $ (,)
    <$> areq boolField "Update all" (Just False)
    <*> areq boolField "Not used" (Just False)
 
--- | update recursively
+-- | find paths and filestatuses recursively.
+-- XXX: also find the argument?
 find :: FilePath -> IO [(FilePath, FileStatus)]
 find dir = do
    childs <- getDirectoryContents dir >>= return . map (dir `combine`) . (\\ [".",".."])
@@ -302,44 +307,51 @@ find dir = do
    return (this ++ concat other)
 
 -- | This function is very memory-inefficient!! TODO: do something about it.
-updateListing :: String
+updateListing :: Text
               -> FilePath
               -> Handler ()
-updateListing dest dir = do
-   infs <- liftIO $ do
-      stat <- getFileStatus dir
-      childs <- find dir
-      return ( (dir,stat) : childs)
-   indb <- runDB $ selectList [FilenodeArea ==. dest] []
+updateListing area dir = do
+    infs' <- liftIO $ do -- find every file in filesystem along with properties
+        stat   <- getFileStatus dir
+        childs <- find dir
+        return ( (dir,stat) : childs)
+    let infs = map (\(x,y) -> (T.pack x, y)) infs'
+        paths = map fst infs
 
-   let todelete = reverse $ map entityKey $ filter (not . existsFs) indb
-       newNodes = filter (not . existsDb) infs
-       existsDb (path,_) = path `elem` (map (filenodePath . entityVal) indb)
-       existsFs ent = (filenodePath $ entityVal ent) `elem` (map fst infs)
-   _ <- runDB $ do
-      mapM delete todelete
-      mapM insert' newNodes
-      tocheck <- selectList [FilenodeParent ==. Nothing] []
-      mapM_ checkParents tocheck
+    -- delete entities not found in the filesystem
+    -- XXX: disable/hide only?
+    runDB $ deleteWhere [FilenodeArea ==. area, FilenodePath /<-. paths]
 
-   return ()
+    -- insert completely new entities
+    unknown <- filterM (fmap isNothing . runDB . getBy . UniqueFilenode . fst) infs
+    mapM (runDB . insertNode) unknown
+
+    -- XXX: find modified entities
+
+    liftIO $ mapM_ (putStrLn . T.unpack . fst) (take 100 unknown) -- debugging only?
+    return ()
    where
-      toNode :: Maybe FilenodeId -> (FilePath, FileStatus) -> IO Filenode
-      toNode parent (path, stat) = do
-         details <- if guessFiletype path `elem` ["video", "audio"]
-            then return $ Just "Calling mediainfo for every file easily timeouts the request, so it is disabled until a workaround is found" -- <$> readProcess "o" [path] ""
-            else return Nothing
-         let isDir = isDirectory stat
-             size  = prettyFilesize $ fileSize stat
-             time  = posixSecondsToUTCTime $ realToFrac $ modificationTime stat
-         return $ Filenode dest parent isDir path size time details
+    insertNode (path,stat) = do
+        parent <- selectFirst [FilenodePath ==. (T.pack $ takeDirectory $ T.unpack path)] []
+        insert =<< liftIO (toFilenode area (entityKey <$> parent) path stat)
 
-      insert' (path, stat) = do
-         parent <- selectFirst [FilenodePath ==. (takeDirectory path)] []
-         node <- liftIO $ toNode (entityKey <$> parent) (path, stat)
-         insert node
+-- | 
+toFilenode :: Text             -- ^ area
+           -> Maybe FilenodeId -- ^ parent node
+           -> Text             -- ^ path of the node
+           -> FileStatus       -- ^ status of the node
+           -> IO Filenode
+toFilenode area parent path stat = do
+    details <- if not boolDir then fmap Just $ getDetails $ T.unpack path else return Nothing
+    return $ Filenode area
+                      parent
+                      boolDir
+                      path
+                      (prettyFilesize $ fileSize stat)
+                      (posixSecondsToUTCTime $ realToFrac $ modificationTime stat)
+                      details
+  where
+    boolDir = isDirectory stat
 
-      checkParents ent = do
-         let path = takeDirectory $ filenodePath $ entityVal ent
-         parent <- selectFirst [FilenodePath ==. path] []
-         update (entityKey ent) [FilenodeParent =. (fmap entityKey parent)]
+getDetails :: FilePath -> IO Text
+getDetails fp = readProcessWithExitCode "mediainfo" [fp] "" >>= \(_,x,_) -> return $ T.pack x

@@ -54,13 +54,13 @@ Anime
    nameJapan Text Maybe
    nameOther Text Maybe
 Filenode
-   area String
+   area Text
    parent FilenodeId Maybe
    isdir Bool
-   path String
+   path Text
    size Text
    modTime UTCTime
-   details String Maybe
+   details Text Maybe
    UniqueFilenode path
 
 LogDownload
