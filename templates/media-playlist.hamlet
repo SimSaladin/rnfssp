@@ -2,14 +2,7 @@
   <div##{content}>
     Loading playlist...
 
-  <div##{actions}>
-    <button.btn>Save
-    <button.btn>Save as...
-
-    <div.btn-group.dropup>
-      <button.btn>Load
-      <button.btn.dropdown-toggle data-toggle="dropdown">
-        <span.caret>
-      <ul.dropdown-menu>
-        <li>
-          <a href="#">TODO
+  <div##{actions}.btn-group>
+    <button.btn onclick="save_playlist()">Save
+    <button.btn onclick="save_playlist_custom(todo)">Save as...
+    <button.btn onclick="load_playlist_dialog()">Load

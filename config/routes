@@ -21,7 +21,7 @@
 /board/#Text/#BoardpostId ThreadR    GET POST
 /files/board/#String      BoardFileR GET
 
-/media/*Strings  MediaR         GET POST
-/media-playlists MediaPlaylistR GET POST
+/media/*Strings        MediaR         GET POST
+/media-playlists/#Text MediaPlaylistR POST
 
 /data/#Text/#Text/*Strings MediaDataR  GET POST

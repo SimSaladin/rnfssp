@@ -1,30 +1,53 @@
-/* Loads active playlist to the playlist element. */
+
+var playlist = {};
+
+/* Loads active playlist, or creates a new playlist. */
 function load_playlist() {
   var cont = $("##{content}");
   $.ajax(
-    { url: "@{MediaPlaylistR}"
+    { url: "@{MediaPlaylistR ""}"
     , dataType: 'json'
-    , success: function(data) {
-        cont.empty();
-        data.appendTo(cont);
-      }
-    , error: function() {
-        cont.empty();
-        $("<i>Playlist not found</i>").appendTo(cont);
-      }
+    , success: function(data) { playlist = data; }
+    , error: function() { playlist = { title: "<new playlist>"
+                                     , elems: []
+                                     }
+                        }
+    , complete: update_playlist
     }
-  )
+  );
+}
+
+function update_playlist() {
+  var cont = $("##{content}");
+  cont.empty();
+
+  $('<h6/>').text(playlist["title"]).appendTo(cont);
+
+  var items = [];
+  $.each(playlist["elems"], function() {
+    items.push($('<li/>').text(this));
+  })
+  $('<ul/>', {
+    html: items.join('')
+  }).appendTo(cont);
 }
 
 /* POST to save the current playlist. */
 function save_playlist() {
+  playlist["action"] = "update";
+  $.post("@{MediaPlaylistR "update"}", playlist);
+  playlist["action"] = "none";
 }
 
 function save_playlist_custom(title) {
+
 }
 
 function to_playlist(what) {
-  alert("TODO: add to playlist; "+what);
+  // alert("TODO: add to playlist; "+what);
+  var cont = $("##{content}");
+  playlist["elems"].push(what);
+  $('<li/>').text(what).appendTo(cont.find('ul'));
 }
 
 $("##{content}").ready(load_playlist)

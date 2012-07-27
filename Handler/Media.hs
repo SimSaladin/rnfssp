@@ -9,7 +9,6 @@ module Handler.Media
     , getMediaAdminR
     , postMediaAdminR
 
-    , getMediaPlaylistR
     , postMediaPlaylistR
     ) where
 
@@ -89,6 +88,9 @@ widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBo
 -- | convienience
 timeNow :: Handler UTCTime
 timeNow = liftIO getCurrentTime
+
+toPath :: [String] -> String
+toPath = foldl1 (\x y -> x ++ "/" ++ y)
 
 -- * Userspace / General
 
@@ -198,32 +200,22 @@ browserViewWidget fps = do
 
 -- * Playing & Playlists
 
--- | JSON-encoded playlists for ajax.
--- XXX: try cookie first instead of db if no playlist given?
--- TODO: support hidden playlists?
-getMediaPlaylistR :: Handler RepJson
-getMediaPlaylistR = do
-  playlist <- getPlaylist404
-  jsonToRepJson playlist
-
 -- | creating, deleting, modifying playlists.
-postMediaPlaylistR :: Handler RepJson
-postMediaPlaylistR = do
+postMediaPlaylistR :: Text -> Handler RepJson
+postMediaPlaylistR action = do
   uent <- requireAuth
-  mt <- lookupPostParam "title"
-  ma <- lookupPostParam "action"
-  case (mt, ma) of
-    (Nothing,_) -> invalidArgs ["no title given"]
-    (_,Nothing) -> invalidArgs ["no action given"]
-    (Just title, Just action) -> do
-        jsonToRepJson =<< case action of
-          "insert" -> insertPlaylist title uent >>= \pl -> return $ array [pl]
-          "delete" -> deletePlaylist title >>= return . Bool
-          "update" -> parseJsonBody_ >>= updatePlaylist title >>= \pl -> return $ array [pl]
+  mtitle <- lookupPostParam "title"
+  jsonToRepJson =<< case mtitle of
+    Nothing -> invalidArgs ["no title given"]
+    Just title -> case action of
+      "select" -> getPlaylist404 >>= return . array . return
+      "create" -> createPlaylist title uent >>= return . array . return
+      "delete" -> deletePlaylist title >>= return . Bool
+      "update" -> updatePlaylist title [] >>= return . array . return
 
 -- | completely new playlist.
-insertPlaylist :: Text -> Entity User -> Handler Playlist
-insertPlaylist title (Entity uid _) = do
+createPlaylist :: Text -> Entity User -> Handler Playlist
+createPlaylist title (Entity uid _) = do
     date <- timeNow
     let pl = Playlist title uid [] date date
     mid <- runDB $ insertUnique pl
@@ -246,10 +238,12 @@ updatePlaylist title newElements = do
 -- | user specific playlist widget
 widPlaylist :: Entity User -> Widget
 widPlaylist (Entity _ uval) = do
-  [main, actions, content] <- replicateM 3 (lift newIdent)
-  $(widgetFile "media-playlist")
+    [main, actions, content] <- replicateM 3 (lift newIdent)
+    $(widgetFile "media-playlist")
 
 -- | getparam OR cookie OR database
+-- XXX: try cookie first instead of db if no playlist given?
+-- TODO: support hidden playlists?
 getPlaylist404 :: Handler Playlist
 getPlaylist404 = do
     mt <- lookupGetParam "title"
@@ -326,7 +320,7 @@ updateListing area dir = do
     unknown <- filterM (fmap isNothing . runDB . getBy . UniqueFilenode . fst) infs
     mapM (runDB . insertNode) unknown
 
-    -- XXX: find modified entities
+    -- XXX: find and update modified entities?
 
     liftIO $ mapM_ (putStrLn . T.unpack . fst) (take 100 unknown) -- debugging only?
     return ()
