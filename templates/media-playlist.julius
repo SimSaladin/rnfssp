@@ -5,7 +5,8 @@ var playlist = {};
 function load_playlist() {
   var cont = $("##{content}");
   $.ajax(
-    { url: "@{MediaPlaylistR ""}"
+    { url: "@{MediaPlaylistR "select"}"
+    , type: 'POST'
     , dataType: 'json'
     , success: function(data) { playlist = data; }
     , error: function() { playlist = { title: "<new playlist>"
