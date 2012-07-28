@@ -1,4 +1,3 @@
-
 var playlist = {};
 
 /* Loads active playlist, or creates a new playlist. */
@@ -45,7 +44,6 @@ function save_playlist_custom(title) {
 }
 
 function to_playlist(what) {
-  // alert("TODO: add to playlist; "+what);
   var cont = $("##{content}");
   playlist["elems"].push(what);
   $('<li/>').text(what).appendTo(cont.find('ul'));
