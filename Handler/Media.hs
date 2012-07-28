@@ -203,36 +203,42 @@ browserViewWidget fps = do
 -- | creating, deleting, modifying playlists.
 postMediaPlaylistR :: Text -> Handler RepJson
 postMediaPlaylistR action = do
-  uent <- requireAuth
-  mtitle <- lookupPostParam "title"
-  jsonToRepJson =<< case mtitle of
-    Nothing -> invalidArgs ["no title given"]
-    Just title -> case action of
-      "select" -> getPlaylist404 >>= return . array . return
-      "create" -> createPlaylist title uent >>= return . array . return
-      "delete" -> deletePlaylist title >>= return . Bool
-      "update" -> updatePlaylist title [] >>= return . array . return
+  Entity uid uval <- requireAuth
+  (action, arg1, mpl) <- parseJsonBody_
+  jsonToRepJson =<< case action of
+    "get_my" -> getPlaylist404
+    "create" -> newPlaylist arg1 uid
+    _ -> case mpl of
+      Just pl -> case action of
+        "update" -> updatePlaylist pl
+        "delete" -> deletePlaylist pl >>= \deleted -> if deleted
+            then newPlaylist "name_gen_todo" uid
+            else getPlaylist404
+        _ -> notFound
+      Nothing -> notFound
 
--- | completely new playlist.
-createPlaylist :: Text -> Entity User -> Handler Playlist
-createPlaylist title (Entity uid _) = do
+newPlaylist :: Text -> UserId -> Handler Playlist
+newPlaylist title uid = do
     date <- timeNow
-    let pl = Playlist title uid [] date date
-    mid <- runDB $ insertUnique pl
-    case mid of
-      Nothing -> invalidArgs ["Playlist with identical title already exists"]
-      Just _  -> return pl
+    return $ Playlist title uid [] date date
 
--- |
-deletePlaylist :: Text
-               -> Handler Bool -- ^ true if deleted, false if never existed XXX: unmodifiable playlists?
-deletePlaylist title = fmap isJust $
+savePlaylist :: Playlist -> Handler Playlist
+savePlaylist pl = runDB (insertUnique pl) >>= \mid -> case mid of
+  Nothing -> invalidArgs ["Playlist with identical title already exists"]
+  Just _ -> return pl
+
+-- | XXX: unmodifiable playlists?
+deletePlaylist :: Playlist
+               -> Handler Bool -- ^ true if deleted, false if never existed
+deletePlaylist pl = fmap isJust $
     runDB $ getBy upl >>= \ment -> deleteBy upl >> return ment
-  where upl = UniquePlaylist title
+  where upl = UniquePlaylist (playlistTitle pl)
 
-updatePlaylist :: Text -> [Text] -> Handler Playlist
-updatePlaylist title newElements = do
-    Entity _ val <- runDB $ getBy404 $ UniquePlaylist title
+updatePlaylist :: Playlist -> Handler Playlist
+updatePlaylist newPl = do
+    Entity key val <- runDB $ getBy404 $ UniquePlaylist (playlistTitle newPl)
+    modTime <- timeNow
+    runDB $ update key [PlaylistElems =. playlistElems newPl, PlaylistModified =. modTime]
     return val
 
 -- | user specific playlist widget
