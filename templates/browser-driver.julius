@@ -22,12 +22,14 @@ function browser_load_page(browserDom, href, browse_history) {
       animOptOne = { direction : "right" };
       animOptSec = { direction : "left" };
     }
-    browserDom.fadeOut(300, function() {
-      browserDom.html(data);
-//      $("#mediaTable").tablesorter()
-      browser_register_links(browserDom);
-      browserDom.fadeIn(300);
-    });
+
+    if (to != from) {
+      browserDom.animate({ opacity: 0 }, 200, function() {
+        browserDom.html(data);
+        browser_register_links(browserDom);
+        browserDom.animate({ opacity:1.0 }, 200);
+      });
+    }
   });
 }
 

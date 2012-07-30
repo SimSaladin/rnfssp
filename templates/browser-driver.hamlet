@@ -1,10 +1,16 @@
-<h2>browse: #
-  $with p <- ["anime"]
-    <a.btn href=@{MediaR p}>
-      <i.icon-film> #
-      Anime
-  $with p <- ["music"]
-    <a.btn href=@{MediaR p}>
-      <i.icon-music> #
-      Music
-<div##{browserId}>
+<ul.nav.nav-tabs>
+  $forall (active, route, name, icon) <- sections
+    $if active
+      <li.active>
+        <a href="@{route}">
+          <i.icon-white.icon-#{icon}>
+          &nbsp;
+          #{name}
+    $else
+      <li>
+        <a href="@{route}">
+          <i.icon-white.icon-#{icon}>
+          &nbsp;
+          #{name}
+<div.page-element style="min-height:20em;">
+  <div##{browserId}>

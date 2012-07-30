@@ -1,13 +1,29 @@
 <div##{main}.page-element>
-  <div##{actions} style="float:right">
-    <div.btn-group style="display:inline-block">
-      <button.btn onclick="">Clear
-      <button.btn onclick="">Filter
-      <button.btn onclick="">Sort by
-    <div.btn-group style="display:inline-block">
-      <button.btn onclick="save_playlist()">Save
-      <button.btn onclick="save_playlist_custom(todo)">Save as...
-      <button.btn onclick="load_playlist_dialog()">Load
-  <div##{heading}>
+  <div##{actions}.btn-toolbar style="float:right">
+    <div.btn-group>
+      <button.btn onclick="clear_playlist()">Clear
+      <button.btn onclick="alert()">Download #
+      <button.btn.dropdown-toggle data-toggle="dropdown">Save #
+        <span.caret>
+      <ul.dropdown-menu.pull-right>
+        <li>
+          <a onclick="load_playlist()">TODO
+
+    <div.btn-group>
+      <button.btn.dropdown-toggle data-toggle="dropdown">Play #
+        <span.caret>
+      <ul.dropdown-menu.pull-right>
+        <li>
+          <a onclick="alert()">In browser
+          <a onclick="alert()">Locally
+
+    <div.btn-group>
+      <button.btn.dropdown-toggle data-toggle="dropdown">Switch #
+        <span.caret>
+      <ul.dropdown-menu.pull-right>
+        <li>
+          <a onclick="load_playlist()">TODO
+
+  <h3##{heading}>
   <div##{content}.playlist-items>
     Loading playlist...

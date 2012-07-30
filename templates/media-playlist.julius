@@ -39,7 +39,11 @@ function update_playlist() {
   var cont = $("##{content}");
   cont.empty();
 
-  $('##{heading}').text(playlist["title"] || "(unknown playlist)");
+  if (playlist["title"]) {
+    $('##{heading}').text(playlist["title"]);
+  } else {
+    $('##{heading}').append($('<i/>').text("default"));
+  }
 
   var table = $('<table/>');
   $.each(playlist["elems"], function(index, value) {
@@ -57,7 +61,13 @@ function save_playlist_custom(title) {
 }
 
 /**
- * 
+ * clear every element from the playlist.
  */
+function clear_playlist() {
+  $.post('@{MediaPlaylistR "clear"}', JSON.stringify([]), function(data) {
+    if (data[0] == 0) { playlist = data[1]; update_playlist(); }
+    else { alert("could not clear the playlist: " + data[1]); }
+  });
+}
 
 $("##{content}").ready(load_playlist)

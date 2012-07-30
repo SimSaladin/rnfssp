@@ -1,10 +1,17 @@
 <h1>Media #
   <small>_{MsgMediaDescription}
+
 $maybe ent <- mauth
-  ^{widPlaylist ent}
   ^{mediaBrowser}
+  ^{widPlaylist ent}
+
 $nothing
-  <div.page-element>
-    <i>
-      <a href="@{AuthR LoginR}" style="padding-right:5px">Login
-      to peek further
+  <div.hero-unit>
+    <h1>Access restricted
+    <p>
+      You must be explicitly granted access to this part.<br/>
+      Please, #
+      <a.btn.btn-primary href="@{AuthR LoginR}">Login
+      or learn how to #
+      <a.btn.btn-info href="@{RegisterR}">Register
+      .

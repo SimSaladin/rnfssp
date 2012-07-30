@@ -20,20 +20,22 @@ body {
   background-position:center;
   color:#{colorFg};
 }
-.page-element {
-  padding:9px;
-  margin-bottom:7px;
+.hero-unit, .page-element {
   -webkit-box-sizing: border-box;
   -moz-box-sizing:border-box;
   box-sizing: border-box;
   background-color:#{colorElemBg};
-  border-radius:4px;
+}
+.page-element {
+  padding:9px;
+  margin-bottom:7px;
+  border-radius:0px 18px 0px 18px;
   box-shadow:0 1px 3px rgba(0,0,0,0.25), 0 -1px 0 rgba(0,0,0,1) inset;
 }
 .page-element.functional {
   padding:0;
+  margin:0;
   /* box-shadow: 0 0 2px 2px #888; */
-  border:1px solid #641285;
   border-radius:0;
 }
 footer {
@@ -74,18 +76,24 @@ ul, ol {
 }
 table.browser {
   width:100%;
-  thead {border-bottom:1px solid #641285;}
-  th, td {text-align:left;}
-  th {padding:0 9px; line-height:1.8em;}
+  white-space:nowrap;
+  table-layout:fixed;
+  thead { border-bottom:1px solid #641285; }
+  th, td { text-align:left; }
+  th { padding:0 9px; line-height:1.8em; }
   td {
+    overflow:hidden;
+    text-overflow:ellipsis;
     padding:0 9px 0 0;
     line-height:1.3em;
     border-bottom:1px solid #641285;
   }
-  td:first-child {
+  td.browser-controls {
     width:51px;
     padding:0 0 0 3px;
   }
+  td.browser-size { width:4em; }
+  td.browser-modified { width:5em; }
   a.directory { color:#C1D1FF; }
   a.video { color:#EBDD81; }
   a.audio { color:#35F539; }
@@ -112,8 +120,9 @@ i { color:#{colorLightBgFg}; }
 .page-element p {color:#{colorFg}}
 
 a:hover, a:active { color:#EEE; }
-a.btn { color:#000; margin-right:5px;}
-a.btn.btn-primary { color:#FFF; }
+.btn { color:#000; }
+.btn.btn-primary { color:#FFF; }
+.btn.btn-info { color:#FEFEFE; }
 .page-element a { color:#999999; }
 /* a { color:#FEFEB8; } */
 
@@ -124,8 +133,25 @@ a.btn.btn-primary { color:#FFF; }
   box-shadow:none;
   margin-bottom:0;
 }
-.nav-tabs > .active a {
-  background-color:#{colorElemBg};
+.nav-tabs {
+  margin-bottom:1px;
+  border-bottom:none;
+  padding-left:5px;
+  li a {
+      border-radius: 0px 13px 0px 0px;
+      padding:3px 20px;
+      color:#{colorLightBgFg};
+      background:#{colorBodyBg};
+  }
+  .active a {
+    color:#{colorFg};
+    background-color:#{colorElemBg};
+  }
+  li a:hover, li.active a:hover {
+    border:1px solid #{colorElemBg};
+    border-bottom:0px;
+    background:#{colorBodyBg};
+  }
 }
 .navbar .nav > li > a {
   color:#{colorNavigationFg};

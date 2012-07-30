@@ -121,11 +121,12 @@ postMediaR fps = do
     setMessage "This is not yet supported"
     redirect $ MediaR fps
 
-getMediaServeR :: Text -- ^ type of download:
+getMediaServeR :: Text   -- ^ type of download:
+               -> Text   -- ^ file area
                -> [Text] -- ^ path for the file
                -> Handler RepJson
-getMediaServeR _ []          = invalidArgs ["Invalid download target"]
-getMediaServeR t (area:path) = do
+getMediaServeR _ _ []        = invalidArgs ["Invalid download target"]
+getMediaServeR t area path = do
     uid  <- requireAuthId
     Entity key val <- runDB $ getBy404 $ UniqueFilenode area (toPath path)
     if filenodeIsdir val
@@ -155,6 +156,12 @@ browserWidget :: [Text] -> Widget
 browserWidget fps = do
     browserId <- lift newIdent
     $(widgetFile "browser-driver")
+  where
+    active = if null fps then "" else head fps
+    sections = map (\(sect, icon) -> (active == sect, MediaR [sect], sect, icon)) browsable
+
+browsable :: [(Text, Text)]
+browsable = [ ("anime", "film"), ("music", "music")]
 
 -- | requires the browser script already on the page
 browserViewWidget :: [Text] -> Widget
@@ -164,7 +171,7 @@ browserViewWidget [] = let
     is_dir  = False
     is_file = False
     details = Nothing :: Maybe String
-    listing = [] :: [(String, Text, [Text], Text, Text)]
+    listing = [] :: [(String, Text, [Text], [Text], Text, Text)]
     in $(widgetFile "browser-bare")
 browserViewWidget (area:path) = do
     node <- lift $ runDB $ getBy404 $ UniqueFilenode area (T.pack $ normalise $ F.joinPath $ map T.unpack path)
@@ -184,11 +191,11 @@ browserViewWidget (area:path) = do
             filetype = if filenodeIsdir val
                          then "directory"
                          else guessFiletype file
-            split    = area:(path ++ [T.pack file])
+            fps      = path ++ [T.pack file]
             size     = filenodeSize val
             modified = formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime val
             details  = filenodeDetails val
-            in return (file, filetype, split, size, modified)
+            in return (file, filetype, fps, area : fps, size, modified)
     $(widgetFile "browser-bare")
   where
     nav = zip (area:path) (foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] (area:path))
@@ -218,8 +225,9 @@ postMediaPlaylistR action = do
         (area, what) <- parseJsonBody_
         new <- toPlaylist pl area what
         if fst new
-          then updatePlaylist plk (snd new) >> rsucc (snd new)
+          then updatePlaylist plk (snd new) >>= rsucc
           else rfail "no such path"
+    "clear"  -> updatePlaylist plk (clearPlaylist pl) >>= rsucc
     _ -> rfail "unknown playlist action"
   where
     rfail :: Text -> Handler RepJson
@@ -250,6 +258,9 @@ getPlaylist (Entity k v) = fromGetparam
 
     fromDBDefault = runDB (getBy $ UniquePlaylist k "") >>= tryMaybe (addDefaultPlaylist k)
 
+clearPlaylist :: Playlist -> Playlist
+clearPlaylist pl = pl { playlistElems = [] }
+
 -- | add file OR every child of directory to playlist.
 toPlaylist :: Playlist
            -> Text
@@ -263,15 +274,6 @@ toPlaylist pl area path = do
       else return (True, pl { playlistElems    = playlistElems pl ++ map ((,) area) newElems
                             , playlistModified = t })
 
-findAll :: Text -> Text -> Handler [Text]
-findAll area path = do
-    Entity k v <- runDB $ getBy404 $ UniqueFilenode area path
-    if filenodeIsdir v
-    then do
-        childs <- liftM (map (filenodePath . entityVal)) $ runDB $ selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
-        liftM concat $ mapM (findAll area) childs
-    else return [filenodePath v]
-
 -- | New titleless playlist for user with userId uid.
 -- XXX: doesn't check for duplicates(!)
 addDefaultPlaylist :: UserId -> Handler (Entity Playlist)
@@ -281,11 +283,12 @@ addDefaultPlaylist uid = do
     k <- runDB $ insert pl
     return $ Entity k pl
 
--- | saves (replaces) an existing playlist.
+-- | saves (replaces) an existing playlist. This is unsafe (replace) due to
+-- unique constraints.
 updatePlaylist :: PlaylistId -- ^ id of playlist to replace
                -> Playlist
-               -> Handler () -- ^ was update successful?
-updatePlaylist plid pl = runDB $ replace plid pl
+               -> Handler Playlist -- ^ was update successful?
+updatePlaylist plid pl = runDB (replace plid pl) >> return pl
 
 -- | user specific playlist widget
 widPlaylist :: Entity User -> Widget
@@ -301,6 +304,16 @@ widPlaylists = do
         pls <- selectList ([] :: [Filter Playlist]) []
         return pls
     toWidget [hamlet|playlist listing: not yet implemented|]
+
+findAll :: Text -> Text -> Handler [Text]
+findAll area path = do
+    Entity k v <- runDB $ getBy404 $ UniqueFilenode area path
+    if filenodeIsdir v
+    then do
+        childs <- liftM (map (filenodePath . entityVal)) $ runDB $ selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
+        liftM concat $ mapM (findAll area) childs
+    else return [filenodePath v]
+
 
 -- * Adminspace
 
@@ -344,6 +357,7 @@ updateListing area dir = do
         stat   <- getFileStatus dir
         childs <- find dir
         return ( (dir,stat) : childs)
+
     -- delete entities not found in the filesystem XXX: disable/hide only?
     runDB $ deleteWhere [FilenodeArea ==. area, FilenodePath /<-. map fst infs]
 
@@ -355,27 +369,29 @@ updateListing area dir = do
     -- Try to add parents to nodes
     orphans <- runDB $ selectList [ FilenodeArea   ==. area
                                   , FilenodeParent ==. Nothing] []
-    liftIO $ putStrLn $ show $ length orphans
     mapM_ fixParent orphans
   where
-    paths = map $ first (T.pack . drop (length dir + 1))
+    paths = map $ first (T.pack . normalise . drop (length dir + 1))
 
     insertNode (path,stat) = do
         parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack path)
-        insert =<< liftIO (toFilenode area (entityKey <$> parent) (T.pack $ normalise $ T.unpack path) stat)
+        insert =<< liftIO (toFilenode (dir </> T.unpack path) area (entityKey <$> parent) (T.pack $ normalise $ T.unpack path) stat)
 
     fixParent (Entity key val) = runDB $ do
         parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack $ filenodePath val)
         update key [FilenodeParent =. (fmap entityKey parent)]
 
 -- | 
-toFilenode :: Text             -- ^ area
+toFilenode :: FilePath         -- ^ Real path to the file
+           -> Text             -- ^ area
            -> Maybe FilenodeId -- ^ parent node
            -> Text             -- ^ path of the node
            -> FileStatus       -- ^ status of the node
            -> IO Filenode
-toFilenode area parent path stat = do
-    details <- if not boolDir then fmap Just $ getDetails $ T.unpack path else return Nothing
+toFilenode real area parent path stat = do
+    details <- if not boolDir
+      then fmap Just $ getDetails real
+      else return Nothing
     return $ Filenode area
                       parent
                       boolDir
@@ -387,4 +403,7 @@ toFilenode area parent path stat = do
     boolDir = isDirectory stat
 
 getDetails :: FilePath -> IO Text
-getDetails fp = readProcessWithExitCode "mediainfo" [fp] "" >>= \(_,x,_) -> return $ T.pack x
+getDetails fp = do
+  (c, out, err) <- readProcessWithExitCode "mediainfo" [fp] ""
+  return $ T.pack out
+
