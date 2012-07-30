@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 16 2012 [23:02:54]
+-- Last Modified: Jul 31 2012 [02:37:40]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -17,12 +17,12 @@
 module Chat where
 
 import Yesod
-import Prelude (Bool, ($), Maybe(..))
+import Prelude (Bool, ($), Maybe(..), (.))
 import Control.Monad (return)
 import Control.Concurrent.Chan (Chan, dupChan, writeChan)
 import Data.Text (Text)
-import Network.Wai (Request(..))
-import Network.Wai.EventSource (ServerEvent (..), eventSourceAppChan)
+import Network.Wai (Response(ResponseSource), responseSource)
+import Network.Wai.EventSource (ServerEvent(..), eventSourceAppChan)
 import Language.Haskell.TH.Syntax (Type (VarT), Pred (ClassP), mkName)
 import Blaze.ByteString.Builder.Char.Utf8 (fromText)
 import Data.Monoid (mappend)
@@ -84,11 +84,12 @@ getReceiveR = do
     -- Now we use the event source API. eventSourceAppChan takes two parameters:
     -- the channel of events to read from, and the WAI request. It returns a
     -- WAI response, which we can return with sendWaiResponse.
-    -- XXX: setHeader "X-Accel-Buffering" "no" -- for nginx reverse-proxying
-    req' <- waiRequest
-    let req = req' { requestHeaders = ("X-Accel-Buffering", "no"):(requestHeaders req') }
+    req <- waiRequest
     res <- lift $ eventSourceAppChan chan req
-    sendWaiResponse res
+
+    -- for nginx reverse-proxying to work, we add the header X-Accel-Buffering
+    let (stat, hs, src) = responseSource res
+    sendWaiResponse $ ResponseSource stat (("X-Accel-Buffering", "no"):hs) src
 
 -- | Provide a widget that the master site can embed on any page.
 chatWidget :: YesodChat master
