@@ -187,6 +187,7 @@ instance YesodAuth App where
     authHttpManager = httpManager
 
     loginHandler = defaultLayout $ do
+        setTitle "Login"
         $(widgetFile "login")
 
 -- This instance is required to use forms. You can modify renderMessage to

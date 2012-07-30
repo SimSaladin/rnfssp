@@ -1,7 +1,9 @@
 var playlist = {};
 var cont = $("##{content}");
 
-/* Loads active playlist, or creates a new playlist. */
+/**
+ * Loads active playlist, or creates a new playlist.
+ */
 function load_playlist() {
   $.ajax(
     { url: '@{MediaPlaylistR "select"}'
@@ -16,7 +18,9 @@ function load_playlist() {
   );
 }
 
-/* add `what' from `area' to the playlist */
+/**
+ * add `what' from `area' to the playlist
+ */
 function to_playlist(area, what) {
   $.post('@{MediaPlaylistR "push"}', JSON.stringify([area, what]), function(data) {
     if (data[0] == 0) {
@@ -28,6 +32,9 @@ function to_playlist(area, what) {
   });
 }
 
+/**
+ * redraw playlist
+ */
 function update_playlist() {
   var cont = $("##{content}");
   cont.empty();
@@ -42,12 +49,15 @@ function update_playlist() {
   cont.append(table);
 }
 
-/* POST to save the current playlist. */
-function save_playlist() {
-}
-
+/**
+ * save playlist. title is optional and default is used if == null
+ */
 function save_playlist_custom(title) {
-
+  
 }
+
+/**
+ * 
+ */
 
 $("##{content}").ready(load_playlist)

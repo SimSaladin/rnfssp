@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables, DoAndIfThenElse #-}
 module Handler.Media
     ( getMediaR
     , postMediaR
@@ -265,16 +265,12 @@ toPlaylist pl area path = do
 
 findAll :: Text -> Text -> Handler [Text]
 findAll area path = do
-    this <- runDB $ getBy $ UniqueFilenode area path
-    case this of
-      Just (Entity k val) -> do
-        other <- if filenodeIsdir val
-          then do
-              childs <- liftM (map (filenodePath . entityVal)) $ runDB $ selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
-              liftM concat $ mapM (findAll area) childs
-          else return []
-        return (filenodePath val : other)
-      Nothing -> return []
+    Entity k v <- runDB $ getBy404 $ UniqueFilenode area path
+    if filenodeIsdir v
+    then do
+        childs <- liftM (map (filenodePath . entityVal)) $ runDB $ selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
+        liftM concat $ mapM (findAll area) childs
+    else return [filenodePath v]
 
 -- | New titleless playlist for user with userId uid.
 -- XXX: doesn't check for duplicates(!)
