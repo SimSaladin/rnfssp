@@ -1,8 +1,13 @@
 <div##{main}.page-element>
-  <div##{actions}.btn-group style="float:right">
-    <button.btn onclick="save_playlist()">Save
-    <button.btn onclick="save_playlist_custom(todo)">Save as...
-    <button.btn onclick="load_playlist_dialog()">Load
+  <div##{actions} style="float:right">
+    <div.btn-group style="display:inline-block">
+      <button.btn onclick="">Clear
+      <button.btn onclick="">Filter
+      <button.btn onclick="">Sort by
+    <div.btn-group style="display:inline-block">
+      <button.btn onclick="save_playlist()">Save
+      <button.btn onclick="save_playlist_custom(todo)">Save as...
+      <button.btn onclick="load_playlist_dialog()">Load
   <div##{heading}>
   <div##{content}.playlist-items>
     Loading playlist...
