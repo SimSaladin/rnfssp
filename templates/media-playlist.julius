@@ -1,52 +1,53 @@
 var playlist = {};
+var cont = $("##{content}");
 
 /* Loads active playlist, or creates a new playlist. */
 function load_playlist() {
-  var cont = $("##{content}");
   $.ajax(
-    { url: @{MediaPlaylistR "select"}
+    { url: '@{MediaPlaylistR "select"}'
     , type: 'POST'
     , dataType: 'json'
-    , success: function(data) { playlist = data; }
-    , error: function() { playlist = { title: "<new playlist>"
-                                     , elems: []
-                                     }
-                        }
+    , success: function(data) { if (data[0] == 0) playlist = data[1];
+                                else playlist = {};
+      }
+    , error: function() { playlist = {}; }
     , complete: update_playlist
     }
   );
+}
+
+/* add `what' from `area' to the playlist */
+function to_playlist(area, what) {
+  $.post('@{MediaPlaylistR "push"}', JSON.stringify([area, what]), function(data) {
+    if (data[0] == 0) {
+      playlist = data[1];
+      update_playlist();
+    } else {
+      alert("could not add to playlist: " + what + "\n\nresult: " + data);
+    }
+  });
 }
 
 function update_playlist() {
   var cont = $("##{content}");
   cont.empty();
 
-  $('<h6/>').text(playlist["title"]).appendTo(cont);
+  $('##{heading}').text(playlist["title"] || "(unknown playlist)");
 
-  var items = [];
-  $.each(playlist["elems"], function() {
-    items.push($('<li/>').text(this));
-  })
-  $('<ul/>', {
-    html: items.join('')
-  }).appendTo(cont);
+  var table = $('<table/>');
+  $.each(playlist["elems"], function(index, value) {
+    table.append($('<tr/>').append( $('<td/>').text(value[1]) ));
+  });
+  
+  cont.append(table);
 }
 
 /* POST to save the current playlist. */
 function save_playlist() {
-  playlist["action"] = "update";
-  $.post("@{MediaPlaylistR "update"}", playlist);
-  playlist["action"] = "none";
 }
 
 function save_playlist_custom(title) {
 
-}
-
-function to_playlist(what) {
-  var cont = $("##{content}");
-  playlist["elems"].push(what);
-  $('<li/>').text(what).appendTo(cont.find('ul'));
 }
 
 $("##{content}").ready(load_playlist)

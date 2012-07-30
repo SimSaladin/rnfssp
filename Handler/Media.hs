@@ -1,10 +1,8 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables #-}
 module Handler.Media
     ( getMediaR
     , postMediaR
-
-    , getMediaDataR
-    , postMediaDataR
+    , getMediaServeR
 
     , getMediaAdminR
     , postMediaAdminR
@@ -20,6 +18,7 @@ import Data.Time (getCurrentTime)
 import Data.Time.Clock (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Time.Format (formatTime)
+import Control.Arrow (first)
 import Control.Monad
 import qualified Data.Text as T
 import qualified System.FilePath as F (joinPath)
@@ -73,7 +72,7 @@ guessFiletype fp = if ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"])
    where ext = takeExtension fp
 
 -- | Get real filepath for @which@ master directory.
-gdir :: String -> Handler FilePath
+gdir :: Text -> Handler FilePath
 gdir which = do
    master <- getYesod
    let set = appExtra $ settings master
@@ -89,14 +88,23 @@ widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBo
 timeNow :: Handler UTCTime
 timeNow = liftIO getCurrentTime
 
-toPath :: [String] -> String
-toPath = foldl1 (\x y -> x ++ "/" ++ y)
+toPath :: [Text] -> Text
+toPath = T.intercalate "/"
+
+tryMaybe :: Monad m => m a -> Maybe a -> m a
+tryMaybe or this = case this of
+    Just a -> return a
+    Nothing -> or
+
+if' :: Bool -> a -> a -> a
+if' cond th el = if cond then th else el
+
 
 -- * Userspace / General
 
 -- | The root and heart of media section. Loads browser, playlist and other
 --   possibly widgets. 
-getMediaR :: [FilePath] -> Handler RepHtml
+getMediaR :: [Text] -> Handler RepHtml
 getMediaR fps = do
     mauth <- maybeAuth
     bare <- lookupGetParam "bare"
@@ -108,162 +116,186 @@ getMediaR fps = do
           where mediaBrowser = browserWidget fps
 
 -- | Used to modify media -- TODO TODO TODO --
-postMediaR :: [FilePath] -> Handler RepHtml
+postMediaR :: [Text] -> Handler RepHtml
 postMediaR fps = do
     setMessage "This is not yet supported"
     redirect $ MediaR fps
 
--- | Downloading files/data (user&js)
-getMediaDataR :: Text     -- ^ one of `playlist`, `download`
-              -> Text     -- ^ for playlist, the title. for download, not used.
-              -> [String] -- ^ for download: specifies filepath
-              -> Handler RepJson
-getMediaDataR what which fp = do
-   entid <- requireAuthId
-
-   case what of
-      -- TODO: use "Header Range" and sendResponse (type, toContent {ByteString})
-      -- ... allows the download to be continued?
-      "download" -> if null fp
-         then notFound
-         else do
-            root <- gdir $ head fp
-            let path = root </> (F.joinPath $ tail fp)
-
-            time <- liftIO getCurrentTime
-
-            _ <- runDB $ insert $ LogDownload entid time path
-            case which of
-               "force" -> sendFile "application/force-download" path
-               "auto"  -> sendFile "" path
-               _       -> invalidArgs ["Invalid download argument"]
-
-      _ -> invalidArgs ["Invalid reply type: " `T.append` what]
-
-postMediaDataR :: Text -> Text -> [String] -> Handler RepJson
-postMediaDataR _ _ _ = do
-    r <- parseJsonBody_
-    liftIO $ putStrLn "teh value:"
-    liftIO $ putStrLn $ show (r :: Value)
-    jsonToRepJson r
+getMediaServeR :: Text -- ^ type of download:
+               -> [Text] -- ^ path for the file
+               -> Handler RepJson
+getMediaServeR _ []          = invalidArgs ["Invalid download target"]
+getMediaServeR t (area:path) = do
+    uid  <- requireAuthId
+    Entity key val <- runDB $ getBy404 $ UniqueFilenode area (toPath path)
+    if filenodeIsdir val
+      then invalidArgs ["Downloading directories is not supported"]
+      else do
+          now <- timeNow
+          fsRoot <- gdir area
+          let fsPath = fsRoot </> (T.unpack $ filenodePath val)
+          runDB $ insert $ LogDownload uid now key
+          case t of
+            "force" -> sendFile "application/force-download" fsPath
+            "auto"  -> sendFile "" fsPath
+            _       -> invalidArgs ["Invalid/unsupported download type"]
+      
 
 -- * Browser
 
 -- | the <table> element only
-browserTable :: [FilePath] -> Handler RepHtml
+browserTable :: [Text] -> Handler RepHtml
 browserTable fps = do
     rauth <- requireAuth
     pc <- widgetToPageContent $ browserViewWidget fps
     hamletToRepHtml [hamlet|^{pageBody pc}|]
 
 -- | The driver for the browser
-browserWidget :: [FilePath] -> Widget
+browserWidget :: [Text] -> Widget
 browserWidget fps = do
     browserId <- lift newIdent
     $(widgetFile "browser-driver")
 
 -- | requires the browser script already on the page
-browserViewWidget :: [FilePath] -> Widget
-browserViewWidget fps = do
-   root <- lift $ gdir $ head fps
-   let real = root </> (F.joinPath $ tail fps)
-       nav  = zip fps (foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] fps)
-   liftIO $ print (root, real)
-   node' <- lift $ runDB $ getBy $ UniqueFilenode (T.pack real)
-   case node' of
-      Nothing -> let is_dir  = False
-                     is_file = False
-                     details = Nothing :: Maybe String
-                     listing = [] :: [(String, Text, [String], Text, Text)]
-                     in $(widgetFile "browser-bare")
+browserViewWidget :: [Text] -> Widget
+browserViewWidget [] = let
+    nav     = [] :: [(Text,Texts)]
+    area    = "" :: Text
+    is_dir  = False
+    is_file = False
+    details = Nothing :: Maybe String
+    listing = [] :: [(String, Text, [Text], Text, Text)]
+    in $(widgetFile "browser-bare")
+browserViewWidget (area:path) = do
+    node <- lift $ runDB $ getBy404 $ UniqueFilenode area (T.pack $ normalise $ F.joinPath $ map T.unpack path)
+    let val     = entityVal node
+        is_dir  = filenodeIsdir val
+        is_file = not is_dir
+        details = filenodeDetails val
 
-      Just node -> let val     = entityVal node
-                       is_dir  = filenodeIsdir val
-                       is_file = not is_dir
-                       details = filenodeDetails val
-                       in do
-         nodes <- lift $ if is_dir
-            then runDB $ selectList [FilenodeParent ==. (Just $ entityKey node)] [Asc FilenodePath]
-            else return []
-         let listing = do
-                val <- map entityVal nodes
-                let file     = takeFileName $ T.unpack $ filenodePath val
-                    filetype = if filenodeIsdir val
-                                 then "directory"
-                                 else guessFiletype file
-                    split    = fps ++ [file]
-                    size     = filenodeSize val
-                    modified = formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime val
-                    details  = filenodeDetails val
-                    in return (file, filetype, split, size, modified)
-         $(widgetFile "browser-bare")
+    nodes <- if is_file
+      then return []
+      else lift $ runDB $ selectList [ FilenodeParent ==. (Just $ entityKey node)
+                                     , FilenodePath   !=. "." ] [Asc FilenodePath]
+
+    let listing = do
+        val <- map entityVal nodes
+        let file     = takeFileName $ T.unpack $ filenodePath val
+            filetype = if filenodeIsdir val
+                         then "directory"
+                         else guessFiletype file
+            split    = area:(path ++ [T.pack file])
+            size     = filenodeSize val
+            modified = formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime val
+            details  = filenodeDetails val
+            in return (file, filetype, split, size, modified)
+    $(widgetFile "browser-bare")
+  where
+    nav = zip (area:path) (foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] (area:path))
+
+
 
 -- * Playing & Playlists
 
--- | creating, deleting, modifying playlists.
+instance A.FromJSON Playlist where
+   parseJSON (Object v) = Playlist
+                           <$> v A..: "title"
+                           <*> v A..: "owner"
+                           <*> v A..: "elems"
+                           <*> v A..: "created"
+                           <*> v A..: "modified"
+
+-- | action: "select" returns current or creates a new playlist
+--           "push" adds an filenode and its children to current playlist and
+--                  saves it if possible.
 postMediaPlaylistR :: Text -> Handler RepJson
 postMediaPlaylistR action = do
-  Entity uid uval <- requireAuth
-  (action, arg1, mpl) <- parseJsonBody_
-  jsonToRepJson =<< case action of
-    "get_my" -> getPlaylist404
-    "create" -> newPlaylist arg1 uid
-    _ -> case mpl of
-      Just pl -> case action of
-        "update" -> updatePlaylist pl
-        "delete" -> deletePlaylist pl >>= \deleted -> if deleted
-            then newPlaylist "name_gen_todo" uid
-            else getPlaylist404
-        _ -> notFound
-      Nothing -> notFound
+  uent <- requireAuth
+  Entity plk pl <- getPlaylist (uent)
+  case action of
+    "select" -> rsucc pl
+    "push"   -> do
+        (area, what) <- parseJsonBody_
+        new <- toPlaylist pl area what
+        if fst new
+          then updatePlaylist plk (snd new) >> rsucc (snd new)
+          else rfail "no such path"
+    _ -> rfail "unknown playlist action"
+  where
+    rfail :: Text -> Handler RepJson
+    rfail msg = jsonToRepJson (1 :: Int, msg)
+    rsucc msg = jsonToRepJson (0 :: Int, msg)
 
-newPlaylist :: Text -> UserId -> Handler Playlist
-newPlaylist title uid = do
+-- | Retrieve user's playlist using various methods.
+-- order: getparam -> cookie -> database -> new playlist
+--
+-- if "title" get parameter is set and no playlist is found, result is 404.
+-- note: playlist with a title of "" is the default for any user
+--
+-- XXX: support hidden playlists?
+getPlaylist :: Entity User -> Handler (Entity Playlist)
+getPlaylist (Entity k v) = fromGetparam
+  where
+    fromGetparam = lookupGetParam "title" >>= \mt -> case mt of
+        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromCookie 
+        Nothing    -> fromCookie
+
+    fromCookie = lookupCookie "playlist-title" >>= \mt' -> case mt' of
+        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromDB
+        Nothing    -> fromDB
+
+    fromDB = case userCurrentplaylist v of
+        Just plid -> runDB (get plid) >>= return . fmap (Entity plid) >>= tryMaybe fromDBDefault
+        Nothing   -> fromDBDefault
+
+    fromDBDefault = runDB (getBy $ UniquePlaylist k "") >>= tryMaybe (addDefaultPlaylist k)
+
+-- | add file OR every child of directory to playlist.
+toPlaylist :: Playlist
+           -> Text
+           -> Text
+           -> Handler (Bool, Playlist) -- (playlist changed?, maybe changed playlist)
+toPlaylist pl area path = do
+    t <- timeNow
+    newElems <- findAll area path
+    if null newElems
+      then return (False, pl)
+      else return (True, pl { playlistElems    = playlistElems pl ++ map ((,) area) newElems
+                            , playlistModified = t })
+
+findAll :: Text -> Text -> Handler [Text]
+findAll area path = do
+    this <- runDB $ getBy $ UniqueFilenode area path
+    case this of
+      Just (Entity k val) -> do
+        other <- if filenodeIsdir val
+          then do
+              childs <- liftM (map (filenodePath . entityVal)) $ runDB $ selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
+              liftM concat $ mapM (findAll area) childs
+          else return []
+        return (filenodePath val : other)
+      Nothing -> return []
+
+-- | New titleless playlist for user with userId uid.
+-- XXX: doesn't check for duplicates(!)
+addDefaultPlaylist :: UserId -> Handler (Entity Playlist)
+addDefaultPlaylist uid = do
     date <- timeNow
-    return $ Playlist title uid [] date date
+    let pl = Playlist "" uid [] date date
+    k <- runDB $ insert pl
+    return $ Entity k pl
 
-savePlaylist :: Playlist -> Handler Playlist
-savePlaylist pl = runDB (insertUnique pl) >>= \mid -> case mid of
-  Nothing -> invalidArgs ["Playlist with identical title already exists"]
-  Just _ -> return pl
-
--- | XXX: unmodifiable playlists?
-deletePlaylist :: Playlist
-               -> Handler Bool -- ^ true if deleted, false if never existed
-deletePlaylist pl = fmap isJust $
-    runDB $ getBy upl >>= \ment -> deleteBy upl >> return ment
-  where upl = UniquePlaylist (playlistTitle pl)
-
-updatePlaylist :: Playlist -> Handler Playlist
-updatePlaylist newPl = do
-    Entity key val <- runDB $ getBy404 $ UniquePlaylist (playlistTitle newPl)
-    modTime <- timeNow
-    runDB $ update key [PlaylistElems =. playlistElems newPl, PlaylistModified =. modTime]
-    return val
+-- | saves (replaces) an existing playlist.
+updatePlaylist :: PlaylistId -- ^ id of playlist to replace
+               -> Playlist
+               -> Handler () -- ^ was update successful?
+updatePlaylist plid pl = runDB $ replace plid pl
 
 -- | user specific playlist widget
 widPlaylist :: Entity User -> Widget
 widPlaylist (Entity _ uval) = do
-    [main, actions, content] <- replicateM 3 (lift newIdent)
+    [main, actions, content, heading] <- replicateM 4 (lift newIdent)
     $(widgetFile "media-playlist")
-
--- | getparam OR cookie OR database
--- XXX: try cookie first instead of db if no playlist given?
--- TODO: support hidden playlists?
-getPlaylist404 :: Handler Playlist
-getPlaylist404 = do
-    mt <- lookupGetParam "title"
-    mc <- lookupCookie "playlist-title"
-    case mt of
-      Just title -> get title
-      Nothing -> case mc of
-        Just title -> get title
-        Nothing -> do
-            Entity _ val <- requireAuth
-            case userCurrentplaylist val of
-              Just plid -> runDB $ get404 plid
-              Nothing -> notFound
-  where get t = return . entityVal =<< (runDB $ getBy404 $ UniquePlaylist t)
 
 -- | Lists every playlist and their information.
 -- XXX: implement hidden/private playlists?
@@ -306,34 +338,39 @@ find dir = do
    other <- mapM (find . fst) (filter (isDirectory . snd) this)
    return (this ++ concat other)
 
--- | This function is very memory-inefficient!! TODO: do something about it.
+-- | 
 updateListing :: Text
               -> FilePath
               -> Handler ()
 updateListing area dir = do
-    infs' <- liftIO $ do -- find every file in filesystem along with properties
+    -- recursively find files and directories in `dir` along with properties
+    infs <- liftM paths $ liftIO $ do
         stat   <- getFileStatus dir
         childs <- find dir
         return ( (dir,stat) : childs)
-    let infs = map (\(x,y) -> (T.pack x, y)) infs'
-        paths = map fst infs
+    -- delete entities not found in the filesystem XXX: disable/hide only?
+    runDB $ deleteWhere [FilenodeArea ==. area, FilenodePath /<-. map fst infs]
 
-    -- delete entities not found in the filesystem
-    -- XXX: disable/hide only?
-    runDB $ deleteWhere [FilenodeArea ==. area, FilenodePath /<-. paths]
+    -- completely new entities
+    unknown <- filterM (fmap isNothing . runDB . getBy . UniqueFilenode area . fst) infs
+    mapM_ (runDB . insertNode) unknown
+    -- XXX: find and update modified (newer than db) entities?
 
-    -- insert completely new entities
-    unknown <- filterM (fmap isNothing . runDB . getBy . UniqueFilenode . fst) infs
-    mapM (runDB . insertNode) unknown
+    -- Try to add parents to nodes
+    orphans <- runDB $ selectList [ FilenodeArea   ==. area
+                                  , FilenodeParent ==. Nothing] []
+    liftIO $ putStrLn $ show $ length orphans
+    mapM_ fixParent orphans
+  where
+    paths = map $ first (T.pack . drop (length dir + 1))
 
-    -- XXX: find and update modified entities?
-
-    liftIO $ mapM_ (putStrLn . T.unpack . fst) (take 100 unknown) -- debugging only?
-    return ()
-   where
     insertNode (path,stat) = do
-        parent <- selectFirst [FilenodePath ==. (T.pack $ takeDirectory $ T.unpack path)] []
-        insert =<< liftIO (toFilenode area (entityKey <$> parent) path stat)
+        parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack path)
+        insert =<< liftIO (toFilenode area (entityKey <$> parent) (T.pack $ normalise $ T.unpack path) stat)
+
+    fixParent (Entity key val) = runDB $ do
+        parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack $ filenodePath val)
+        update key [FilenodeParent =. (fmap entityKey parent)]
 
 -- | 
 toFilenode :: Text             -- ^ area

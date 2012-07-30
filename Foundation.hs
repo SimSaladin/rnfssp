@@ -126,7 +126,6 @@ instance Yesod App where
     isAuthorized BlogOverviewR True   = isAdmin
     isAuthorized (MediaR []) False    = return Authorized
     isAuthorized (MediaR _) _         = isValidLoggedIn
-    isAuthorized (MediaDataR _ _ _) _ = isValidLoggedIn
     isAuthorized _ _                  = return Authorized
 
     messageLogger y loc level msg =

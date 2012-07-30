@@ -95,6 +95,13 @@ table.browser {
   }
 }
 
+/* playlist */
+.playlist-items {
+  width:100%;
+  height:20em;
+  overflow:auto;
+}
+
 /* texts */
 p {color:#{colorLightBgFg};}
 .page-element h1, .page-element h2, .page-element h3,

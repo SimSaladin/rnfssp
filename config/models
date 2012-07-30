@@ -44,15 +44,10 @@ Boardpost
 Playlist
    title Text
    owner UserId
-   elems [Text]
+   elems [TupleText]
    created UTCTime
    modified UTCTime
-   UniquePlaylist title
-
-Anime
-   nameIdent Text
-   nameJapan Text Maybe
-   nameOther Text Maybe
+   UniquePlaylist owner title
 Filenode
    area Text
    parent FilenodeId Maybe
@@ -61,9 +56,14 @@ Filenode
    size Text
    modTime UTCTime
    details Text Maybe
-   UniqueFilenode path
+   UniqueFilenode area path
+
+Anime
+   nameIdent Text
+   nameJapan Text Maybe
+   nameOther Text Maybe
 
 LogDownload
    user UserId
    time UTCTime
-   file String
+   node FilenodeId

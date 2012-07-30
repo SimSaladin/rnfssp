@@ -1,8 +1,8 @@
 <div##{main}.page-element>
-  <div##{content}>
-    Loading playlist...
-
-  <div##{actions}.btn-group>
+  <div##{actions}.btn-group style="float:right">
     <button.btn onclick="save_playlist()">Save
     <button.btn onclick="save_playlist_custom(todo)">Save as...
     <button.btn onclick="load_playlist_dialog()">Load
+  <div##{heading}>
+  <div##{content}.playlist-items>
+    Loading playlist...
