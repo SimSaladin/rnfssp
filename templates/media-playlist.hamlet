@@ -1,28 +1,24 @@
 <div##{main}.page-element>
   <div##{actions}.btn-toolbar style="float:right">
     <div.btn-group>
-      <button.btn onclick="clear_playlist()">Clear
-      <button.btn onclick="alert()">Download #
-      <button.btn.dropdown-toggle data-toggle="dropdown">Save #
-        <span.caret>
-      <ul.dropdown-menu.pull-right>
-        <li>
-          <a onclick="load_playlist()">TODO
+      <button.btn.btn-warning onclick="clear_playlist()">Clear
 
     <div.btn-group>
-      <button.btn.dropdown-toggle data-toggle="dropdown">Play #
-        <span.caret>
-      <ul.dropdown-menu.pull-right>
-        <li>
-          <a onclick="alert()">In browser
-          <a onclick="alert()">Locally
-
-    <div.btn-group>
+      <button.btn onclick="alert()">Rename
       <button.btn.dropdown-toggle data-toggle="dropdown">Switch #
         <span.caret>
       <ul.dropdown-menu.pull-right>
         <li>
           <a onclick="load_playlist()">TODO
+
+    <div.btn-group>
+      <button.btn.btn-primary onclick="alert()">Play! #
+      <button.btn.btn-primary.dropdown-toggle data-toggle="dropdown">
+        <span.caret>
+      <ul.dropdown-menu.pull-right>
+        <li>
+          <a onclick="alert()">Play in browser
+          <a onclick="alert()">Play in...
 
   <h3##{heading}>
   <div##{content}.playlist-items>

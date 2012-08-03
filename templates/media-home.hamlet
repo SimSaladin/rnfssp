@@ -6,12 +6,12 @@ $maybe ent <- mauth
   ^{widPlaylist ent}
 
 $nothing
-  <div.hero-unit>
+  <div.hero-unit.center-box.small-box>
     <h1>Access restricted
     <p>
       You must be explicitly granted access to this part.<br/>
       Please, #
       <a.btn.btn-primary href="@{AuthR LoginR}">Login
-      or learn how to #
+      &nbsp;or #
       <a.btn.btn-info href="@{RegisterR}">Register
       .

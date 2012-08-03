@@ -201,7 +201,6 @@ browserViewWidget (area:path) = do
     nav = zip (area:path) (foldr (\x xs -> [[x]] ++ map ([x] ++) xs) [[]] (area:path))
 
 
-
 -- * Playing & Playlists
 
 instance A.FromJSON Playlist where
@@ -217,18 +216,18 @@ instance A.FromJSON Playlist where
 --                  saves it if possible.
 postMediaPlaylistR :: Text -> Handler RepJson
 postMediaPlaylistR action = do
-  uent <- requireAuth
-  Entity plk pl <- getPlaylist (uent)
-  case action of
-    "select" -> rsucc pl
-    "push"   -> do
-        (area, what) <- parseJsonBody_
-        new <- toPlaylist pl area what
-        if fst new
-          then updatePlaylist plk (snd new) >>= rsucc
-          else rfail "no such path"
-    "clear"  -> updatePlaylist plk (clearPlaylist pl) >>= rsucc
-    _ -> rfail "unknown playlist action"
+    uent <- requireAuth
+    Entity plk pl <- getPlaylist (uent)
+    case action of
+      "select" -> rsucc pl
+      "push"   -> do
+          (area, what) <- parseJsonBody_
+          (new, pl') <- toPlaylist pl area what
+          if new
+            then updatePlaylist plk pl' >>= rsucc
+            else rfail "no such path"
+      "clear"  -> updatePlaylist plk (clearPlaylist pl) >>= rsucc
+      _ -> rfail "unknown playlist action"
   where
     rfail :: Text -> Handler RepJson
     rfail msg = jsonToRepJson (1 :: Int, msg)
@@ -402,6 +401,7 @@ toFilenode real area parent path stat = do
   where
     boolDir = isDirectory stat
 
+-- |
 getDetails :: FilePath -> IO Text
 getDetails fp = do
   (c, out, err) <- readProcessWithExitCode "mediainfo" [fp] ""
