@@ -62,6 +62,7 @@ widgetFile = Yesod.Default.Util.widgetFileNoReload
 data Extra = Extra
     { extraCopyright :: Text
     , extraApproot :: Text
+    , extraServeroot :: Text
     , extraAnalytics :: Maybe Text -- ^ Google Analytics
     , extraDirAnime :: FilePath
     , extraDirMusic :: FilePath
@@ -71,6 +72,7 @@ parseExtra :: DefaultEnv -> Object -> Parser Extra
 parseExtra _ o = Extra
     <$> o .:  "copyright"
     <*> o .:  "approot"
+    <*> o .:  "serveroot"
     <*> o .:? "analytics"
     <*> o .: "animedir"
     <*> o .: "musicdir"

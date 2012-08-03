@@ -76,8 +76,8 @@ gdir which = do
             "music" -> return $ extraDirMusic set
             _ -> invalidArgs ["no master directory for: " `T.append` which]
 
-gApproot :: Handler Text
-gApproot = getYesod >>= return . extraApproot . appExtra . settings
+gServeroot :: Handler Text
+gServeroot = getYesod >>= return . extraServeroot . appExtra . settings
 
 widgetOnly :: Widget -> Handler RepHtml
 widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
@@ -266,7 +266,7 @@ postMediaPlaylistR action = do
 --
 generateM3U :: Playlist -> Handler FilePath
 generateM3U pl = do
-    resolved <- gApproot
+    resolved <- gServeroot
     yesod    <- getYesod
     time     <- timeNow
     let render a p t = yesodRender
