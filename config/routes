@@ -22,5 +22,5 @@
 /files/board/#String      BoardFileR GET
 
 /media/*Texts                 MediaR         GET POST
-/media-playlists/#Text        MediaPlaylistR     POST
+/media-playlists/#Text        MediaPlaylistR GET POST
 /media-get/#Text/#Text/*Texts MediaServeR    GET

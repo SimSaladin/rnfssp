@@ -33,7 +33,7 @@ function to_playlist(area, what) {
 }
 
 /**
- * redraw playlist
+ * redraw playlist and add default title if none is specified.
  */
 function update_playlist() {
   var cont = $("##{content}");

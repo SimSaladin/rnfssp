@@ -120,6 +120,8 @@ executable         rnfssp
                  , wai
                  , libmpd
                  , aeson
+                 , MonadRandom
+                 , temporary
 
                  , yesod-test
 test-suite integration-tests

@@ -158,7 +158,7 @@ isValidLoggedIn = do
     mu <- maybeAuth
     return $ case mu of
         Nothing -> AuthenticationRequired
-        Just (Entity uid uval) 
+        Just (Entity _ uval) 
             | userValid uval -> Authorized
             | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
 

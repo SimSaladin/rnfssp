@@ -1,8 +1,11 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
 module Model where
 
 import Prelude
 import Yesod
 import Yesod.Auth.HashDB (HashDBUser(..))
+import Data.Aeson.Types (ToJSON(..), FromJSON(..), (.:))
+import Control.Applicative ((<$>), (<*>))
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Database.Persist.Quasi
@@ -22,3 +25,20 @@ instance HashDBUser (UserGeneric backend) where
     setSaltAndPasswordHash s h p = p { userSalt     = s
                                      , userPassword = h
                                      }
+
+instance ToJSON Playlist where
+    toJSON (Playlist title owner elems create modified) = object
+        [ "title" .= title
+        , "owner" .= owner
+        , "elems" .= elems
+        , "created" .= create
+        , "modified" .= modified
+        ]
+
+instance FromJSON Playlist where
+  parseJSON (Object v) = Playlist <$> v .: "title"
+                                  <*> v .: "owner"
+                                  <*> v .: "elems"
+                                  <*> v .: "created"
+                                  <*> v .: "modified"
+  parseJSON          _ = undefined

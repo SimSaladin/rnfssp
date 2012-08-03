@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Home where
 
-import Import
+import Import hiding (fail)
 import qualified Data.Text as T
 import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)

@@ -67,3 +67,8 @@ LogDownload
    user UserId
    time UTCTime
    node FilenodeId
+DlTemp
+   date UTCTime
+   ident Text
+   target Text
+   UniqueDlTemp ident

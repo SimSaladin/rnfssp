@@ -7,39 +7,34 @@ module Handler.Media
     , getMediaAdminR
     , postMediaAdminR
 
+    , getMediaPlaylistR
     , postMediaPlaylistR
     ) where
 
-import Import
-import qualified Data.Aeson.Types as A
-import Data.List ((\\), init, last, head, tail)
-import Data.Maybe (isJust, isNothing)
-import Data.Time (getCurrentTime)
-import Data.Time.Clock (UTCTime)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Time.Format (formatTime)
-import Control.Arrow (first)
-import Control.Monad
+import           Import
+import           Data.List ((\\), init, last, head, tail)
+import           Data.Char (chr)
+import           Data.Maybe (isNothing)
+import           Data.Time (getCurrentTime)
+import           Data.Time.Clock (UTCTime, diffUTCTime)
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           Data.Time.Format (formatTime)
+import           Control.Arrow (first)
+import           Control.Monad
+import qualified Control.Monad.Random as MR (evalRandIO, getRandomR)
 import qualified Data.Text as T
+import qualified Data.Text.IO as T
 import qualified System.FilePath as F (joinPath)
-import System.Locale (defaultTimeLocale)
-import System.Directory (getDirectoryContents)
-import System.FilePath -- (combine)
-import System.Posix.Files -- (getFileStatus, fileSize, modificationTime, isDirectory)
-import System.Posix (FileOffset)
-import System.Process (readProcessWithExitCode)
-import Text.Printf (printf)
-import Yesod.Json
-import Yesod.Default.Config (appExtra)
-
-instance A.ToJSON Playlist where
-    toJSON (Playlist title owner elems create mod) = object
-        [ "title" .= title
-        , "owner" .= owner
-        , "elems" .= elems
-        , "created" .= create
-        , "modified" .= mod
-        ]
+import           System.Directory (getDirectoryContents, getTemporaryDirectory)
+import           System.FilePath (takeExtension, takeDirectory, takeFileName, (</>), normalise, splitPath)
+import           System.IO (hClose)
+import           System.IO.Temp (openTempFile)
+import           System.Locale (defaultTimeLocale)
+import           System.Posix.Files -- (getFileStatus, fileSize, modificationTime, isDirectory)
+import           System.Posix (FileOffset)
+import           System.Process (readProcessWithExitCode)
+import           Text.Printf (printf)
+import           Yesod.Default.Config (appExtra)
 
 -- * Confs & Utilities
 
@@ -76,10 +71,13 @@ gdir :: Text -> Handler FilePath
 gdir which = do
    master <- getYesod
    let set = appExtra $ settings master
-      in return $ case which of
-            "anime" -> extraDirAnime set
-            "music" -> extraDirMusic set
-            -- XXX: fails for any other runtime!
+      in case which of
+            "anime" -> return $ extraDirAnime set
+            "music" -> return $ extraDirMusic set
+            _ -> invalidArgs ["no master directory for: " `T.append` which]
+
+gApproot :: Handler Text
+gApproot = getYesod >>= return . extraApproot . appExtra . settings
 
 widgetOnly :: Widget -> Handler RepHtml
 widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
@@ -92,12 +90,16 @@ toPath :: [Text] -> Text
 toPath = T.intercalate "/"
 
 tryMaybe :: Monad m => m a -> Maybe a -> m a
-tryMaybe or this = case this of
+tryMaybe this unlessJust = case unlessJust of
     Just a -> return a
-    Nothing -> or
+    Nothing -> this
 
 if' :: Bool -> a -> a -> a
 if' cond th el = if cond then th else el
+
+denyIf :: Bool -> Text -> Handler ()
+denyIf True  = permissionDenied
+denyIf False = const (return ())
 
 
 -- * Userspace / General
@@ -121,33 +123,43 @@ postMediaR fps = do
     setMessage "This is not yet supported"
     redirect $ MediaR fps
 
-getMediaServeR :: Text   -- ^ type of download:
+getMediaServeR :: Text   -- ^ kind of download
                -> Text   -- ^ file area
                -> [Text] -- ^ path for the file
                -> Handler RepJson
-getMediaServeR _ _ []        = invalidArgs ["Invalid download target"]
-getMediaServeR t area path = do
-    uid  <- requireAuthId
-    Entity key val <- runDB $ getBy404 $ UniqueFilenode area (toPath path)
-    if filenodeIsdir val
-      then invalidArgs ["Downloading directories is not supported"]
-      else do
-          now <- timeNow
-          fsRoot <- gdir area
-          let fsPath = fsRoot </> (T.unpack $ filenodePath val)
-          runDB $ insert $ LogDownload uid now key
-          case t of
-            "force" -> sendFile "application/force-download" fsPath
-            "auto"  -> sendFile "" fsPath
-            _       -> invalidArgs ["Invalid/unsupported download type"]
-      
+getMediaServeR kind area path
+  | null path  = invalidArgs ["Invalid download target"]
+  | is "auto"  = authPath >>= send ""
+  | is "force" = authPath >>= send "application/force-download"
+  | is "temp"  = do
+      Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp ident
+      now <- timeNow
+      denyIf (diffUTCTime now time > maxTime) "This temporary url has expired!"
+      denyIf (not (target == (toPath $ tail path))) "Malformed url"
+      send "" . toReal target =<< gdir area
+  | otherwise  = invalidArgs ["Invalid/unsupported download type"]
+  where
+    is         = (==) kind
+    ident      = head path
+    send t p   = setHeader "Accept-Ranges" "bytes" >> sendFile t p
+    maxTime    = 60 * 60 * 24
+    toReal t r = r </> T.unpack t
+    authPath   = do
+        uid <- requireAuthId
+        Entity key val <- runDB $ getBy404 $ UniqueFilenode area (toPath path)
+        if filenodeIsdir val
+          then invalidArgs ["Downloading directories is not supported"]
+          else do t <- timeNow
+                  _ <- runDB $ insert $ LogDownload uid t key
+                  return . toReal (filenodePath val) =<< gdir area
+
 
 -- * Browser
 
 -- | the <table> element only
 browserTable :: [Text] -> Handler RepHtml
 browserTable fps = do
-    rauth <- requireAuth
+    _ <- requireAuth
     pc <- widgetToPageContent $ browserViewWidget fps
     hamletToRepHtml [hamlet|^{pageBody pc}|]
 
@@ -157,8 +169,8 @@ browserWidget fps = do
     browserId <- lift newIdent
     $(widgetFile "browser-driver")
   where
-    active = if null fps then "" else head fps
-    sections = map (\(sect, icon) -> (active == sect, MediaR [sect], sect, icon)) browsable
+    sections = map (\(sect, icon) -> (current == sect, MediaR [sect], sect, icon)) browsable
+    current  = if' (null fps) "" (head fps)
 
 browsable :: [(Text, Text)]
 browsable = [ ("anime", "film"), ("music", "music")]
@@ -186,15 +198,15 @@ browserViewWidget (area:path) = do
                                      , FilenodePath   !=. "." ] [Asc FilenodePath]
 
     let listing = do
-        val <- map entityVal nodes
-        let file     = takeFileName $ T.unpack $ filenodePath val
-            filetype = if filenodeIsdir val
+        this <- map entityVal nodes
+        let file     = takeFileName $ T.unpack $ filenodePath this
+            filetype = if filenodeIsdir this
                          then "directory"
                          else guessFiletype file
             fps      = path ++ [T.pack file]
-            size     = filenodeSize val
-            modified = formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime val
-            details  = filenodeDetails val
+            size     = filenodeSize this
+            modified = formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime this
+--            details  = filenodeDetails this
             in return (file, filetype, fps, area : fps, size, modified)
     $(widgetFile "browser-bare")
   where
@@ -203,13 +215,22 @@ browserViewWidget (area:path) = do
 
 -- * Playing & Playlists
 
-instance A.FromJSON Playlist where
-   parseJSON (Object v) = Playlist
-                           <$> v A..: "title"
-                           <*> v A..: "owner"
-                           <*> v A..: "elems"
-                           <*> v A..: "created"
-                           <*> v A..: "modified"
+-- | Create and send a new playlist file (.m3u). playlist is got via
+-- @getPlaylist@.
+getMediaPlaylistR :: Text -> Handler RepHtml
+getMediaPlaylistR action
+    | is "get"  = requireAuth
+      >>= getPlaylist
+      >>= generateM3U . entityVal
+      >>= if force
+        then \x -> do setHeader "Content-Disposition"
+                                "attachment; filename=\"playlist.m3u\""
+                      sendFile "application/force-download" x
+        else sendFile "audio/x-mpegurl"
+    | otherwise = invalidArgs ["action not supported: " `T.append` action]
+  where
+    is = flip T.isPrefixOf action
+    force = T.isSuffixOf "-force" action
 
 -- | action: "select" returns current or creates a new playlist
 --           "push" adds an filenode and its children to current playlist and
@@ -232,6 +253,45 @@ postMediaPlaylistR action = do
     rfail :: Text -> Handler RepJson
     rfail msg = jsonToRepJson (1 :: Int, msg)
     rsucc msg = jsonToRepJson (0 :: Int, msg)
+
+-- | Generate a m3u-formatted file of the playlist with random-generated
+-- check-texts for access from any(?) client.
+-- Saves to a temporary file.
+-- File format:
+--
+-- > #EXTM3U
+-- > #EXTINF:length, extra_info
+-- > @{MediaServeR "temp" hash path}
+-- > ...
+--
+generateM3U :: Playlist -> Handler FilePath
+generateM3U pl = do
+    resolved <- gApproot
+    yesod    <- getYesod
+    time     <- timeNow
+    let render a p t = yesodRender
+          yesod resolved (MediaServeR "temp" a (t : splitPath' p)) []
+
+        write h (area, path) = do
+            temp <- randomIdent 20
+            T.hPutStrLn h (render area path temp)
+            return (temp, path)
+
+    (path, temps) <- liftIO $ do
+      (path, handle) <- getTemporaryDirectory >>= flip openTempFile "playlist.m3u"
+      T.hPutStrLn handle "#EXTM3U\n"
+      temps <- mapM (write handle) $ playlistElems pl
+      hClose handle
+      return (path, temps)
+    mapM_ (uncurry $ ((runDB . insert) .) . DlTemp time) temps
+    return path
+
+splitPath' :: Text -> [Text]
+splitPath' = map T.pack . splitPath . T.unpack
+
+randomIdent :: Int -> IO Text
+randomIdent n = MR.evalRandIO (sequence (replicate n rnd)) >>= return . T.pack . map chr
+  where rnd = MR.getRandomR (65, 90)
 
 -- | Retrieve user's playlist using various methods.
 -- order: getparam -> cookie -> database -> new playlist
@@ -295,14 +355,9 @@ widPlaylist (Entity _ uval) = do
     [main, actions, content, heading] <- replicateM 4 (lift newIdent)
     $(widgetFile "media-playlist")
 
--- | Lists every playlist and their information.
--- XXX: implement hidden/private playlists?
-widPlaylists :: Widget
-widPlaylists = do
-    pls <- lift $ runDB $ do
-        pls <- selectList ([] :: [Filter Playlist]) []
-        return pls
-    toWidget [hamlet|playlist listing: not yet implemented|]
+-- | get playlists
+myPlaylists :: Handler [Entity Playlist]
+myPlaylists = runDB $ selectList ([] :: [Filter Playlist]) []
 
 findAll :: Text -> Text -> Handler [Text]
 findAll area path = do
@@ -340,7 +395,7 @@ adminForm = renderBootstrap $ (,)
 -- XXX: also find the argument?
 find :: FilePath -> IO [(FilePath, FileStatus)]
 find dir = do
-   childs <- getDirectoryContents dir >>= return . map (dir `combine`) . (\\ [".",".."])
+   childs <- getDirectoryContents dir >>= return . map (dir </>) . (\\ [".",".."])
    stats  <- mapM getFileStatus childs
    let this = zip childs stats
    other <- mapM (find . fst) (filter (isDirectory . snd) this)
@@ -404,6 +459,6 @@ toFilenode real area parent path stat = do
 -- |
 getDetails :: FilePath -> IO Text
 getDetails fp = do
-  (c, out, err) <- readProcessWithExitCode "mediainfo" [fp] ""
+  (_, out, _) <- readProcessWithExitCode "mediainfo" [fp] ""
   return $ T.pack out
 
