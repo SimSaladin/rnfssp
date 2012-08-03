@@ -87,7 +87,7 @@ timeNow :: Handler UTCTime
 timeNow = liftIO getCurrentTime
 
 toPath :: [Text] -> Text
-toPath = T.intercalate "/"
+toPath = T.pack . F.joinPath . map T.unpack
 
 tryMaybe :: Monad m => m a -> Maybe a -> m a
 tryMaybe this unlessJust = case unlessJust of
