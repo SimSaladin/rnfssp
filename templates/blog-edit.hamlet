@@ -1,1 +1,12 @@
-<h1>Editing: #
+<h1>Editing post #
+
+<div.page-element>
+  <form.form-horizontal method=post action=@{BlogEditR path} enctype=#{encType}>
+    $case result
+      $of FormFailure reasons
+        $forall reason <- reasons
+          <div.alert.alert-errors>#{reason}
+      $of _
+    <fieldset>
+      <legend.clearfix>
+      ^{widget}

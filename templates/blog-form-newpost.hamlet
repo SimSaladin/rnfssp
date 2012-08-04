@@ -1,21 +1,21 @@
 #{extra}
 <div.control-group>
-  <label.control-label for=#{fvId titleView}>
-    ^{fvLabel titleView}
+  <label.control-label for=#{fvId viewTitle}>
+    ^{fvLabel viewTitle}
   <div.controls>
-    ^{fvInput titleView}
+    ^{fvInput viewTitle}
 
 <div.control-group>
-  <label.control-label for=#{fvId urlpartView}>
-    ^{fvLabel urlpartView}
+  <label.control-label for=#{fvId viewURL}>
+    ^{fvLabel viewURL}
   <div.controls>
-    ^{fvInput urlpartView}
+    ^{fvInput viewURL}
 
 <div.control-group>
-  <label.control-label for=#{fvId contentView}>
-    ^{fvLabel contentView}
+  <label.control-label for=#{fvId viewMD}>
+    ^{fvLabel viewMD}
   <div.controls>
-    ^{fvInput contentView}
+    ^{fvInput viewMD}
 
 <div.form-actions>
   <input.btn.primary type=submit value="Post it">

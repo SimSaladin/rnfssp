@@ -1,13 +1,9 @@
-^{postw}
+^{post}
 <h4>Comments
-<div.page-element>
-  $if null commentsw
-    <i>No comments yet...
-  $else
-    $forall wid <- commentsw
-      ^{wid}
+<div.comments>
+  ^{comments}
 <h3>Leave a comment
-<form.page-element.form-horizontal method=post action=@{BlogViewR utitle} enctype=#{encType}>
+<form.page-element.form-horizontal method=post action=@{route} enctype=#{encType}>
   <fieldset>
     <legend.clearfix>
     $case result
@@ -15,6 +11,6 @@
         $forall reason <- reasons
           <div.alert.alert-error>#{reason}
       $of _
-  ^{replyw}
+  ^{formWidget}
   <div.form-actions>
     <input.btn.btn-primary type=submit value=Reply>

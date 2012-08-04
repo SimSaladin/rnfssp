@@ -3,6 +3,7 @@ module Model where
 
 import Prelude
 import Yesod
+import Yesod.Markdown
 import Yesod.Auth.HashDB (HashDBUser(..))
 import Data.Aeson.Types (ToJSON(..), FromJSON(..), (.:))
 import Control.Applicative ((<$>), (<*>))

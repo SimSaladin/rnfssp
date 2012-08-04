@@ -1,0 +1,8 @@
+$forall Entity key val <- parents
+  <div.page-element>
+    <cite.info-block>#{blogcommentAuthor val} #
+      <span> writes
+      <div.date>#{show $ blogcommentTime val}
+    <div>#{blogcommentContent val}
+    <div.reply>reply
+    <div>^{blogcommentsWidget (Just key) children}

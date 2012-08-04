@@ -15,8 +15,8 @@ module Foundation
     ) where
 
 import Prelude
+import Control.Monad (liftM)
 import Yesod
-import Yesod.Form.Nic
 import Yesod.Static
 import Yesod.Auth
 import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
@@ -121,12 +121,12 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    isAuthorized AdminR _             = isAdmin
-    isAuthorized MediaAdminR _        = isAdmin
-    isAuthorized BlogOverviewR True   = isAdmin
-    isAuthorized (MediaR []) False    = return Authorized
-    isAuthorized (MediaR _) _         = isValidLoggedIn
-    isAuthorized _ _                  = return Authorized
+    isAuthorized AdminR        _     = isAdmin
+    isAuthorized MediaAdminR   _     = isAdmin
+    isAuthorized BlogOverviewR True  = isAdmin
+    isAuthorized (MediaR [])   False = return Authorized
+    isAuthorized (MediaR _ )   _     = isValidLoggedIn
+    isAuthorized _             _     = return Authorized
 
     messageLogger y loc level msg =
       formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
@@ -202,10 +202,8 @@ instance RenderMessage App FormMessage where
 --
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
 
-instance YesodNic App
-
 instance YesodChat App where
-   getUserName = requireAuth >>= return . userUsername . entityVal
+   getUserName = liftM (userUsername . entityVal) requireAuth
    isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
       Authorized -> True
       _          -> False

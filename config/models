@@ -11,12 +11,13 @@ Blogpost
    time UTCTime
    poster Text
    title Text
-   urltitle Text
-   content Html
-   UniqueBlogpost urltitle
-BlogComment
+   urlpath Text
+   markdown Markdown
+   rendered Html
+   UniqueBlogpost urlpath
+Blogcomment
    post BlogpostId
-   parent BlogCommentId Maybe
+   parent BlogcommentId Maybe
    time UTCTime
    user UserId Maybe
    author Text
