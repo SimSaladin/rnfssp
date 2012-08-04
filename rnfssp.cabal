@@ -4,13 +4,25 @@ license:           BSD3
 license-file:      LICENSE
 author:            Samuli Thomasson
 maintainer:        Samuli Thomasson
-synopsis:          The greatest Yesod web application ever.
-description:       I'm sure you can say something clever here if you try.
+synopsis:          Yesod-powered wabapp for media sharing and more.
+description:       rnfssp is a complete website with features focusing on media
+                   sharing and streaming. Currently supported features include:
+                     * user registration and access control
+                     * admin interface
+                     * listing media files (from automatically generated database)
+                     * directly streaming a file over http
+                     * playing multiple files on any computer via a m3u-playlist
+                       (generates random urls to prevent unwanted access)
+                   Nothing works perfectly or even good. Testing only!
 category:          Web
 stability:         Experimental
 cabal-version:     >= 1.6
 build-type:        Simple
-homepage:          http://rnfssp.yesodweb.com/
+homepage:          http://ssdesk.paivola.fi/
+
+source-repository head
+    type:     git
+    location: git://ssdesk.paivola.fi:8181/rnfssp.git
 
 Flag dev
     Description:   Turn on development settings, like auto-reload templates.
