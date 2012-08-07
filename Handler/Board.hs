@@ -10,15 +10,15 @@ module Handler.Board
 
 import Import
 import Prelude (tail)
-import System.IO (openBinaryTempFile, hClose)
-import System.FilePath (takeFileName, takeExtension, combine)
+import System.FilePath
 import Data.Text (append, unpack)
 import Data.Int (Int64)
 import Data.Time (getCurrentTime, UTCTime)
 import Data.Time.Clock (utctDay)
 import Data.Time.Calendar (toModifiedJulianDay)
 import Data.Maybe (fromMaybe, isNothing)
-import Data.ByteString.Lazy (hPut)
+
+import Utils
 -- import Yesod.Form.Nic (nicHtmlField)
 
 imgFilepath :: FilePath
@@ -143,10 +143,9 @@ savePost d = do
             t <- liftIO getCurrentTime
             let time = show $ toModifiedJulianDay $ utctDay t
                 ext  = takeExtension $ unpack $ fileName fi
-            (fp, h) <- openBinaryTempFile imgFilepath (time ++ ext)
-            hPut h $ fileContent fi
-            hClose h
-            return (Just $ takeFileName fp, Just $ fileName fi)
+            path <- liftIO $ uniqueFilePath imgFilepath (time ++ ext)
+            fileMove fi path
+            return (Just $ takeFileName path, Just $ fileName fi)
 
     return $ Just $ Boardpost
             (d1location d) (d1parent d) (d1time d)

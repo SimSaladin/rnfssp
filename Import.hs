@@ -3,6 +3,7 @@ module Import
     , module Yesod
     , module Foundation
     , module Settings.StaticFiles
+    , module Settings.Development
     , module Data.Monoid
     , module Control.Applicative
     , Text
@@ -14,10 +15,15 @@ module Import
 import Prelude hiding (writeFile, readFile, head, tail, init, last)
 import Yesod   hiding (Route(..))
 import Foundation
+#if __GLASGOW_HASKELL__ < 704
 import Data.Monoid (Monoid (mappend, mempty, mconcat))
+#else
+import Data.Monoid (Monoid (mappend, mempty, mconcat), (<>))
+#endif
 import Control.Applicative ((<$>), (<*>), pure)
 import Data.Text (Text)
 import Settings.StaticFiles
+import Settings.Development
 
 #if __GLASGOW_HASKELL__ < 704
 infixr 5 <>

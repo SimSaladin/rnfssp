@@ -1,16 +1,19 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Aug 04 2012 [04:01:13]
+-- Last Modified: Aug 08 2012 [02:32:52]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
 
 import           Import
+import           Control.Monad
+import           Control.Monad.Random
+import           Data.Char
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Text as T
-import           System.FilePath (takeExtension)
+import           System.FilePath
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
 import           Yesod.Default.Config (appExtra)
@@ -76,3 +79,12 @@ if' cond th el = if cond then th else el
 denyIf :: Bool -> Text -> Handler ()
 denyIf True  = permissionDenied
 denyIf False = const (return ())
+
+uniqueFilePath :: FilePath -- ^ directory
+               -> FilePath -- ^ template
+               -> IO FilePath
+uniqueFilePath dir template = liftM (\x -> dir </> (takeFileName template) </> x </> (takeExtension dir)) (randomString 10)
+
+randomString :: Int -> IO String
+randomString n = liftM (map chr) (evalRandIO $ sequence $ replicate n rnd)
+  where rnd = getRandomR (0, 9)
