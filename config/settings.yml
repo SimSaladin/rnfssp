@@ -1,12 +1,13 @@
 Default: &defaults
-  host: "localhost"
-  port: 3001
-  approot: "http://localhost:3001"
+  host:      "localhost"
+  port:      3001
+  approot:   "http://localhost:3001"
   serveroot: "http://localhost:3001"
   copyright: "BPS"
   #analytics: UA-YOURCODE
-  animedir: "/home/sim/anime"
-  musicdir: "/home/sim/music"
+  animedir:  "/home/sim/anime"
+  musicdir:  "/home/sim/music"
+  dyndir:    "/home/sim/rnfssp/files"
 
 Development:
   <<: *defaults
@@ -18,10 +19,11 @@ Staging:
   <<: *defaults
 
 Production:
-  host: "*4"
-  port: 3000
-  approot: "https://ssdesk.paivola.fi"
+  host:      "*4"
+  port:      3000
+  approot:   "https://ssdesk.paivola.fi"
   serveroot: "http://ssdesk.paivola.fi"
-  animedir: "/home/media/anime"
-  musicdir: "/home/media/music"
+  animedir:  "/home/media/anime"
+  musicdir:  "/home/media/music"
+  dyndir:    "/srv/sites/rnfssp/files"
   <<: *defaults

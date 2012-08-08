@@ -75,6 +75,7 @@ data Extra = Extra
     , extraAnalytics :: Maybe Text -- ^ Google Analytics
     , extraDirAnime :: FilePath
     , extraDirMusic :: FilePath
+    , extraDirDyn   :: FilePath
     } deriving Show
 
 parseExtra :: DefaultEnv -> Object -> Parser Extra
@@ -85,3 +86,4 @@ parseExtra _ o = Extra
     <*> o .:? "analytics"
     <*> o .: "animedir"
     <*> o .: "musicdir"
+    <*> o .: "dyndir"

@@ -9,3 +9,4 @@ yesod/foobar/
 static/tmp/*
 yesod-platform/yesod-platform.cabal
 .virthualenv
+files/

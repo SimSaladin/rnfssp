@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Aug 08 2012 [02:32:52]
+-- Last Modified: Aug 08 2012 [04:58:10]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -83,8 +83,9 @@ denyIf False = const (return ())
 uniqueFilePath :: FilePath -- ^ directory
                -> FilePath -- ^ template
                -> IO FilePath
-uniqueFilePath dir template = liftM (\x -> dir </> (takeFileName template) </> x </> (takeExtension dir)) (randomString 10)
+uniqueFilePath dir template = fmap ((dir </>) . appendBaseName) (randomString 10)
+  where appendBaseName = replaceBaseName template . (takeBaseName template ++)
 
 randomString :: Int -> IO String
 randomString n = liftM (map chr) (evalRandIO $ sequence $ replicate n rnd)
-  where rnd = getRandomR (0, 9)
+  where rnd = getRandomR (48, 57)

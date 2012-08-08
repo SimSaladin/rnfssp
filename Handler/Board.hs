@@ -11,7 +11,7 @@ module Handler.Board
 import Import
 import Prelude (tail)
 import System.FilePath
-import Data.Text (append, unpack)
+import qualified Data.Text as T
 import Data.Int (Int64)
 import Data.Time (getCurrentTime, UTCTime)
 import Data.Time.Clock (utctDay)
@@ -19,12 +19,8 @@ import Data.Time.Calendar (toModifiedJulianDay)
 import Data.Maybe (fromMaybe, isNothing)
 
 import Utils
--- import Yesod.Form.Nic (nicHtmlField)
 
-imgFilepath :: FilePath
-imgFilepath = "/home/sim/rnfssp/files/board/"
-
--- /board
+-- [/board] 
 getBoardHomeR :: Handler RepHtml
 getBoardHomeR = do
     boards <- runDB $ selectList ([] :: [Filter Board]) []
@@ -32,42 +28,32 @@ getBoardHomeR = do
         setTitle "Lauta"
         $(widgetFile "board-home")
 
--- /board/b
+-- /board/<board>
 getBoardR :: Text -> Handler RepHtml
 getBoardR bname = do
     (board, ops, replies) <- runDB $ do
         b <- getBy404 $ UniqueBoard bname
-        ops <- selectList
-                    [ BoardpostLocation ==. entityKey b
-                    , BoardpostParent ==. Nothing
-                    ]
-                    [Asc BoardpostTime]
+        ops <- selectList [ BoardpostLocation ==. entityKey b
+                          , BoardpostParent ==. Nothing
+                          ]
+                          [Asc BoardpostTime]
         replies <- mapM (\op -> selectList [BoardpostParent ==. Just (entityKey op)] []) ops
         return (b, ops, replies)
     let previews = zip ops replies
-    (formWidget, encType) <- generateFormPost (postForm (entityKey board) Nothing)
+    ((result,formWidget), encType) <- runFormPost (postForm (entityKey board) Nothing)
     defaultLayout $ do
-        setTitle $ toHtml $ "/" `append` bname `append` "/ :: Lauta"
+        setTitle $ toHtml $ T.concat ["Lauta//", bname,"/"]
         $(widgetFile "board")
 
 postBoardR :: Text -> Handler RepHtml
 postBoardR bname = do
-    board <- runDB $ getBy404 $ UniqueBoard bname
-    ((result, _), _) <- runFormPost (postForm (entityKey board) Nothing)
+    Entity bid _ <- runDB $ getBy404 $ UniqueBoard bname
+    ((result, _), _) <- runFormPost $ postForm bid Nothing
     case result of
-        FormSuccess replyD -> do
-            save <- liftIO $ savePost replyD
-            case save of
-                Just p -> do
-                    postId <- runDB $ insert p
-                    setMessage "Postaus onnistui!"
-                    redirect $ ThreadR bname postId
-                Nothing -> do
-                    setMessage "Postaus failasi"
-                    redirect $ BoardR bname
-        _ -> do
-            setMessage "Postaus failasi"
-            redirect $ BoardR bname
+      FormSuccess replyD -> d1toBoardPost replyD >>= runDB . insert
+                                                 >>= redirect . ThreadR bname
+      FormFailure asdf -> getBoardR bname -- redirect (BoardR bname)
+      _ -> do notFound -- setMessage "Postaus failasi"
 
 -- /board/b/1
 getThreadR :: Text -> BoardpostId -> Handler RepHtml
@@ -79,7 +65,7 @@ getThreadR bname opKey = do
         return (board, op, replies)
     (postWidget, encType) <- generateFormPost (postForm (entityKey board) (Just opKey))
     defaultLayout $ do
-        setTitle $ toHtml $ "/" `append` bname `append` "/ :: Lauta"
+        setTitle $ toHtml $ T.concat ["Lauta//", bname,"/"]
         $(widgetFile "board-thread")
 
 postThreadR :: Text -> BoardpostId -> Handler RepHtml
@@ -87,23 +73,14 @@ postThreadR bname opKey = do
     board <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost (postForm (entityKey board) (Just opKey))
     case result of
-        FormSuccess replyD -> do
-            save <- liftIO $ savePost replyD
-            case save of
-                Just p -> do
-                    _ <- runDB $ insert p
-                    setMessage "Postaus onnistui!"
-                Nothing -> do
-                    setMessage "Postaus failasi"
-        FormFailure fails -> do
-            setMessage $ toHtml $ toHtml <$> append "\n" <$> fails
-        FormMissing -> do
-            setMessage "no POST data"
+        FormSuccess replyD -> d1toBoardPost replyD >>= runDB . insert >> return ()
+        -- TODO: failures in the form instead
+        FormFailure fails  -> setMessage $ toHtml $ toHtml <$> T.append "\n" <$> fails
+        FormMissing        -> setMessage "no POST data was received."
     redirect $ ThreadR bname opKey
 
 getBoardFileR :: String -> Handler RepHtml
-getBoardFileR fname = do
-    sendFile "" $ combine imgFilepath fname
+getBoardFileR fname = getFilesPath >>= \p -> sendFile "" $ p </> fname
 
 widgetThreadPost :: Text -> Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a -> Widget
 widgetThreadPost bname n reply = do
@@ -118,10 +95,16 @@ widgetThreadPost bname n reply = do
     let divClass = if isop then "postop" else "postreply" :: String
     $(widgetFile "board-post")
 
+getFilesPath :: Handler FilePath
+getFilesPath = fmap ((</> "board") . extraDirDyn) getExtra
+
 key2text :: Key (PersistEntityBackend Boardpost) Boardpost -> String
 key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
                 Left _ -> "fail!"
                 Right num -> show num
+
+
+-- TODO: write a single monadic form for the following stuff
 
 data D1 = D1
     { d1location :: BoardId
@@ -135,25 +118,33 @@ data D1 = D1
     , d1pass :: Text
     }
 
-savePost :: D1 -> IO (Maybe Boardpost)
-savePost d = do
+d1toBoardPost :: D1 -> Handler Boardpost
+d1toBoardPost d = do
     (fname, info) <- case d1fileinfo d of
-        Nothing -> return (Nothing, Nothing) :: IO (Maybe FilePath, Maybe Text)
-        Just fi -> do
-            t <- liftIO getCurrentTime
-            let time = show $ toModifiedJulianDay $ utctDay t
-                ext  = takeExtension $ unpack $ fileName fi
-            path <- liftIO $ uniqueFilePath imgFilepath (time ++ ext)
-            fileMove fi path
-            return (Just $ takeFileName path, Just $ fileName fi)
+      Nothing -> return (Nothing, Nothing)
+      Just fi | T.null $ fileName fi -> return (Nothing, Nothing)
+              | otherwise -> do
+          dir <- getFilesPath
+          to <- liftIO $ do
+              t <- getCurrentTime
+              to <- uniqueFilePath dir $ (++'_':T.unpack fname) $ showTime t
+              putStrLn $ "--to-------------_>     " ++ to
+              putStrLn $ " <--- dir -->           " ++ dir
+              putStrLn $ " ---time--_>            " ++ showTime t
+              putStrLn $ "--------->              " ++ T.unpack fname
+              fileMove fi to >> return to
+          return (Just $ takeFileName to, Just fname)
+          where fname = fileName fi
 
-    return $ Just $ Boardpost
+    return $ Boardpost
             (d1location d) (d1parent d) (d1time d)
             (d1poster d) (d1email d) (d1title d)
             (d1content d) (d1pass d) fname info
+  where
+    showTime = show . toModifiedJulianDay . utctDay
 
 postForm :: BoardId -> Maybe BoardpostId -> Form D1
-postForm bid mpid = renderDivs $ D1
+postForm bid mpid = renderBootstrap $ D1
     <$> pure bid
     <*> pure mpid
     <*> aformM (liftIO getCurrentTime)
