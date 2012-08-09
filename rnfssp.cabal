@@ -110,6 +110,7 @@ library
                  , MonadRandom
                  , temporary
                  , yesod-markdown
+                 , conduit
 
 executable         rnfssp
     if flag(library-only)

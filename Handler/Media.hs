@@ -33,6 +33,9 @@ import           System.Locale (defaultTimeLocale)
 import           System.Posix.Files (FileStatus, getFileStatus, fileSize, modificationTime, isDirectory)
 import           System.Process (readProcessWithExitCode)
 
+import qualified Data.Conduit as C
+import qualified Data.Conduit.List as CL
+
 -- * Confs & Utilities
 
 viewable :: [Text]
@@ -351,17 +354,26 @@ updateListing :: Text
               -> Handler ()
 updateListing area dir = do
     -- recursively find files and directories in `dir` along with properties
-    infs <- liftM paths $ liftIO $ do
+    infs <- liftM normalisePaths $ liftIO $ do
         stat   <- getFileStatus dir
         childs <- find dir
         return ( (dir,stat) : childs)
+    let paths   = map fst infs
+        notInfs = not . flip elem paths . filenodePath . entityVal
 
     -- delete entities not found in the filesystem XXX: disable/hide only?
-    runDB $ deleteWhere [FilenodeArea ==. area, FilenodePath /<-. map fst infs]
+    runDB $ do
+      toRemove <- C.runResourceT $ selectSource [FilenodeArea ==. area] []
+                    C.$= CL.filter notInfs
+                    C.$= CL.map entityKey
+                    C.$$ CL.consume
+      mapM_ delete toRemove
 
-    -- completely new entities
+    -- find completely new entities..
     unknown <- filterM (fmap isNothing . runDB . getBy . UniqueFilenode area . fst) infs
+    -- and insert them and their info
     mapM_ (runDB . insertNode) unknown
+
     -- XXX: find and update modified (newer than db) entities?
 
     -- Try to add parents to nodes
@@ -369,7 +381,7 @@ updateListing area dir = do
                                   , FilenodeParent ==. Nothing] []
     mapM_ fixParent orphans
   where
-    paths = map $ first (T.pack . normalise . drop (length dir + 1))
+    normalisePaths = map $ first (T.pack . normalise . drop (length dir + 1))
 
     insertNode (path,stat) = do
         parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack path)
