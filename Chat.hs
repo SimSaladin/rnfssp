@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 16 2012 [23:02:54]
+-- Last Modified: Jul 31 2012 [03:21:38]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -66,7 +66,8 @@ postSendR = do
 
     -- Get the channel
     Chat chan <- getYesodSub
-
+    
+    setHeader "X-Accel-Buffering" "no"
     -- Send an event to all listeners with the user's name and message.
     liftIO $ writeChan chan $ ServerEvent Nothing Nothing $ return $
         fromText from `mappend` fromText ": " `mappend` fromText body
