@@ -2,14 +2,19 @@
   <div.date-box>
       #{month}
       <span>#{day}
-  <h2>#{blogpostTitle post}
+  <h2>#{title}
   $if preview
-    <p>^{toWidget cnt}
+    <p>^{toWidget rendered}
   $else
-    <p>^{toWidget cnt}
+    <p>^{toWidget rendered}
   <cite.info-block>
-    Posted by #{blogpostPoster post} under ... | #
-    <a href=@{BlogViewR $ blogpostUrltitle post}>Link #
+    Posted by #{poster} under ... | #
+    <a href=@{link}>Link #
     | #
-    <a href=@{BlogViewR $ blogpostUrltitle post}>
-      #{show commentCount} Comments
+    <a href=@{link}>
+      $if (==) commentCount 0
+        No comments yet
+      $elseif (==) commentCount 1
+        1 comment
+      $else
+        #{show commentCount} comments

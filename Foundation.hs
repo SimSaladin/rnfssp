@@ -12,17 +12,17 @@ module Foundation
     , requireAuthId
     , module Settings
     , module Model
+    , getExtra
     ) where
 
 import Prelude
+import Control.Monad (liftM)
 import Yesod
-import Yesod.Form.Nic
 import Yesod.Static
 import Yesod.Auth
 import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
-import Yesod.Logger (Logger, logMsg, formatLogText)
 import Network.HTTP.Conduit (Manager)
 import qualified Settings
 import qualified Database.Persist.Store
@@ -45,7 +45,6 @@ import Mpd
 -- access to the data present here.
 data App = App
     { settings :: AppConfig DefaultEnv Extra
-    , getLogger :: Logger
     , getStatic :: Static -- ^ Settings for static file serving.
     , connPool :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
     , httpManager :: Manager
@@ -121,15 +120,12 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    isAuthorized AdminR _             = isAdmin
-    isAuthorized MediaAdminR _        = isAdmin
-    isAuthorized BlogOverviewR True   = isAdmin
-    isAuthorized (MediaR []) False    = return Authorized
-    isAuthorized (MediaR _) _         = isValidLoggedIn
-    isAuthorized _ _                  = return Authorized
-
-    messageLogger y loc level msg =
-      formatLogText (getLogger y) loc level msg >>= logMsg (getLogger y)
+    isAuthorized AdminR        _     = isAdmin
+    isAuthorized MediaAdminR   _     = isAdmin
+    isAuthorized BlogOverviewR True  = isAdmin
+    isAuthorized (MediaR [])   False = return Authorized
+    isAuthorized (MediaR _ )   _     = isValidLoggedIn
+    isAuthorized _             _     = return Authorized
 
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
@@ -158,7 +154,7 @@ isValidLoggedIn = do
     mu <- maybeAuth
     return $ case mu of
         Nothing -> AuthenticationRequired
-        Just (Entity uid uval) 
+        Just (Entity _ uval) 
             | userValid uval -> Authorized
             | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
 
@@ -195,6 +191,10 @@ instance YesodAuth App where
 instance RenderMessage App FormMessage where
     renderMessage _ _ = defaultFormMessage
 
+-- | Get the 'Extra' value, used to hold data from the settings.yml file.
+getExtra :: Handler Extra
+getExtra = fmap (appExtra . settings) getYesod
+
 -- Note: previous versions of the scaffolding included a deliver function to
 -- send emails. Unfortunately, there are too many different options for us to
 -- give a reasonable default. Instead, the information is available on the
@@ -202,10 +202,8 @@ instance RenderMessage App FormMessage where
 --
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
 
-instance YesodNic App
-
 instance YesodChat App where
-   getUserName = requireAuth >>= return . userUsername . entityVal
+   getUserName = liftM (userUsername . entityVal) requireAuth
    isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
       Authorized -> True
       _          -> False

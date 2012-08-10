@@ -6,7 +6,7 @@ $else
       <li>
         <a.browser-link href=@{MediaR url}>#{name}
         <span.divider>/
-    $with (name, url) <- last nav
+    $with (name, _) <- last nav
       <li.active>#{name}
   $if is_dir
     <div.page-element.functional>
@@ -42,7 +42,7 @@ $else
           <div.span7>
             <h3>General
             <div>
-              <i>...
+              <i>#{name}
             <h3>Comments
             <i>coming maybe some day
           <div.span5>

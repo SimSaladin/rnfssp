@@ -1,1 +1,1 @@
-##{fvId contentView} { width:750px; }
+##{fvId viewMD} { width:100%; }

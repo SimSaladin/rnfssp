@@ -1,5 +1,5 @@
 var browser_from = "";
-var browser_ready = false;
+var browser_ready = true;
 
 function browser_load_page(browserDom, href, browse_history) {
   $.get(href + "?bare=1", function(data) {
@@ -46,15 +46,15 @@ $(document).ready(function() {
     browser_register_links(dom);
   });
   browser_from = location.href;
+  browser_ready = false;
   window.history.replaceState('', '', location.href);
 });
 
 window.onpopstate = function(e) {
-  /*alert("onpopstate");
-  if (browser_ready) */
+  if (browser_ready)
     browser_load_page($("##{browserId}"), location.href, false);
-  /* else
-    browser_ready = true; */
+  else
+    browser_ready = true;
 }
 
 $(document).ready(function(){

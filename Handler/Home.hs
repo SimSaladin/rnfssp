@@ -1,7 +1,7 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Home where
 
-import Import
+import Import hiding (fail)
 import qualified Data.Text as T
 import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)
@@ -24,9 +24,10 @@ postRegisterR = do
             if isJust muid
                then reperr [T.intercalate " " ["Username", name, "on jo käytössä"]]
                else do newUser <- setPassword (userPassword user) user
-                       uid <- runDB $ insert newUser
-                       setMessage "Rekisteröinti onnistui"
+                       _ <- runDB $ insert newUser
+                       setMessage "Your registration has been noted. Please, stand by."
                        redirect $ AuthR LoginR
+                       -- TODO: send email?
         FormFailure fails -> reperr fails
         FormMissing -> redirect $ RegisterR
 

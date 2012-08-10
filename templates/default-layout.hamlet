@@ -48,12 +48,19 @@
       <div.page-element>
         <h4>TODO:
         <ul>
-          <li>local niceditor; image upload
+          <li>
+            <span style="text-decoration:line-through">local niceditor; image
+              upload #
+            (Implemented markdown)
           <li>move these todo's somewhere
           <li>search
-          <li>playlist manipulation
-          <li>web play
-          <li>localplay
+          <li>playlist manipulation (search, filter, sort, ...)
+          <li>
+            <span style="text-decoration:line-through">web play #
+            DONE
+          <li>
+            <span style="text-decoration:line-through">localplay #
+            DONE
           <li>MPD support
           <li>user profiles
           <li>easy ProfileR user
@@ -62,3 +69,4 @@
           <li>news feed
           <li>clean up default-layout.lucius
           <li>themes and changer
+          <li>IRC integration (the haiku project)

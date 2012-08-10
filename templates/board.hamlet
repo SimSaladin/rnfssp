@@ -1,10 +1,18 @@
 $with Entity _ val <- board
   <h1>/#{bname} - #{boardDescription val}
 
-<form method="post" action=@{BoardR bname}#form enctype=#{encType}>
-    ^{formWidget}
-    <label>&nbsp;
-    <input type="submit" value="_{MsgBoardStartThread}" class="btn btn-primary btn-large">
+<div.page-elemnt>
+  <form.form-horizontal method=post action=@{BoardR bname} enctype=#{encType}>
+    $case result
+      $of FormFailure reasons
+        $forall reason <- reasons
+          <div.alert.alert-errors>#{reason}
+      $of _
+    <fieldset>
+      <legend.clearfix>
+      ^{formWidget}
+      <div.form-actions>
+        <input.btn.primary type=submit value="Submit">
 <hr>
 $forall (op, rest) <- previews
   ^{widgetThreadPost bname (entityKey op) (entityVal op)}

@@ -1,16 +1,28 @@
 name:              rnfssp
-version:           0.0.3
+version:           0.0.4
 license:           BSD3
 license-file:      LICENSE
 author:            Samuli Thomasson
 maintainer:        Samuli Thomasson
-synopsis:          The greatest Yesod web application ever.
-description:       I'm sure you can say something clever here if you try.
+synopsis:          Yesod-powered wabapp for media sharing and more.
+description:       rnfssp is a complete website with features focusing on media
+                   sharing and streaming. Currently supported features include:
+                     * user registration and access control
+                     * admin interface
+                     * listing media files (from automatically generated database)
+                     * directly streaming a file over http
+                     * playing multiple files on any computer via a m3u-playlist
+                       (generates random urls to prevent unwanted access)
+                   Nothing works perfectly or even good. Testing only!
 category:          Web
 stability:         Experimental
-cabal-version:     >= 1.6
+cabal-version:     >= 1.8
 build-type:        Simple
-homepage:          http://rnfssp.yesodweb.com/
+homepage:          http://ssdesk.paivola.fi/
+
+source-repository head
+    type:     git
+    location: git://ssdesk.paivola.fi:8181/rnfssp.git
 
 Flag dev
     Description:   Turn on development settings, like auto-reload templates.
@@ -21,17 +33,13 @@ Flag library-only
     Default:       False
 
 library
-    if flag(library-only)
-        Buildable: True
-    else
-        Buildable: False
-
     exposed-modules: Application
-    other-modules:   Foundation
+                     Foundation
                      Import
                      Model
                      Settings
                      Settings.StaticFiles
+                     Settings.Development
                      Handler.Home
                      Handler.Admin
                      Handler.Blog
@@ -39,41 +47,19 @@ library
                      Handler.Media
                      Chat
                      Mpd
+                     Utils
 
-    ghc-options:   -Wall -threaded -O0
-    cpp-options:   -DDEVELOPMENT
-
-    extensions: TemplateHaskell
-                QuasiQuotes
-                OverloadedStrings
-                NoImplicitPrelude
-                CPP
-                MultiParamTypeClasses
-                TypeFamilies
-                GADTs
-                GeneralizedNewtypeDeriving
-                FlexibleContexts
-                EmptyDataDecls
-                NoMonomorphismRestriction
-
-executable         rnfssp
-    if flag(library-only)
-        Buildable: False
-
-    if flag(dev)
+    if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
-        ghc-options:   -Wall -threaded -O0
+        ghc-options:   -Wall -O0
     else
-        ghc-options:   -Wall -threaded -O2
-
-    main-is:       main.hs
+        ghc-options:   -Wall -O2
 
     extensions: TemplateHaskell
                 QuasiQuotes
                 OverloadedStrings
                 NoImplicitPrelude
                 CPP
-                OverloadedStrings
                 MultiParamTypeClasses
                 TypeFamilies
                 GADTs
@@ -83,32 +69,33 @@ executable         rnfssp
                 NoMonomorphismRestriction
 
     build-depends: base                          >= 4          && < 5
-                 , yesod                         >= 1.0        && < 1.1
-                 , yesod-core                    >= 1.0        && < 1.1
-                 , yesod-auth                    >= 1.0        && < 1.1
-                 , yesod-static                  >= 1.0        && < 1.1
-                 , yesod-default                 >= 1.0        && < 1.1
-                 , yesod-form                    >= 1.0        && < 1.1
-                 , yesod-test                    >= 0.2        && < 0.3
-                 , yesod-json
-                 , clientsession                 >= 0.7.3      && < 0.8
+                 -- , yesod-platform                >= 1.1        && < 1.2
+                 , yesod                         >= 1.1        && < 1.2
+                 , yesod-core                    >= 1.1        && < 1.2
+                 , yesod-auth                    >= 1.1        && < 1.2
+                 , yesod-static                  >= 1.1        && < 1.2
+                 , yesod-default                 >= 1.1        && < 1.2
+                 , yesod-form                    >= 1.1        && < 1.2
+                 , yesod-test                    >= 0.3        && < 0.4
+                 , clientsession                 >= 0.8        && < 0.9
                  , bytestring                    >= 0.9        && < 0.10
                  , text                          >= 0.11       && < 0.12
-                 , persistent                    >= 0.9        && < 0.10
-                 , persistent-postgresql         >= 0.9        && < 0.10
+                 , persistent                    >= 1.0        && < 1.1
+                 , persistent-postgresql         >= 1.0        && < 1.1
                  , template-haskell
-                 , hamlet                        >= 1.0        && < 1.1
+                 , hamlet                        >= 1.1        && < 1.2
                  , shakespeare-css               >= 1.0        && < 1.1
                  , shakespeare-js                >= 1.0        && < 1.1
                  , shakespeare-text              >= 1.0        && < 1.1
-                 , hjsmin                        >= 0.0.14     && < 0.1
+                 , hjsmin                        >= 0.1        && < 0.2
                  , monad-control                 >= 0.3        && < 0.4
-                 , wai-extra                     >= 1.2        && < 1.3
-                 , wai-eventsource
-                 , yaml                          >= 0.7        && < 0.8
-                 , http-conduit                  >= 1.4        && < 1.5
+                 , wai-extra                     >= 1.3        && < 1.4
+                 , wai-eventsource               >= 1.3        && < 1.4
+                 , yaml                          >= 0.8        && < 0.9
+                 , http-conduit                  >= 1.5        && < 1.6
                  , directory                     >= 1.1        && < 1.2
-                 , warp                          >= 1.2        && < 1.3
+                 , warp                          >= 1.3        && < 1.4
+                 , data-default
                  , time                          >= 1.4        && < 1.5
                  , filepath
                  , unix
@@ -120,24 +107,33 @@ executable         rnfssp
                  , wai
                  , libmpd
                  , aeson
+                 , MonadRandom
+                 , temporary
+                 , yesod-markdown
+                 , conduit
 
+executable         rnfssp
+    if flag(library-only)
+        Buildable: False
+
+    main-is:           ../main.hs
+    hs-source-dirs:    dist
+    build-depends:     base
+                     , rnfssp
+                     , yesod-default
+
+    ghc-options:       -threaded -O2
+
+test-suite test
+    type:              exitcode-stdio-1.0
+    main-is:           main.hs
+    hs-source-dirs:    tests
+    ghc-options:       -Wall
+
+    build-depends: base
+                 , rnfssp
                  , yesod-test
-test-suite integration-tests
-    type: exitcode-stdio-1.0
-    main-is:        main.hs
-    hs-source-dirs: tests .
-    ghc-options:     -Wall
-    extensions: TemplateHaskell
-                QuasiQuotes
-                OverloadedStrings
-                NoImplicitPrelude
-                CPP
-                OverloadedStrings
-                MultiParamTypeClasses
-                TypeFamilies
-                GADTs
-                GeneralizedNewtypeDeriving
-                FlexibleContexts
-
-    build-depends: base                          >= 4          && < 5
-                 , yesod-test                    >= 0.1        && < 0.2
+                 , yesod-default
+                 , yesod-core
+                 , persistent                >= 1.0        && < 1.1
+                 , persistent-postgresql     >= 1.0        && < 1.1

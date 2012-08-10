@@ -5,7 +5,7 @@
 /mpd    MpdR    Mpd    getMpd
 
 /favicon.ico FaviconR GET
-/robots.txt  RobotsR  GET
+/robots.txt RobotsR GET
 
 /admin       AdminR      GET POST
 /admin/media MediaAdminR GET POST
@@ -22,5 +22,5 @@
 /files/board/#String      BoardFileR GET
 
 /media/*Texts                 MediaR         GET POST
-/media-playlists/#Text        MediaPlaylistR     POST
+/media-playlists/#Text        MediaPlaylistR GET POST
 /media-get/#Text/#Text/*Texts MediaServeR    GET
