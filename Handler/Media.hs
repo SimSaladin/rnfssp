@@ -363,7 +363,7 @@ updateListing area dir = do
 
     -- delete entities not found in the filesystem XXX: disable/hide only?
     runDB $ do
-      toRemove <- C.runResourceT $ selectSource [FilenodeArea ==. area] []
+      toRemove <- C.runResourceT $ selectSource [FilenodeArea ==. area] [Desc FilenodePath]
                     C.$= CL.filter notInfs
                     C.$= CL.map entityKey
                     C.$$ CL.consume
