@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Aug 08 2012 [04:58:10]
+-- Last Modified: Aug 31 2012 [02:02:10]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -13,6 +13,7 @@ import           Data.Char
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Text as T
+import qualified Data.Map as Map
 import           System.FilePath
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
@@ -89,3 +90,33 @@ uniqueFilePath dir template = fmap ((dir </>) . appendBaseName) (randomString 10
 randomString :: Int -> IO String
 randomString n = liftM (map chr) (evalRandIO $ sequence $ replicate n rnd)
   where rnd = getRandomR (48, 57)
+
+mapField :: Field sub master (Map.Map Text a)
+mapField = Field
+  { fieldParse = \rawVals -> case rawVals of
+      xs | length xs < 4 -> return $ Left "Must have at least two options"
+         | otherwise -> do
+            let paired = pairs xs
+            return $ Right $ Just Map.empty
+
+  , fieldView = \idAttr nameAttr _ eResult isReq -> do
+    j_add <- lift newIdent
+    toWidget [julius|
+function #{j_add}{
+}
+    |]
+    [whamlet|
+<input id=#{idAttr}-1-factor name="#{nameAttr}-factor" type=text required>
+<input id=#{idAttr}-1 name=#{nameAttr} type=text :isReq:required>
+<br>
+<input id=#{idAttr}-2-factor name="#{nameAttr}-factor" type=text required>
+<input id=#{idAttr}-2 name=#{nameAttr} type=text :isReq:required>
+<br>
+<button onclick="#{j_add}()">Add new option
+    |]
+  }
+
+pairs :: [a] -> [ (a,a) ]
+pairs []       = []
+pairs (x:[])   = [(x,x)]
+pairs (x:y:zs) = (x,y) : pairs zs

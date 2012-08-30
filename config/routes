@@ -24,3 +24,6 @@
 /media/*Texts                 MediaR         GET POST
 /media-playlists/#Text        MediaPlaylistR GET POST
 /media-get/#Text/#Text/*Texts MediaServeR    GET
+
+/bets        BetR     GET POST
+/btes/#BetId BetViewR GET POST

@@ -73,3 +73,14 @@ DlTemp
    ident Text
    target Text
    UniqueDlTemp ident
+
+Bettarget
+   date UTCTime
+   running Bool
+   owner UserId
+   title Text
+   factors (Map Text Int)
+Bet
+   owner UserId
+   amount Int
+   target Text

@@ -45,6 +45,7 @@ library
                      Handler.Blog
                      Handler.Board
                      Handler.Media
+                     Handler.Bet
                      Chat
                      Mpd
                      Utils
@@ -111,6 +112,7 @@ library
                  , temporary
                  , yesod-markdown
                  , conduit
+                 , containers
 
 executable         rnfssp
     if flag(library-only)

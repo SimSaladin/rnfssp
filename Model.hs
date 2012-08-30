@@ -9,6 +9,7 @@ import Data.Aeson.Types (ToJSON(..), FromJSON(..), (.:))
 import Control.Applicative ((<$>), (<*>))
 import Data.Text (Text)
 import Data.Time (UTCTime)
+import Data.Map (Map)
 import Database.Persist.Quasi
 
 type TupleText = (Text, Text)
