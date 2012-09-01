@@ -25,6 +25,7 @@ import Handler.Blog
 import Handler.Board
 import Handler.Media
 import Handler.Bet
+import Handler.Profile
 import Chat
 import Mpd
 

@@ -1,0 +1,4 @@
+$if own
+  <h1>My Profile
+$else
+  <h1>Profile of #{userUsername uval}
