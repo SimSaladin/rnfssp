@@ -1,0 +1,9 @@
+<h1>Betting
+<div.page-element>
+  <h2>Active bets
+  ^{bets2table $ map entityVal bets}
+
+<div.page-element>
+  <h2>Create a bet
+  <form method="post" enctype=#{encType}>
+    ^{newBetW}
