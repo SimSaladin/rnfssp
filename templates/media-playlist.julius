@@ -55,7 +55,7 @@ function update_playlist() {
   $.each(playlist["elems"], function(index, value) {
     table.append(
       $('<tr/>')
-      .append($('<td/>').text(value[1]))
+      .append($('<td title="'+value[1]+'"/>').text(value[1]))
       .append($('<td/>').text(value[0]))
     );
   });
