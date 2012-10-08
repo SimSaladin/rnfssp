@@ -6,6 +6,8 @@ import qualified Data.Text as T
 import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)
 
+import Utils
+
 getRegisterR :: Handler RepHtml
 getRegisterR = do
     (widget, encType) <- generateFormPost registerForm
@@ -44,25 +46,3 @@ registerForm extra = do
                        <*> pure Nothing
                        <*> resComm
         in return (resUser, $(widgetFile "form-register"))
-
-passwordConfirmField :: Field sub master Text
-passwordConfirmField = Field
-    { fieldParse = \rawVals ->
-        case rawVals of
-            [a, b]
-                | T.length a < 4 -> return $ Left "Password must be at least 4 characters"
-                | a == b -> return $ Right $ Just a
-                | otherwise -> return $ Left "Passwords don't match"
-            [] -> return $ Right Nothing
-            _ -> return $ Left "You must enter two values"
-    , fieldView = \idAttr nameAttr _ eResult isReq -> [whamlet|
-<div.control-group>
-  <div.control-label for=#{idAttr}> Password
-  <div.controls>
-    <input id=#{idAttr} name=#{nameAttr} type=password :isReq:required>
-<div.control-group>
-  <div.control-label for=#{idAttr}-confirm> Confirm password
-  <div.controls>
-    <input id=#{idAttr}-confirm name=#{nameAttr} type=password>
-|]
-    }

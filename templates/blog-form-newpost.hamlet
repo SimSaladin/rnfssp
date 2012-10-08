@@ -18,4 +18,4 @@
     ^{fvInput viewMD}
 
 <div.form-actions>
-  <input.btn.primary type=submit value="Post it">
+  <input.btn.btn-primary type=submit value="Post it">

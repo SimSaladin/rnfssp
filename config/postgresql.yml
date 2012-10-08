@@ -1,6 +1,6 @@
 Default: &defaults
   user: rnfssp
-  password: rnfssp
+  password: <password>
   host: localhost
   port: 5432
   database: rnfssp

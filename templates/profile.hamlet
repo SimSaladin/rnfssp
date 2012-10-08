@@ -1,0 +1,11 @@
+$if own
+  <h1>My Profile
+$else
+  <h1>Profile of #{userUsername uval}
+
+$if own
+  <h2>Change password
+  <div.page-element>
+    <form method=post>
+      ^{passwdW}
+      <input.btn.btn-danger type=submit value="vaihda">

@@ -28,7 +28,7 @@
                   <li>
                     <a href=@{AdminR}>Admin
                 <li>
-                  <a href="/">#{userUsername $ entityVal authent}
+                  <a href=@{ProfileR}>#{userUsername $ entityVal authent}
                 <li .divider-vertical>
                 <li>
                   <a href=@{AuthR LogoutR}>_{MsgLogout}

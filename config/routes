@@ -27,3 +27,5 @@
 
 /bets        BetR     GET POST
 /btes/#BetId BetViewR GET POST
+
+/profile ProfileR GET POST

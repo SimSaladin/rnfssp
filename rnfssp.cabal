@@ -46,6 +46,7 @@ library
                      Handler.Board
                      Handler.Media
                      Handler.Bet
+                     Handler.Profile
                      Chat
                      Mpd
                      Utils

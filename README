@@ -1,0 +1,2 @@
+NOTE: git should not track changes to configs/postgresql.yml, as
+      > git update-index --assume-unchanged config/postgresql.yml
