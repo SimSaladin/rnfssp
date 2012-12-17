@@ -15,7 +15,7 @@ module Foundation
     , getExtra
     ) where
 
-import Prelude
+import Prelude hiding (readFile, appendFile)
 import Control.Monad (liftM)
 import Yesod
 import Yesod.Static
@@ -35,6 +35,9 @@ import Web.ClientSession (getKey)
 import Text.Hamlet (hamletFile)
 
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Text.IO (appendFile, readFile)
+import Data.Monoid (mappend)
 
 import Chat
 import Mpd
@@ -202,8 +205,19 @@ getExtra = fmap (appExtra . settings) getYesod
 --
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
 
+chatFile :: FilePath
+chatFile = "chatmessages.txt"
+
 instance YesodChat App where
-   getUserName = liftM (userUsername . entityVal) requireAuth
-   isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
+  getUserName = liftM (userUsername . entityVal) requireAuth
+  isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
       Authorized -> True
       _          -> False
+  saveMessage (from, msg) = liftIO $ appendFile chatFile $ from `mappend` "," `mappend` msg
+  getRecent = liftM (map (T.breakOn ",") . last' 5 . T.lines) $ liftIO $ readFile chatFile
+
+last' :: Int -> [a] -> [a]
+last' n xs
+  | l >= n    = drop (l - n) xs
+  | otherwise = xs
+    where l = length xs
