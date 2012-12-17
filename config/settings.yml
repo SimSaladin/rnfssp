@@ -1,5 +1,5 @@
 Default: &defaults
-  host:      "localhost"
+  host:      "*4"
   port:      3001
   approot:   "http://localhost:3001"
   serveroot: "http://localhost:3001"
