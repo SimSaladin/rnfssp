@@ -28,7 +28,7 @@ postRegisterR = do
                else do newUser <- setPassword (userPassword user) user
                        _ <- runDB $ insert newUser
                        setMessage "Your registration has been noted. Please, stand by."
-                       redirect $ AuthR LoginR
+                       redirect BlogOverviewR
                        -- TODO: send email?
         FormFailure fails -> reperr fails
         FormMissing -> redirect $ RegisterR

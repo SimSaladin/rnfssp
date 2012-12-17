@@ -2,7 +2,7 @@
   <small>_{MsgMediaDescription}
 
 $maybe ent <- mauth
-  ^{mediaBrowser}
+  ^{browserWidget fps}
   ^{widPlaylist ent}
 
 $nothing
@@ -11,7 +11,7 @@ $nothing
     <p>
       You must be explicitly granted access to this part.<br/>
       Please, #
-      <a.btn.btn-primary href="@{AuthR LoginR}">Login
+      <a.btn.btn-primary href="@{routeToLogin}">Login
       &nbsp;or #
       <a.btn.btn-info href="@{RegisterR}">Register
       .

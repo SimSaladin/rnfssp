@@ -4,9 +4,10 @@ User
    salt Text
    admin Bool default=false Update
    valid Bool default=false Update
-   currentplaylist PlaylistId Maybe
+   currentplaylist Text Maybe
    comment Textarea
    UniqueUser username
+
 Blogpost
    time UTCTime
    poster Text
@@ -15,6 +16,7 @@ Blogpost
    markdown Markdown
    rendered Html
    UniqueBlogpost urlpath
+
 Blogcomment
    post BlogpostId
    parent BlogcommentId Maybe
@@ -23,6 +25,7 @@ Blogcomment
    author Text
    website Text Maybe
    content Textarea
+
 BlogTag
    tag String
 

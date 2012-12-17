@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Sep 01 2012 [05:10:45]
+-- Last Modified: Dec 17 2012 [20:50:17]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -93,7 +93,7 @@ randomString n = liftM (map chr) (evalRandIO $ sequence $ replicate n rnd)
 
 mapField :: Field sub master (Map.Map Text a)
 mapField = Field
-  { fieldParse = \rawVals -> case rawVals of
+  { fieldParse = \rawVals _ -> case rawVals of
       xs | length xs < 4 -> return $ Left "Must have at least two options"
          | otherwise -> do
             let paired = pairs xs
@@ -102,7 +102,7 @@ mapField = Field
   , fieldView = \idAttr nameAttr _ eResult isReq -> do
     j_add <- lift newIdent
     toWidget [julius|
-function #{j_add}{
+function #{rawJS j_add}{
 }
     |]
     [whamlet|
@@ -114,6 +114,7 @@ function #{j_add}{
 <br>
 <button onclick="#{j_add}()">Add new option
     |]
+  , fieldEnctype = UrlEncoded
   }
 
 pairs :: [a] -> [ (a,a) ]
@@ -123,7 +124,7 @@ pairs (x:y:zs) = (x,y) : pairs zs
 
 passwordConfirmField :: Field sub master Text
 passwordConfirmField = Field
-    { fieldParse = \rawVals ->
+    { fieldParse = \rawVals _ ->
         case rawVals of
             [a, b]
                 | T.length a < 4 -> return $ Left "Password must be at least 4 characters"
@@ -141,4 +142,5 @@ passwordConfirmField = Field
   <div.controls>
     <input id=#{idAttr}-confirm name=#{nameAttr} type=password>
 |]
+    , fieldEnctype = UrlEncoded
     }

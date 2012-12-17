@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 31 2012 [02:37:40]
+-- Last Modified: Dec 17 2012 [20:02:57]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -17,6 +17,7 @@
 module Chat where
 
 import Yesod
+import Text.Julius (rawJS)
 import Prelude (Bool, ($), Maybe(..), (.))
 import Control.Monad (return)
 import Control.Concurrent.Chan (Chan, dupChan, writeChan)
@@ -106,7 +107,7 @@ chatWidget toMaster = do
             -- And now that Javascript
             toWidgetBody [julius|
 // Set up the receiving end
-var output = document.getElementById("#{output}");
+var output = document.getElementById("#{rawJS output}");
 var src = new EventSource("@{toMaster ReceiveR}");
 src.onmessage = function(msg) {
     // This function will be called for each new message.
@@ -121,7 +122,7 @@ src.onmessage = function(msg) {
 
 // Set up the sending end: send a message via Ajax whenever the user hits
 // enter.
-var input = document.getElementById("#{input}");
+var input = document.getElementById("#{rawJS input}");
 input.onkeyup = function(event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == '13') {

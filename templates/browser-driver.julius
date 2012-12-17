@@ -1,3 +1,4 @@
+
 var browser_from = "";
 var browser_ready = true;
 
@@ -33,6 +34,7 @@ function browser_load_page(browserDom, href, browse_history) {
   });
 }
 
+/* Bind the function browser_load_page() to the browser links */
 function browser_register_links(browserDom) {
   browserDom.find("a.browser-link").click(function() {
     browser_load_page(browserDom, $(this).attr("href"), true);
@@ -41,23 +43,23 @@ function browser_register_links(browserDom) {
 }
 
 $(document).ready(function() {
-  var dom = $("##{browserId}");
+  var dom = $("##{rawJS browserId}");
   dom.load(location.href + "?bare=1", function () {
     browser_register_links(dom);
   });
   browser_from = location.href;
   browser_ready = false;
   window.history.replaceState('', '', location.href);
+
+  /* hide the browser, then show it. */
+  $("##{rawJS browserId}").hide();
+  $("##{rawJS browserId}").fadeIn(700);
 });
 
+/* when asked to move in history */
 window.onpopstate = function(e) {
   if (browser_ready)
-    browser_load_page($("##{browserId}"), location.href, false);
+    browser_load_page($("##{rawJS browserId}"), location.href, false);
   else
     browser_ready = true;
 }
-
-$(document).ready(function(){
-  $("##{browserId}").hide();
-  $("##{browserId}").fadeIn(700);
-});

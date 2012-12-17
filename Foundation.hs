@@ -1,30 +1,16 @@
-module Foundation
-    ( App (..)
-    , Route (..)
-    , AppMessage (..)
-    , resourcesApp
-    , Handler
-    , Widget
-    , Form
-    , maybeAuth
-    , maybeAuthId
-    , requireAuth
-    , requireAuthId
-    , module Settings
-    , module Model
-    , getExtra
-    ) where
+module Foundation where
 
-import Prelude hiding (readFile, appendFile)
+import Prelude hiding (appendFile, readFile)
 import Control.Monad (liftM)
 import Yesod
 import Yesod.Static
-import Yesod.Auth
+import Yesod.Auth 
 import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Network.HTTP.Conduit (Manager)
 import qualified Settings
+import Settings.Development (development)
 import qualified Database.Persist.Store
 import Settings.StaticFiles
 import Database.Persist.GenericSql
@@ -55,8 +41,6 @@ data App = App
     , getChat :: Chat
     , getMpd :: Mpd
     }
-
-type Strings = [String]
 
 -- Set up i18n messages. See the message folder.
 mkMessage "App" "messages" "en"
@@ -139,6 +123,11 @@ instance Yesod App where
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
 
+    -- What messages should be logged. The following includes all messages when
+    -- in development, and warnings and errors in production.
+    shouldLog _ _source level =
+        development || level == LevelWarn || level == LevelError
+
 isAdmin :: GHandler s App AuthResult
 isAdmin = do
     mu <- maybeAuth
@@ -150,9 +139,10 @@ isAdmin = do
 --            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
 --            | otherwise -> Unauthorized "You must be an admin"
 
-isValidLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
-        YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
-        (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
+--isValidLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
+--        YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
+--        (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
+isValidLoggedIn :: GHandler s App AuthResult
 isValidLoggedIn = do
     mu <- maybeAuth
     return $ case mu of
@@ -221,3 +211,6 @@ last' n xs
   | l >= n    = drop (l - n) xs
   | otherwise = xs
     where l = length xs
+
+routeToLogin :: Route App
+routeToLogin = AuthR LoginR

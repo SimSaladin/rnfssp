@@ -13,36 +13,32 @@ module Handler.Media
 
 import           Utils
 import           Import
-import           Data.List ((\\), init, last, head, tail)
-import           Data.Char (chr)
-import           Data.Maybe (isNothing)
-import           Data.Time.Clock (diffUTCTime)
-import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           Data.Time.Format (formatTime)
+import           JSBrowser
+
 import           Control.Arrow (first)
 import           Control.Monad
 import qualified Control.Monad.Random as MR (evalRandIO, getRandomR)
-import qualified Data.Text as T
-import qualified Data.Text.IO as T
-import qualified System.FilePath as F (joinPath)
-import           System.Directory (getDirectoryContents, getTemporaryDirectory)
-import           System.FilePath (takeDirectory, takeFileName, (</>), normalise, splitPath)
-import           System.IO (hClose)
-import           System.IO.Temp (openTempFile)
-import           System.Locale (defaultTimeLocale)
-import           System.Posix.Files (FileStatus, getFileStatus, fileSize, modificationTime, isDirectory)
-import           System.Process (readProcessWithExitCode)
-
+import           Data.Char (chr)
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
+import           Data.List ((\\), head, tail)
+import           Data.Maybe (isNothing)
+import qualified Data.Text as T
+import qualified Data.Text.IO as T
+import           Data.Time.Clock (diffUTCTime)
+import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           System.Directory (getDirectoryContents, getTemporaryDirectory)
+import           System.FilePath (takeDirectory, (</>), normalise, splitPath)
+import qualified System.FilePath as F (joinPath)
+import           System.IO (hClose)
+import           System.IO.Temp (openTempFile)
+import           System.Posix.Files (FileStatus, getFileStatus, fileSize, modificationTime, isDirectory)
+import           System.Process (readProcessWithExitCode)
 
 -- * Confs & Utilities
 
 viewable :: [Text]
 viewable = ["audio", "video"]
-
-isdir :: Text -> Bool
-isdir = (==) "directory"
 
 toPath :: [Text] -> Text
 toPath = T.pack . F.joinPath . map T.unpack
@@ -50,18 +46,18 @@ toPath = T.pack . F.joinPath . map T.unpack
 
 -- * Userspace / General
 
--- | The root and heart of media section. Loads browser, playlist and other
---   possibly widgets. 
+-- | The root and heart of media section. Loads widgets to the page:
+--   * browserWidget
+--   * playlist
 getMediaR :: [Text] -> Handler RepHtml
 getMediaR fps = do
-    mauth <- maybeAuth
-    bare <- lookupGetParam "bare"
-    case bare of
-        Just _ -> browserTable fps
-        Nothing -> defaultLayout $ do
-            setTitle "Media"
-            $(widgetFile "media-home")
-          where mediaBrowser = browserWidget fps
+  mauth <- maybeAuth
+  bare <- lookupGetParam "bare"
+  case bare of
+      Just _ -> browserBare fps
+      Nothing -> defaultLayout $ do
+          setTitle "Media"
+          $(widgetFile "media-home")
 
 -- | Used to modify media -- TODO TODO TODO --
 postMediaR :: [Text] -> Handler RepHtml
@@ -98,65 +94,6 @@ getMediaServeR kind area path
           else do t <- timeNow
                   _ <- runDB $ insert $ LogDownload uid t key
                   return . toReal (filenodePath val) =<< gdir area
-
-
--- * Browser
-
--- | the <table> element only
-browserTable :: [Text] -> Handler RepHtml
-browserTable fps = do
-    _ <- requireAuth
-    pc <- widgetToPageContent $ browserViewWidget fps
-    hamletToRepHtml [hamlet|^{pageBody pc}|]
-
--- | The driver for the browser
-browserWidget :: [Text] -> Widget
-browserWidget fps = do
-    browserId <- lift newIdent
-    $(widgetFile "browser-driver")
-  where
-    sections = map (\(sect, icon) -> (current == sect, MediaR [sect], sect, icon)) browsable
-    current  = if' (null fps) "" (head fps)
-
-browsable :: [(Text, Text)]
-browsable = [ ("anime", "film"), ("music", "music")]
-
--- | requires the browser script already on the page
-browserViewWidget :: [Text] -> Widget
-browserViewWidget [] = let
-    nav     = [] :: [(Text,Texts)]
-    area    = "" :: Text
-    is_dir  = False
-    is_file = False
-    details = Nothing :: Maybe String
-    listing = [] :: [(String, Text, [Text], [Text], Text, Text)]
-    in $(widgetFile "browser-bare")
-browserViewWidget (area:path) = do
-    node <- lift $ runDB $ getBy404 $ UniqueFilenode area (T.pack $ normalise $ F.joinPath $ map T.unpack path)
-    let val     = entityVal node
-        is_dir  = filenodeIsdir val
-        is_file = not is_dir
-        details = filenodeDetails val
-
-    nodes <- if is_file
-      then return []
-      else lift $ runDB $ selectList [ FilenodeParent ==. (Just $ entityKey node)
-                                     , FilenodePath   !=. "." ] [Asc FilenodePath]
-
-    let listing = do
-        this <- map entityVal nodes
-        let file     = takeFileName $ T.unpack $ filenodePath this
-            filetype = if filenodeIsdir this
-                         then "directory"
-                         else guessFiletype file
-            fps      = path ++ [T.pack file]
-            size     = filenodeSize this
-            modified = formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime this
---            details  = filenodeDetails this
-            in return (file, filetype, fps, area : fps, size, modified)
-    $(widgetFile "browser-bare")
-  where
-    nav = zip (area:path) (foldr (\x xs -> [x] : map ([x] ++) xs) [[]] (area:path))
 
 
 -- * Playing & Playlists
@@ -259,7 +196,7 @@ getPlaylist (Entity k v) = fromGetparam
         Nothing    -> fromDB
 
     fromDB = case userCurrentplaylist v of
-        Just plid -> liftM (fmap (Entity plid)) (runDB $ get plid) >>= tryMaybe fromDBDefault
+        Just name -> runDB (getBy $ UniquePlaylist k name) >>= tryMaybe fromDBDefault
         Nothing   -> fromDBDefault
 
     fromDBDefault = runDB (getBy $ UniquePlaylist k "") >>= tryMaybe (addDefaultPlaylist k)

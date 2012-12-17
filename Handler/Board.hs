@@ -82,7 +82,7 @@ postThreadR bname opKey = do
 getBoardFileR :: String -> Handler RepHtml
 getBoardFileR fname = getFilesPath >>= \p -> sendFile "" $ p </> fname
 
-widgetThreadPost :: Text -> Key (PersistEntityBackend Boardpost) Boardpost -> BoardpostGeneric a -> Widget
+widgetThreadPost :: Text -> Key Boardpost -> Boardpost -> Widget
 widgetThreadPost bname n reply = do
     let isop = isNothing $ boardpostParent reply
     let time = show $ boardpostTime reply
@@ -98,7 +98,7 @@ widgetThreadPost bname n reply = do
 getFilesPath :: Handler FilePath
 getFilesPath = fmap ((</> "board") . extraDirDyn) getExtra
 
-key2text :: Key (PersistEntityBackend Boardpost) Boardpost -> String
+key2text :: Key Boardpost -> String
 key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
                 Left _ -> "fail!"
                 Right num -> show num

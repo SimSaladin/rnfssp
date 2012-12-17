@@ -18,10 +18,10 @@ type TupleText = (Text, Text)
 -- You can find more information on persistent and how to declare entities
 -- at:
 -- http://www.yesodweb.com/book/persistent/
-share [mkPersist sqlSettings, mkMigrate "migrateAll"]
+share [mkPersist sqlOnlySettings, mkMigrate "migrateAll"]
     $(persistFileWith lowerCaseSettings "config/models")
 
-instance HashDBUser (UserGeneric backend) where
+instance HashDBUser User where
     userPasswordHash = Just . userPassword
     userPasswordSalt = Just . userSalt
     setSaltAndPasswordHash s h p = p { userSalt     = s

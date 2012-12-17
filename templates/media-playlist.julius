@@ -1,5 +1,5 @@
 var playlist = {};
-var cont = $("##{content}");
+var cont = $("##{rawJS content}");
 
 /**
  * Loads active playlist, or creates a new playlist.
@@ -36,8 +36,8 @@ function to_playlist(area, what) {
  * redraw playlist and add default title if none is specified.
  */
 function update_playlist() {
-  var cont = $("##{content}");
-  var head = $("##{heading}");
+  var cont = $("##{rawJS content}");
+  var head = $("##{rawJS heading}");
   cont.empty();
   head.empty();
 
@@ -80,4 +80,4 @@ function clear_playlist() {
   });
 }
 
-$("##{content}").ready(load_playlist)
+$("##{rawJS content}").ready(load_playlist)

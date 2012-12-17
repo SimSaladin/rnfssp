@@ -11,7 +11,7 @@
 #     mv deploy/Procfile ./
 #
 # * Create an empty package.json
-#     echo '{ "name": "rnfssp", "version": "0.0.1", "dependencies": {} }' >> package.json
+#     echo '{ "name": "rnfssp", "version": "0.0.5", "dependencies": {} }' >> package.json
 #
 # Postgresql Yesod setup:
 #
