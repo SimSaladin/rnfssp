@@ -18,7 +18,6 @@ import           JSBrowser
 import           Control.Arrow (first)
 import           Control.Monad
 import qualified Control.Monad.Random as MR (evalRandIO, getRandomR)
-import           Data.Char (chr)
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
 import           Data.List ((\\), head, tail)
@@ -28,8 +27,7 @@ import qualified Data.Text.IO as T
 import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Directory (getDirectoryContents, getTemporaryDirectory)
-import           System.FilePath (takeDirectory, (</>), normalise, splitPath)
-import qualified System.FilePath as F (joinPath)
+import           System.FilePath (takeDirectory, (</>), normalise)
 import           System.IO (hClose)
 import           System.IO.Temp (openTempFile)
 import           System.Posix.Files (FileStatus, getFileStatus, fileSize, modificationTime, isDirectory)
@@ -38,6 +36,9 @@ import           System.Process (readProcessWithExitCode)
 -- | Maximum time a file can be accessed via a temporary url.
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
+
+browsable :: [(Text, Text)]
+browsable = [ ("anime", "film"), ("music", "music")]
 
 
 -- * General / Content
@@ -48,6 +49,10 @@ getMediaHomeR = do
   defaultLayout $ do
     setTitle "Media"
     $(widgetFile "media-home")
+  where sections = mediaSectionNavs ""
+
+mediaSectionNavs :: Text -> [(Bool, Route App, Text, Text)]
+mediaSectionNavs current = map (\(s, i) -> (current == s, MediaContentR s [], s, i)) browsable
 
 getMediaContentR :: Text -> [Text] -> Handler RepHtml
 getMediaContentR section fps = do
@@ -58,6 +63,7 @@ getMediaContentR section fps = do
       Nothing -> defaultLayout $ do
           setTitle "Media"
           $(widgetFile "media-content")
+    where sections = mediaSectionNavs section
 
 -- | Generate content based on section and path.
 contentWidget :: Text -> [Text] -> Widget
@@ -228,10 +234,10 @@ toPlaylist :: Playlist
            -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
 toPlaylist pl section path = do
     t <- timeNow
-    xs <- findFilenodeFiles section path
-    return $ case xs of
+    new <- findFilenodeFiles section path
+    return $ case new of
       [] -> (False, pl)
-      xs -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) xs
+      new -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) new
                      , playlistModified = t 
                      })
 

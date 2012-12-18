@@ -6,7 +6,7 @@ import           Prelude              as Import hiding (head, init, last,
                                                  readFile, tail, writeFile)
 import           Yesod                as Import hiding (Route (..))
 import           Yesod.Form.ExtraFields as Import
-import           Yesod.Auth           as Import (maybeAuth, requireAuth, maybeAuthId, requireAuthId)
+import           Yesod.Auth           as Import (maybeAuth, requireAuth, maybeAuthId, requireAuthId, Route)
 import           Text.Julius          as Import (rawJS)
 
 import           Control.Applicative  as Import (pure, (<$>), (<*>))

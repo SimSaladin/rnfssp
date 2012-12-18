@@ -4,7 +4,7 @@ import Prelude hiding (appendFile, readFile)
 import Control.Monad (liftM)
 import Yesod
 import Yesod.Static
-import Yesod.Auth 
+import Yesod.Auth
 import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)

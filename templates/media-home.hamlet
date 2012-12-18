@@ -2,7 +2,20 @@
   <small>_{MsgMediaDescription}
 
 $maybe ent <- mauth
-  <i>Something coming soon
+  <ul.nav.nav-tabs>
+    $forall (active, route, name, icon) <- sections
+      $if active
+        <li.active>
+          <a href="@{route}">
+            <i.icon-white.icon-#{icon}>
+            &nbsp;
+            #{name}
+      $else
+        <li>
+          <a href="@{route}">
+            <i.icon-white.icon-#{icon}>
+            &nbsp;
+            #{name}
   ^{playlist ent}
 
 $nothing

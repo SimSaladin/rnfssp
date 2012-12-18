@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Dec 18 2012 [04:40:46]
+-- Last Modified: Dec 18 2012 [05:13:11]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
