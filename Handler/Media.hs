@@ -1,14 +1,14 @@
 {-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables, DoAndIfThenElse #-}
 module Handler.Media
-    ( getMediaR
-    , postMediaR
+    ( getMediaHomeR
+    , getMediaContentR
     , getMediaServeR
 
     , getMediaAdminR
     , postMediaAdminR
 
-    , getMediaPlaylistR
-    , postMediaPlaylistR
+    , getPlaylistR
+    , postPlaylistR
     ) where
 
 import           Utils
@@ -25,7 +25,7 @@ import           Data.List ((\\), head, tail)
 import           Data.Maybe (isNothing)
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           Data.Time.Clock (diffUTCTime)
+import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Directory (getDirectoryContents, getTemporaryDirectory)
 import           System.FilePath (takeDirectory, (</>), normalise, splitPath)
@@ -35,98 +35,114 @@ import           System.IO.Temp (openTempFile)
 import           System.Posix.Files (FileStatus, getFileStatus, fileSize, modificationTime, isDirectory)
 import           System.Process (readProcessWithExitCode)
 
--- * Confs & Utilities
-
-viewable :: [Text]
-viewable = ["audio", "video"]
-
-toPath :: [Text] -> Text
-toPath = T.pack . F.joinPath . map T.unpack
+-- | Maximum time a file can be accessed via a temporary url.
+maxTempUrlAlive :: NominalDiffTime
+maxTempUrlAlive = 60 * 60 * 24
 
 
--- * Userspace / General
+-- * General / Content
 
--- | The root and heart of media section. Loads widgets to the page:
---   * browserWidget
---   * playlist
-getMediaR :: [Text] -> Handler RepHtml
-getMediaR fps = do
+getMediaHomeR :: Handler RepHtml
+getMediaHomeR = do
+  mauth <- maybeAuth
+  defaultLayout $ do
+    setTitle "Media"
+    $(widgetFile "media-home")
+
+getMediaContentR :: Text -> [Text] -> Handler RepHtml
+getMediaContentR section fps = do
   mauth <- maybeAuth
   bare <- lookupGetParam "bare"
   case bare of
-      Just _ -> browserBare fps
+      Just  _ -> widgetToRepHtml $ contentWidget section fps
       Nothing -> defaultLayout $ do
           setTitle "Media"
-          $(widgetFile "media-home")
+          $(widgetFile "media-content")
 
--- | Used to modify media -- TODO TODO TODO --
-postMediaR :: [Text] -> Handler RepHtml
-postMediaR fps = do
-    setMessage "This is not yet supported"
-    redirect $ MediaR fps
+-- | Generate content based on section and path.
+contentWidget :: Text -> [Text] -> Widget
+contentWidget "anime" fps = undefined -- listing from db
+contentWidget "music" fps = undefined -- mpd stuff here
+contentWidget       _   _ = lift notFound
 
+restrictedWidget :: Widget
+restrictedWidget = [whamlet|
+<div.hero-unit.center-box.small-box>
+  <h1>Access restricted
+  <p>
+    You must be explicitly granted access to this part.<br/>
+    Please, #
+    <a.btn.btn-primary href="@{routeToLogin}">Login
+    &nbsp;or #
+    <a.btn.btn-info href="@{RegisterR}">Register
+    .
+|]
+
+
+-- * Play / Download
+
+-- | Downloading files
 getMediaServeR :: Text   -- ^ kind of download
-               -> Text   -- ^ file area
-               -> [Text] -- ^ path for the file
+               -> Text   -- ^ file section
+               -> [Text] -- ^ file path
                -> Handler RepJson
-getMediaServeR kind area path
-  | null path  = invalidArgs ["Invalid download target"]
-  | is "auto"  = authPath >>= send ""
-  | is "force" = authPath >>= send "application/force-download"
-  | is "temp"  = do
-      Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp ident
-      now <- timeNow
-      denyIf (diffUTCTime now time > maxTime) "This temporary url has expired!"
-      denyIf (target /= toPath (tail path)) "Malformed url"
-      send "" . toReal target =<< gdir area
-  | otherwise  = invalidArgs ["Invalid/unsupported download type"]
-  where
-    is         = (==) kind
-    ident      = head path
-    send t p   = setHeader "Accept-Ranges" "bytes" >> sendFile t p
-    maxTime    = 60 * 60 * 24
-    toReal t r = r </> T.unpack t
-    authPath   = do
-        uid <- requireAuthId
-        Entity key val <- runDB $ getBy404 $ UniqueFilenode area (toPath path)
-        if filenodeIsdir val
-          then invalidArgs ["Downloading directories is not supported"]
-          else do t <- timeNow
-                  _ <- runDB $ insert $ LogDownload uid t key
-                  return . toReal (filenodePath val) =<< gdir area
+getMediaServeR kind section path
+  | null path       = invalidArgs ["Invalid file."]
+  | kind == "temp"  = solveTemp >>= send ""
+  | kind == "auto"  = solvePathWithAuth section path >>= send ""
+  | kind == "force" = solvePathWithAuth section path >>= send "application/force-download"
+  | otherwise       = invalidArgs ["Invalid or unsupported download type."]
+    where
+  send ct fp = setHeader "Accept-Ranges" "bytes" >> sendFile ct fp
+  solveTemp  = do
+    Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp $ head path
+    now <- timeNow
+    denyIf (diffUTCTime now time > maxTempUrlAlive) "File not available."
+    denyIf (target /= toPath (tail path)          ) "Malformed url."
+    toFSPath section $ T.unpack target
+
+-- | Solve section+path down to a FilePath. 404 if user is not authenticated.
+-- Logs a successful download.
+solvePathWithAuth :: Text -> [Text] -> Handler FilePath
+solvePathWithAuth section path = do
+    uid <- requireAuthId
+    Entity key val <- runDB $ getBy404 $ UniqueFilenode section (toPath path)
+    if filenodeIsdir val
+      then invalidArgs ["Downloading directories is not supported."]
+      else do t <- timeNow
+              _ <- runDB $ insert $ LogDownload uid t key
+              toFSPath section $ T.unpack $ filenodePath val
 
 
--- * Playing & Playlists
+-- * Playlists
 
--- | Create and send a new playlist file (.m3u). playlist is got via
--- @getPlaylist@.
-getMediaPlaylistR :: Text -> Handler RepHtml
-getMediaPlaylistR action
-    | is "get"  = requireAuth
-      >>= getPlaylist
+-- | Get the active playlist with @solvePlaylist@ and send it as m3u.
+getPlaylistR :: Text -> Handler RepPlain
+getPlaylistR action
+    | action `T.isPrefixOf` "get"  = requireAuth
+      >>= solvePlaylist
       >>= generateM3U . entityVal
-      >>= if force
-        then \x -> do setHeader "Content-Disposition"
-                                "attachment; filename=\"playlist.m3u\""
+      >>= if "-force" `T.isSuffixOf` action
+        then \x -> do setHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\""
                       sendFile "application/force-download" x
         else sendFile "audio/x-mpegurl"
-    | otherwise = invalidArgs ["action not supported: " `T.append` action]
-  where
-    is = flip T.isPrefixOf action
-    force = "-force" `T.isSuffixOf` action
+    | otherwise = invalidArgs ["Invalid or unsupported action: " `T.append` action]
 
--- | action: "select" returns current or creates a new playlist
---           "push" adds an filenode and its children to current playlist and
---                  saves it if possible.
-postMediaPlaylistR :: Text -> Handler RepJson
-postMediaPlaylistR action = do
-    uent <- requireAuth
-    Entity plk pl <- getPlaylist uent
+-- | Perform actions on playlists. action is the first part in the uri.
+--
+-- action is one of:
+--    push:   adds an filenode and its children to current playlist, and
+--            save the playlist.
+--
+--    clear:  remove all elements from the playlist.
+--
+postPlaylistR :: Text -> Handler RepJson
+postPlaylistR action = do
+    Entity plk pl <- solvePlaylist =<< requireAuth
     case action of
-      "select" -> rsucc pl
-      "push"   -> do
-          (area, what) <- parseJsonBody_
-          (new, pl') <- toPlaylist pl area what
+      "push" -> do
+          (section, what) <- parseJsonBody_
+          (new, pl') <- toPlaylist pl section what
           if new
             then updatePlaylist plk pl' >>= rsucc
             else rfail "no such path"
@@ -136,6 +152,36 @@ postMediaPlaylistR action = do
     rfail :: Text -> Handler RepJson
     rfail msg = jsonToRepJson (1 :: Int, msg)
     rsucc msg = jsonToRepJson (0 :: Int, msg)
+
+-- | user specific playlist widget
+playlist :: Entity User -> Widget
+playlist (Entity _ uval) = do
+    [main, actions, content, heading] <- replicateM 4 (lift newIdent)
+    $(widgetFile "media-playlist")
+
+-- | Retrieve user's playlist using various methods.
+-- order: getparam -> cookie -> database -> new playlist
+--
+-- if "title" get parameter is set and no playlist is found, result is 404.
+-- note: playlist with a title of "" is the default for any user
+--
+-- XXX: support hidden playlists?
+solvePlaylist :: Entity User -> Handler (Entity Playlist)
+solvePlaylist (Entity k v) = fromGetparam
+  where
+    fromGetparam = lookupGetParam "title" >>= \mt -> case mt of
+        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromCookie 
+        Nothing    -> fromCookie
+
+    fromCookie = lookupCookie "playlist-title" >>= \mt' -> case mt' of
+        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromDB
+        Nothing    -> fromDB
+
+    fromDB = case userCurrentplaylist v of
+        Just name -> runDB (getBy $ UniquePlaylist k name) >>= tryMaybe fromDBDefault
+        Nothing   -> fromDBDefault
+
+    fromDBDefault = runDB (getBy $ UniquePlaylist k "") >>= tryMaybe (addDefaultPlaylist k)
 
 -- | Generate a m3u-formatted file of the playlist with random-generated
 -- check-texts for access from any(?) client.
@@ -156,7 +202,7 @@ generateM3U pl = do
           yesod resolved (MediaServeR "temp" a (t : splitPath' p)) []
 
         write h (area, path) = do
-            temp <- randomIdent 20
+            temp <- randomText 32
             T.hPutStrLn h (render area path temp)
             return (temp, path)
 
@@ -169,60 +215,32 @@ generateM3U pl = do
     mapM_ (uncurry $ ((runDB . insert) .) . DlTemp time) temps
     return path
 
-splitPath' :: Text -> [Text]
-splitPath' = map T.pack . splitPath . T.unpack
 
-randomIdent :: Int -> IO Text
-randomIdent n = liftM (T.pack . map chr)
-                  (MR.evalRandIO $ replicateM n rnd)
-  where rnd = MR.getRandomR (65, 90)
-
--- | Retrieve user's playlist using various methods.
--- order: getparam -> cookie -> database -> new playlist
---
--- if "title" get parameter is set and no playlist is found, result is 404.
--- note: playlist with a title of "" is the default for any user
---
--- XXX: support hidden playlists?
-getPlaylist :: Entity User -> Handler (Entity Playlist)
-getPlaylist (Entity k v) = fromGetparam
-  where
-    fromGetparam = lookupGetParam "title" >>= \mt -> case mt of
-        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromCookie 
-        Nothing    -> fromCookie
-
-    fromCookie = lookupCookie "playlist-title" >>= \mt' -> case mt' of
-        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromDB
-        Nothing    -> fromDB
-
-    fromDB = case userCurrentplaylist v of
-        Just name -> runDB (getBy $ UniquePlaylist k name) >>= tryMaybe fromDBDefault
-        Nothing   -> fromDBDefault
-
-    fromDBDefault = runDB (getBy $ UniquePlaylist k "") >>= tryMaybe (addDefaultPlaylist k)
+-- ** Playlist actions
 
 clearPlaylist :: Playlist -> Playlist
 clearPlaylist pl = pl { playlistElems = [] }
 
 -- | add file OR every child of directory to playlist.
 toPlaylist :: Playlist
-           -> Text
-           -> Text
-           -> Handler (Bool, Playlist) -- (playlist changed?, maybe changed playlist)
-toPlaylist pl area path = do
+           -> Text -- ^ File area
+           -> Text -- ^ File path
+           -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
+toPlaylist pl section path = do
     t <- timeNow
-    newElems <- findAll area path
-    if null newElems
-      then return (False, pl)
-      else return (True, pl { playlistElems    = playlistElems pl ++ map ((,) area) newElems
-                            , playlistModified = t })
+    xs <- findFilenodeFiles section path
+    return $ case xs of
+      [] -> (False, pl)
+      xs -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) xs
+                     , playlistModified = t 
+                     })
 
 -- | New titleless playlist for user with userId uid.
 -- XXX: doesn't check for duplicates(!)
 addDefaultPlaylist :: UserId -> Handler (Entity Playlist)
 addDefaultPlaylist uid = do
-    date <- timeNow
-    let pl = Playlist "" uid [] date date
+    t <- timeNow
+    let pl = Playlist "" uid [] t t
     k <- runDB $ insert pl
     return $ Entity k pl
 
@@ -233,23 +251,19 @@ updatePlaylist :: PlaylistId -- ^ id of playlist to replace
                -> Handler Playlist -- ^ was update successful?
 updatePlaylist plid pl = runDB (replace plid pl) >> return pl
 
--- | user specific playlist widget
-widPlaylist :: Entity User -> Widget
-widPlaylist (Entity _ uval) = do
-    [main, actions, content, heading] <- replicateM 4 (lift newIdent)
-    $(widgetFile "media-playlist")
-
--- | get playlists
+-- | Get all user's playlists.
 myPlaylists :: Handler [Entity Playlist]
 myPlaylists = runDB $ selectList ([] :: [Filter Playlist]) []
 
-findAll :: Text -> Text -> Handler [Text]
-findAll area path = do
+-- | Recursively find all child files (and only files) of a node.
+findFilenodeFiles :: Text -> Text -> Handler [Text]
+findFilenodeFiles area path = do
     Entity k v <- runDB $ getBy404 $ UniqueFilenode area path
     if filenodeIsdir v
     then do
-        childs <- liftM (map (filenodePath . entityVal)) $ runDB $ selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
-        liftM concat $ mapM (findAll area) childs
+      children <- liftM (map (filenodePath . entityVal)) $ runDB $
+                  selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
+      liftM concat $ mapM (findFilenodeFiles area) children
     else return [filenodePath v]
 
 

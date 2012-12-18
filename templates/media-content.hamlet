@@ -2,7 +2,7 @@
   <small>_{MsgMediaDescription}
 
 $maybe ent <- mauth
-  <i>Something coming soon
+  ^{browser}
   ^{playlist ent}
 
 $nothing

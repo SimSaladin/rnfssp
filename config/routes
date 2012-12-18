@@ -7,25 +7,26 @@
 /favicon.ico FaviconR GET
 /robots.txt RobotsR GET
 
-/admin       AdminR      GET POST
-/admin/media MediaAdminR GET POST
+/register   RegisterR   GET POST
+/profile    ProfileR    GET POST
 
-/register RegisterR GET POST
+/admin         AdminR      GET POST
+/admin/media   MediaAdminR GET POST
 
-/           BlogOverviewR GET POST
-/view/#Text BlogViewR     GET POST
-/edit/#Text BlogEditR     GET POST
+/           BlogOverviewR  GET POST
+/view/#Text BlogViewR      GET POST
+/edit/#Text BlogEditR      GET POST
 
-/board                    BoardHomeR GET
-/board/#Text              BoardR     GET POST
-/board/#Text/#BoardpostId ThreadR    GET POST
-/files/board/#String      BoardFileR GET
+/board                     BoardHomeR  GET
+/board/#Text               BoardR      GET POST
+/board/#Text/#BoardpostId  ThreadR     GET POST
 
-/media/*Texts                 MediaR         GET POST
-/media-playlists/#Text        MediaPlaylistR GET POST
-/media-get/#Text/#Text/*Texts MediaServeR    GET
+/media               MediaHomeR     GET
+/media/#Text/*Texts  MediaContentR  GET
+/playlists/#Text     PlaylistR      GET POST
 
-/bets        BetR     GET POST
-/btes/#BetId BetViewR GET POST
+/files/board/#String             BoardFileR     GET
+/files/media/#Text/#Text/*Texts  MediaServeR    GET
 
-/profile ProfileR GET POST
+/bets          BetR     GET POST
+/btes/#BetId   BetViewR GET POST

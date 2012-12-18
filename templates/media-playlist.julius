@@ -6,7 +6,7 @@ var cont = $("##{rawJS content}");
  */
 function load_playlist() {
   $.ajax(
-    { url: '@{MediaPlaylistR "select"}'
+    { url: '@{PlaylistR "select"}'
     , type: 'POST'
     , dataType: 'json'
     , success: function(data) { if (data[0] == 0) playlist = data[1];
@@ -22,7 +22,7 @@ function load_playlist() {
  * add `what' from `area' to the playlist
  */
 function to_playlist(area, what) {
-  $.post('@{MediaPlaylistR "push"}', JSON.stringify([area, what]), function(data) {
+  $.post('@{PlaylistR "push"}', JSON.stringify([area, what]), function(data) {
     if (data[0] == 0) {
       playlist = data[1];
       update_playlist();
@@ -74,7 +74,7 @@ function save_playlist_custom(title) {
  * clear every element from the playlist.
  */
 function clear_playlist() {
-  $.post('@{MediaPlaylistR "clear"}', JSON.stringify([]), function(data) {
+  $.post('@{PlaylistR "clear"}', JSON.stringify([]), function(data) {
     if (data[0] == 0) { playlist = data[1]; update_playlist(); }
     else { alert("could not clear the playlist: " + data[1]); }
   });

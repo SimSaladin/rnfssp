@@ -110,8 +110,8 @@ instance Yesod App where
     isAuthorized AdminR        _     = isAdmin
     isAuthorized MediaAdminR   _     = isAdmin
     isAuthorized BlogOverviewR True  = isAdmin
-    isAuthorized (MediaR [])   False = return Authorized
-    isAuthorized (MediaR _ )   _     = isValidLoggedIn
+    isAuthorized MediaHomeR    False = return Authorized
+    isAuthorized (MediaContentR _ _) _ = isValidLoggedIn
     isAuthorized _             _     = return Authorized
 
     -- This function creates static content files in the static folder

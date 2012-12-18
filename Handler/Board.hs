@@ -154,3 +154,4 @@ postForm bid mpid = renderBootstrap $ D1
     <*> aopt textField "Aihe" Nothing
     <*> aopt textareaField "Viesti" Nothing
     <*> areq passwordField "Salasana" (Just "salasana")
+
