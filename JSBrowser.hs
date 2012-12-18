@@ -1,13 +1,18 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Dec 18 2012 [04:13:37]
+-- Last Modified: Dec 18 2012 [06:05:25]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module JSBrowser where
 
+import Prelude
 import Yesod
+import Data.Text (Text)
+import Data.List (init, last)
+import qualified Data.Text as T
 import Text.Julius (rawJS)
+import qualified System.FilePath as F (joinPath)
 
 -- | Javascript browser, which utilises the onpopstate functionality of modern
 -- browsers. Assumptions this widget makes:
@@ -30,7 +35,7 @@ browser = do
 <div##{browserId}>
   |]
   toWidget [julius|
-$(
+$(function(){
 var dom       = $("##{rawJS browserId}"),
     last_href = location.href,
     ready     = false;
@@ -74,7 +79,7 @@ function loadpage(href, update_history) {
       dom.animate({ opacity:1.0 }, 200);
     });
   });
-)
+}
 
 /* Bind the function browser_load_page() to the browser links */
 function register_links() {
@@ -86,15 +91,65 @@ function register_links() {
 
 /* when asked to move in history */
 window.onpopstate = function(e) {
-  if (ready)
-    loadpage(location.href, false);
-  else
-    browser_ready = true;
+  if (ready) loadpage(location.href, false);
+  else browser_ready = true;
 }
 
+})
   |]
 
 -- | Convert a widget to a whole page.
 widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
 widgetToRepHtml w = do pc <- widgetToPageContent w
                        hamletToRepHtml [hamlet|^{pageBody pc}|]
+
+-- | Simple listing content
+simpleListing :: Text                               -- ^ Section
+              -> [(Text, Route master)]             -- ^ Navigation
+              -> [(Text, Text, [Text], Text, Text)] -- ^ (filename, filetype, fps, size, modified)
+              -> ([Text] -> Route master)           -- ^ url to content
+              -> (Text -> [Text] -> Route master)   -- ^ url to direct file
+              -> (Text, Text, Text)                 -- ^ (msgFilename, msgFileize, msgModified)
+              -> GWidget sub master ()
+simpleListing section navParts listing toContent toFile (msgFilename, msgFileize, msgModified) = let
+    in do 
+  [whamlet|
+<ul.breadcrum>
+  $forall (name, route) <- init navParts
+    <li>
+      <a.browser-link href=@{route}>#{name}
+      <span.divider>/
+  $with (name, _) <- last navParts
+    <li.active>#{name}
+  <div.page-element.functional>
+    <table#media-table .browser .tablesorter>
+      <thead>
+        <tr>
+          <td.browser-controls scope="col">
+          <td.browser-filename scope="col">#{msgFilename}
+          <td.browser-size scope="col">#{msgFileize}
+          <td.browser-modified scope="col">#{msgModified}
+
+      <tbody>
+        $forall (filename, filetype, fps, size, modified) <- listing
+          <tr>
+            <td.browser-controls>
+              <a href="@{toContent fps}?to_playlist=1" onclick="to_playlist('#{section}', '#{toPath fps}'); return false">
+                <i.icon-plus.icon-white>
+              $if not $ equalsDirectory filetype
+                <a href=@{toFile "force" fps} onclick="">
+                  <i.icon-download-alt.icon-white>
+                <a href=@{toFile "auto" fps} onclick="" target="_blank">
+                  <i.icon-play.icon-white>
+
+            <td.browser-filename>
+              <a.browser-link.#{filetype} href=@{toContent fps}>
+                <tt>#{filename}
+
+            <td.browser-size>#{size}
+            <td.browser-modified>#{modified}
+
+  |]
+    where
+  toPath = T.pack . F.joinPath . map T.unpack
+  equalsDirectory = (==) "directory"

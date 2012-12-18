@@ -65,12 +65,6 @@ getMediaContentR section fps = do
           $(widgetFile "media-content")
     where sections = mediaSectionNavs section
 
--- | Generate content based on section and path.
-contentWidget :: Text -> [Text] -> Widget
-contentWidget "anime" fps = undefined -- listing from db
-contentWidget "music" fps = undefined -- mpd stuff here
-contentWidget       _   _ = lift notFound
-
 restrictedWidget :: Widget
 restrictedWidget = [whamlet|
 <div.hero-unit.center-box.small-box>
@@ -83,6 +77,24 @@ restrictedWidget = [whamlet|
     <a.btn.btn-info href="@{RegisterR}">Register
     .
 |]
+
+-- | Generate content based on section and path.
+contentWidget :: Text -> [Text] -> Widget
+contentWidget "anime" fps = animeContent fps -- undefined -- listing from db
+contentWidget "music" fps = undefined -- mpd stuff here
+contentWidget       _   _ = lift notFound
+
+animeContent :: [Text] -> Widget
+animeContent fps = do
+  
+  simpleListing "anime"
+                nav
+                [] -- elems
+                (MediaContentR "anime")
+                (flip MediaServeR "anime")
+                ("Filename", "File size", "Modified")
+    where
+  nav = map (\(x, y) -> (x, MediaContentR "anime" y)) $ ("anime", []) : zip fps (foldr (\x xs -> [x] : map ([x] ++) xs) [[]] fps)
 
 
 -- * Play / Download

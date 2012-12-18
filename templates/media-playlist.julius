@@ -36,7 +36,6 @@ function to_playlist(area, what) {
  * redraw playlist and add default title if none is specified.
  */
 function update_playlist() {
-  var cont = $("##{rawJS content}");
   var head = $("##{rawJS heading}");
   cont.empty();
   head.empty();
@@ -80,4 +79,4 @@ function clear_playlist() {
   });
 }
 
-$("##{rawJS content}").ready(load_playlist)
+cont.ready(load_playlist)
