@@ -26,3 +26,6 @@
           <td>#{comment}
           <td>
             <a href=@{AdminR}?action=#{action}&target=#{name}>#{action}
+<div.row-fluid>
+  <div .span6 .page-element>
+    ^{Media.adminWidget}

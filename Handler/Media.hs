@@ -3,35 +3,34 @@ module Handler.Media
     ( getMediaHomeR
     , getMediaContentR
     , getMediaServeR
-
-    , getMediaAdminR
     , postMediaAdminR
-
     , getPlaylistR
     , postPlaylistR
+    , adminWidget
     ) where
 
 import           Utils
 import           Import
 import           JSBrowser
-
-import           Control.Arrow (first)
+import           Control.Arrow ((***))
 import           Control.Monad
-import qualified Control.Monad.Random as MR (evalRandIO, getRandomR)
 import qualified Data.Conduit as C
 import qualified Data.Conduit.List as CL
-import           Data.List ((\\), head, tail)
-import           Data.Maybe (isNothing)
+import           Data.List (head, tail)
+import qualified Data.Set as S
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import           System.Directory (getDirectoryContents, getTemporaryDirectory)
-import           System.FilePath (takeDirectory, (</>), normalise)
+import           Data.Time.Format (formatTime)
+import           System.Directory (getTemporaryDirectory)
+import           System.FilePath ((</>), normalise)
 import           System.IO (hClose)
 import           System.IO.Temp (openTempFile)
-import           System.Posix.Files (FileStatus, getFileStatus, fileSize, modificationTime, isDirectory)
+import           System.Posix.Files (FileStatus, fileSize, modificationTime, isDirectory)
 import           System.Process (readProcessWithExitCode)
+import qualified System.FilePath.Find as F
+import           System.Locale (defaultTimeLocale)
 
 -- | Maximum time a file can be accessed via a temporary url.
 maxTempUrlAlive :: NominalDiffTime
@@ -39,6 +38,9 @@ maxTempUrlAlive = 60 * 60 * 24
 
 browsable :: [(Text, Text)]
 browsable = [ ("anime", "film"), ("music", "music")]
+
+videoExtensions :: [FilePath]
+videoExtensions = [".mkv", ".avi", ".jpg"]
 
 
 -- * General / Content
@@ -84,20 +86,73 @@ contentWidget "anime" fps = animeContent fps -- undefined -- listing from db
 contentWidget "music" fps = undefined -- mpd stuff here
 contentWidget       _   _ = lift notFound
 
+-- | Convert anime path to content. Normal listing on directories, player in
+--   files.
 animeContent :: [Text] -> Widget
 animeContent fps = do
-  
-  simpleListing "anime"
-                nav
-                [] -- elems
-                (MediaContentR "anime")
-                (flip MediaServeR "anime")
-                ("Filename", "File size", "Modified")
+  (mnode, mchildren) <- lift $ runDB $ do
+    case fps of
+      [] -> liftM ((,) Nothing . Just) $ selectList [FilenodeParent ==. Nothing] [Asc FilenodePath]
+      fps' -> do
+        Entity key val <- getBy404 $ UniqueFilenode "anime" (T.intercalate "/" fps') -- FIXME; '/' as path separator
+        liftM ((,) $ Just $ Entity key val) $ if filenodeIsdir val
+          then liftM Just $ selectList [FilenodeParent ==. (Just key)] [Asc FilenodePath]
+          else return Nothing
+
+  case (mnode, mchildren) of
+    (_, Just children) -> simpleListing "anime"
+                                   (constructAnimeNav fps)
+                                   (map (buildElem . entityVal) children)
+                                   (MediaContentR "anime")
+                                   (flip MediaServeR "anime")
+                                   ("Filename", "File size", "Modified")
+    (Just node, _) -> animeSingle fps node
+    _ -> lift notFound
     where
-  nav = map (\(x, y) -> (x, MediaContentR "anime" y)) $ ("anime", []) : zip fps (foldr (\x xs -> [x] : map ([x] ++) xs) [[]] fps)
+  buildElem val = ( filenodePath val
+                  , if' (filenodeIsdir val) "directory" "file"
+                  , T.splitOn "/" $ filenodePath val
+                  , filenodeSize val
+                  , T.pack $ formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime val
+                  )
 
+-- |
+constructAnimeNav :: [Text] -> [(Text, Route App)]
+constructAnimeNav fps = map (id *** MediaContentR "anime") $ ("anime", []) : zip fps (foldr (\x xs -> [x] : map ([x] ++) xs) [[]] fps)
 
--- * Play / Download
+-- |
+animeSingle :: [Text] -> Entity Filenode -> Widget
+animeSingle fps (Entity _ val) = do
+  simpleNav $ constructAnimeNav fps
+  [whamlet|
+<div .container-fluid>
+  <div..row-fluid>
+    <div.span7>
+      <table>
+        <tr>
+          <th>Filename
+          <td><i>#{filenodePath val}
+        <tr>
+          <th>Size
+          <td>#{filenodeSize val}
+        <tr>
+          <th>Modified
+          <td>#{T.pack $ formatTime defaultTimeLocale "%d.%m -%y" $ filenodeModTime val}
+    <div.span5>
+      <a.btn.btn-primary href="@{MediaServeR "auto" "anime" fps}" target="_blank">
+        <i.icon-white.icon-play> #
+        Auto-open
+      <a.btn href="@{MediaServeR "force" "anime" fps}">
+        <i.icon.icon-download-alt> #
+        Download
+      <a.btn onclick="window.playlist.to_playlist('anime', '#{toPath fps}'); return false">
+        Add to playlist
+  $maybe s <- filenodeDetails val
+    <h4>Mediainfo
+    <pre>#{s}
+  |]
+
+-- * Playing / Downloading files
 
 -- | Downloading files
 getMediaServeR :: Text   -- ^ kind of download
@@ -158,13 +213,14 @@ postPlaylistR :: Text -> Handler RepJson
 postPlaylistR action = do
     Entity plk pl <- solvePlaylist =<< requireAuth
     case action of
-      "push" -> do
+      "select" -> rsucc pl
+      "insert" -> do
           (section, what) <- parseJsonBody_
           (new, pl') <- toPlaylist pl section what
           if new
             then updatePlaylist plk pl' >>= rsucc
             else rfail "no such path"
-      "clear"  -> updatePlaylist plk (clearPlaylist pl) >>= rsucc
+      "delete"  -> updatePlaylist plk (clearPlaylist pl) >>= rsucc
       _ -> rfail "unknown playlist action"
   where
     rfail :: Text -> Handler RepJson
@@ -287,99 +343,122 @@ findFilenodeFiles area path = do
 
 -- * Adminspace
 
-getMediaAdminR :: Handler RepHtml
-getMediaAdminR = do
-   (widget, encType) <- generateFormPost adminForm
-   defaultLayout $ do
-      setTitle "media :: admin"
-      $(widgetFile "media-admin")
+-- | A widget for media administration functionality, to be embebbed in the
+--   centralised admin page.
+adminWidget :: Widget
+adminWidget = do
+  ((result, widget), encType) <- lift $ runFormPost adminForm
+  [whamlet|
+<h1>Media
+<div>
+  <form.form-horizontal method=post action=@{MediaAdminR} enctype=#{encType}>
+    <fieldset>
+      <legend>Media actions
+      $case result
+        $of FormFailure reasons
+          $forall reason <- reasons
+            <div .alert .alert-error>#{reason}
+        $of _
+      ^{widget}
+      <div .form-actions>
+        <input .btn .primary type=submit value="Execute actions">
+  |]
 
+-- | Admin operations in Media.
 postMediaAdminR :: Handler RepHtml
 postMediaAdminR = do
    path <- gdir "anime"
-   path' <- gdir "music"
    updateListing "anime" path
-   updateListing "music" path'
-   redirect MediaAdminR
+   redirect AdminR
 
 adminForm :: Form (Bool, Bool)
 adminForm = renderBootstrap $ (,)
-   <$> areq boolField "Update all" (Just False)
+   <$> areq boolField "Update all anime" (Just False)
    <*> areq boolField "Not used" (Just False)
-
--- | find paths and filestatuses recursively.
--- XXX: also find the argument?
-find :: FilePath -> IO [(FilePath, FileStatus)]
-find dir = do
-   childs <- liftM (map (dir </>) . (\\ [".",".."])) (getDirectoryContents dir)
-   stats  <- mapM getFileStatus childs
-   let this = zip childs stats
-   other <- mapM (find . fst) (filter (isDirectory . snd) this)
-   return (this ++ concat other)
 
 -- | 
 updateListing :: Text
               -> FilePath
               -> Handler ()
-updateListing area dir = do
-    -- recursively find files and directories in `dir` along with properties
-    infs <- liftM normalisePaths $ liftIO $ do
-        stat   <- getFileStatus dir
-        childs <- find dir
-        return ( (dir,stat) : childs)
-    let paths   = map fst infs
-        notInfs = not . flip elem paths . filenodePath . entityVal
+updateListing section dir = do
+  -- recursively find files and directories in `dir` along with properties
+  let filterp = foldl (F.||?) (F.fileType F.==? F.Directory F.&&? F.filePath F./=? dir)
+                      $ map (F.extension F.==?) videoExtensions
 
-    -- delete entities not found in the filesystem XXX: disable/hide only?
-    runDB $ do
-      toRemove <- C.runResourceT $ selectSource [FilenodeArea ==. area] [Desc FilenodePath]
-                    C.$= CL.filter notInfs
-                    C.$= CL.map entityKey
-                    C.$$ CL.consume
-      mapM_ delete toRemove
+  -- foldl (F.||?)  $ map (F.extension F.==?) videoExtensions
+      makeRel = dropWhile (== '/') . drop (length dir)
 
-    -- find completely new entities..
-    unknown <- filterM (fmap isNothing . runDB . getBy . UniqueFilenode area . fst) infs
-    -- and insert them and their info
-    mapM_ (runDB . insertNode) unknown
+  (filesInFS, filesInFS') <- liftIO $ F.fold
+      F.always
+      (\(list, set) fi -> if F.evalClause filterp fi
+          then let tpath = T.pack $ makeRel $ F.infoPath fi
+            in (list ++ [(tpath, F.infoStatus fi)], S.insert tpath set)
+          else (list, set))
+      ([], S.empty)
+      dir
 
-    -- XXX: find and update modified (newer than db) entities?
+  let fileNotInFS = flip S.notMember filesInFS' . filenodePath . entityVal
 
-    -- Try to add parents to nodes
-    orphans <- runDB $ selectList [ FilenodeArea   ==. area
-                                  , FilenodeParent ==. Nothing] []
-    mapM_ fixParent orphans
-  where
-    normalisePaths = map $ first (T.pack . normalise . drop (length dir + 1))
+  liftIO $ print "--------------------------- filesInFS --------------------" >> print (show $ map fst filesInFS) >> print "--------------------------- END -------------------------"
 
-    insertNode (path,stat) = do
-        parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack path)
-        insert =<< liftIO (toFilenode (dir </> T.unpack path) area (entityKey <$> parent) (T.pack $ normalise $ T.unpack path) stat)
+  -- delete files not found in the filesystem
+  -- XXX: disable/hide only?
+  deleted <- runDB $ C.runResourceT $ selectSource [FilenodeArea ==. section] [Desc FilenodePath]
+      C.$= CL.filter fileNotInFS
+      C.$= CL.map entityKey C.$= CL.mapM delete
+      C.$$ CL.consume -- do something with results?
 
-    fixParent (Entity key val) = runDB $ do
-        parent <- getBy $ UniqueFilenode area (T.pack $ takeDirectory $ T.unpack $ filenodePath val)
-        update key [FilenodeParent =. fmap entityKey parent]
+  liftIO $ print "--------------------------- filesInFS' --------------------" >> print (show filesInFS') >> print "--------------------------- END -------------------------"
 
--- | 
+  -- find completely new entities and insert them and their info
+  added <- runDB $ C.runResourceT $ (CL.sourceList filesInFS)
+    C.$= CL.mapMaybeM (\x -> liftM (flip ifNothing x) $ getBy $ UniqueFilenode section $ fst x)
+    C.$= CL.mapM insertNode
+    C.$$ CL.consume
+
+  liftIO $ print "---------------------------- files added -------------------" >> print added >> print "--------------------------- END -------------------------"
+
+  -- TODO: find and update modified (newer than db) entities?
+
+  -- Try to add parents to nodes. XXX: This is needed becouse..?
+  fixed <- runDB $ C.runResourceT $ selectSource [FilenodeArea ==. section, FilenodeParent ==. Nothing] []
+      C.$= CL.mapM fixParent
+      C.$$ CL.consume
+
+  liftIO $ print "---------------------------- files fixed -------------------" >> print fixed >> print "--------------------------- END -------------------------"
+
+  return ()
+    where
+  insertNode (path,stat) = do
+      parent <- getBy $ UniqueFilenode section (takeDirectory' path)
+      insert =<< liftIO (toFilenode (dir </> T.unpack path)
+                                    section
+                                    (entityKey <$> parent)
+                                    (T.pack $ normalise $ T.unpack path)
+                                    stat)
+
+  fixParent (Entity key val) = do
+      parent <- getBy $ UniqueFilenode section (takeDirectory' $ filenodePath val)
+      update key [FilenodeParent =. fmap entityKey parent]
+
+  ifNothing mx x = case mx of
+      Nothing -> Just x
+      Just _  -> Nothing
+
+-- | Generate a filenode from properties.
 toFilenode :: FilePath         -- ^ Real path to the file
            -> Text             -- ^ area
            -> Maybe FilenodeId -- ^ parent node
            -> Text             -- ^ path of the node
            -> FileStatus       -- ^ status of the node
            -> IO Filenode
-toFilenode real area parent path stat = do
-    details <- if not boolDir
-      then fmap Just $ getDetails real
-      else return Nothing
-    return $ Filenode area
-                      parent
-                      boolDir
-                      path
+toFilenode real section parent path stat = do
+    details <- if' isdir (return Nothing) $ Just <$> getDetails real
+    return $ Filenode section parent isdir path
                       (prettyFilesize $ fileSize stat)
                       (posixSecondsToUTCTime $ realToFrac $ modificationTime stat)
                       details
-  where
-    boolDir = isDirectory stat
+    where isdir = isDirectory stat
 
 -- |
 getDetails :: FilePath -> IO Text

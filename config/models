@@ -33,6 +33,7 @@ Board
    name Text
    description Text
    UniqueBoard name
+
 Boardpost
    location BoardId
    parent BoardpostId Maybe
@@ -52,6 +53,7 @@ Playlist
    created UTCTime
    modified UTCTime
    UniquePlaylist owner title
+
 Filenode
    area Text
    parent FilenodeId Maybe
@@ -71,6 +73,7 @@ LogDownload
    user UserId
    time UTCTime
    node FilenodeId
+
 DlTemp
    date UTCTime
    ident Text
@@ -83,6 +86,7 @@ Bettarget
    owner UserId
    title Text
    factors (Map Text Int)
+
 Bet
    owner UserId
    amount Int

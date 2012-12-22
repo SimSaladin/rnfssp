@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Dec 18 2012 [06:05:25]
+-- Last Modified: Dec 22 2012 [03:38:40]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module JSBrowser where
@@ -9,7 +9,6 @@ module JSBrowser where
 import Prelude
 import Yesod
 import Data.Text (Text)
-import Data.List (init, last)
 import qualified Data.Text as T
 import Text.Julius (rawJS)
 import qualified System.FilePath as F (joinPath)
@@ -28,51 +27,36 @@ import qualified System.FilePath as F (joinPath)
 --  The loadpage function again fetches the content, replaces links in it and
 --  injects it to the browser.
 --
+--  NOTE: Currently only one browser instance can be safely based on a single
+--  site!
 browser :: GWidget sub master ()
 browser = do
   browserId <- lift newIdent
-  toWidget [hamlet|
-<div##{browserId}>
-  |]
-  toWidget [julius|
-$(function(){
+  toWidget [hamlet|<div##{browserId}>|]
+  toWidget [julius|$(function(){
 var dom       = $("##{rawJS browserId}"),
-    last_href = location.href,
+    previous  = location.href,
     ready     = false;
 
-dom.load(location.href + "?bare=1", register_links);
+/* Bind the function loadpage() to the browser links */
+function register_links() {
+  dom.find("a.browser-link").click(function() {
+    loadpage($(this).attr("href"), true);
+    return false;
+  });
+  console.log("register_links end");
+}
 
-window.history.replaceState('', '', location.href);
-
-//$("##{rawJS browserId}").hide();
-//$("##{rawJS browserId}").fadeIn(700);
-
-function loadpage(href, update_history) {
+function loadpage(href, push_history) {
+  console.log("loadpage");
   $.get(href + "?bare=1", function(data) {
-    var from = (from == "") ? location.href : from,
-        to   = (href.indexOf("http://") < 0)
-          ?  location.href.substring(0, location.href.indexOf("/", 7)) + href
-          : href;
 
-    // remove trailing slashes.
-    if (from.charAt(from.length - 1) == "/") { from = from.slice(0, -1); }
-    if (to.charAt(to.length - 1) == "/")     { to   = to.slice(0, -1); }
+    // push the new page to history, unless it was just popped.
+    if (push_history && previous != href) {
+      previous = href;
+      window.history.pushState('', '', href);
+    }
 
-    if (to == from) return;
-
-    // push the new page to history, unless it was popped.
-    if (update_history) { window.history.pushState('', '', href); }
-
-    last_href = to;
-
-//    // Transition params depend on whether we are going forward or backward in history.
-//    if (to.split("/").length >= from.split("/").length) {
-//      animOptOne = { direction : "left" };
-//      animOptSec = { direction : "right" };
-//    } else {
-//      animOptOne = { direction : "right" };
-//      animOptSec = { direction : "left" };
-//    }
     dom.animate({ opacity: 0 }, 200, function() {
       dom.html(data);
       register_links();
@@ -81,20 +65,16 @@ function loadpage(href, update_history) {
   });
 }
 
-/* Bind the function browser_load_page() to the browser links */
-function register_links() {
-  dom.find("a.browser-link").click(function() {
-    loadpage($(this).attr("href"), true);
-    return false;
-  });
-}
-
 /* when asked to move in history */
 window.onpopstate = function(e) {
+  console.log("onpopstate");
   if (ready) loadpage(location.href, false);
-  else browser_ready = true;
+  else ready = true;
 }
 
+window.history.replaceState('', '', location.href);
+
+dom.load(location.href + "?bare=1", register_links);
 })
   |]
 
@@ -111,45 +91,49 @@ simpleListing :: Text                               -- ^ Section
               -> (Text -> [Text] -> Route master)   -- ^ url to direct file
               -> (Text, Text, Text)                 -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
-simpleListing section navParts listing toContent toFile (msgFilename, msgFileize, msgModified) = let
-    in do 
-  [whamlet|
-<ul.breadcrum>
-  $forall (name, route) <- init navParts
-    <li>
-      <a.browser-link href=@{route}>#{name}
-      <span.divider>/
-  $with (name, _) <- last navParts
-    <li.active>#{name}
-  <div.page-element.functional>
-    <table#media-table .browser .tablesorter>
-      <thead>
-        <tr>
-          <td.browser-controls scope="col">
-          <td.browser-filename scope="col">#{msgFilename}
-          <td.browser-size scope="col">#{msgFileize}
-          <td.browser-modified scope="col">#{msgModified}
-
-      <tbody>
-        $forall (filename, filetype, fps, size, modified) <- listing
-          <tr>
-            <td.browser-controls>
-              <a href="@{toContent fps}?to_playlist=1" onclick="to_playlist('#{section}', '#{toPath fps}'); return false">
-                <i.icon-plus.icon-white>
-              $if not $ equalsDirectory filetype
-                <a href=@{toFile "force" fps} onclick="">
-                  <i.icon-download-alt.icon-white>
-                <a href=@{toFile "auto" fps} onclick="" target="_blank">
-                  <i.icon-play.icon-white>
-
-            <td.browser-filename>
-              <a.browser-link.#{filetype} href=@{toContent fps}>
-                <tt>#{filename}
-
-            <td.browser-size>#{size}
-            <td.browser-modified>#{modified}
+simpleListing section navParts listing routeToContent toFile (msgFilename, msgFileize, msgModified) =
+  simpleNav navParts
+  >> [whamlet|
+<table .tablesorter .standout .browser>
+  <thead>
+    <tr>
+      <th.browser-controls scope="col">
+      <th.browser-filename scope="col">#{msgFilename}
+      <th.browser-size scope="col">#{msgFileize}
+      <th.browser-modified scope="col">#{msgModified}
+  <tbody>
+    $forall (filename, filetype, fps, size, modified) <- listing
+      <tr>
+        <td.browser-controls>
+          <i .icon-plus .icon-white onclick="alert('aoeu'); playlist.to_playlist('#{section}', '#{toPath fps}'); return false">
+          $if not $ equalsDirectory filetype
+            <a .icon-download-alt .icon-white href=@{toFile "force" fps} onclick="">
+            <a .icon-play .icon-white href=@{toFile "auto" fps} onclick="" target="_blank">
+        <td.browser-filename title="#{filename}">
+          <a.browser-link.#{filetype} href=@{routeToContent fps}>
+            <tt>#{filename}
+        <td.browser-size>#{size}
+        <td.browser-modified>#{modified}
+  <tfoot>
+    <tr>
+      <th.browser-controls scope="col">
+      <th.browser-filename scope="col">#{msgFilename}
+      <th.browser-size scope="col">#{msgFileize}
+      <th.browser-modified scope="col">#{msgModified}
 
   |]
     where
   toPath = T.pack . F.joinPath . map T.unpack
   equalsDirectory = (==) "directory"
+
+-- |
+simpleNav :: [(Text, Route master)] -> GWidget sub master ()
+simpleNav parts = [whamlet|
+<ul.breadcrumb>
+  $forall (name, route) <- init parts
+    <li>
+      <a.browser-link href=@{route}>#{name}
+      <span.divider>/
+  $with (name, _) <- last parts
+    <li.active>#{name}
+  |]

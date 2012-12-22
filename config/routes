@@ -11,7 +11,7 @@
 /profile    ProfileR    GET POST
 
 /admin         AdminR      GET POST
-/admin/media   MediaAdminR GET POST
+/admin/media   MediaAdminR     POST
 
 /           BlogOverviewR  GET POST
 /view/#Text BlogViewR      GET POST

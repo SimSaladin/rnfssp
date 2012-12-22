@@ -1,15 +1,15 @@
 <div##{main}.page-element>
   <div##{actions}.btn-toolbar style="float:right">
     <div.btn-group>
-      <button.btn.btn-warning onclick="clear_playlist()">Clear
+      <button.btn.btn-warning onclick="playlist.clear_playlist()">Clear
 
     <div.btn-group>
-      <button.btn onclick="alert()">Rename
+      <button.btn onclick="alert('TODO: not yet implemented')">Rename
       <button.btn.dropdown-toggle data-toggle="dropdown">Switch #
         <span.caret>
       <ul.dropdown-menu.pull-right>
         <li>
-          <a onclick="load_playlist()">TODO
+          <a onclick="window.load_playlist()">TODO
 
     <div.btn-group>
       <a.btn.btn-primary href="@{PlaylistR "get"}" target="_blank">Play! #

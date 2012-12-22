@@ -1,10 +1,7 @@
 <h1>Media #
   <small>_{MsgMediaDescription}
-
 $maybe ent <- mauth
-  <div.page-element style="min-height:20em;">
-    ^{browser}
+  ^{browser}
   ^{playlist ent}
-
 $nothing
   ^{restrictedWidget}

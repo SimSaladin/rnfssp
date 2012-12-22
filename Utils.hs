@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Dec 18 2012 [05:13:11]
+-- Last Modified: Dec 18 2012 [16:51:45]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -106,3 +106,5 @@ toPath = T.pack . F.joinPath . map T.unpack
 splitPath' :: Text -> [Text]
 splitPath' = map T.pack . splitPath . T.unpack
 
+takeDirectory' :: Text -> Text
+takeDirectory' = T.dropWhileEnd (=='/') . fst . T.breakOnEnd "/"
