@@ -1,8 +1,8 @@
 Default: &defaults
-  host:      "localhost"
-  port:      3001
-  approot:   "http://localhost:3001"
-  serveroot: "http://localhost:3001"
+  host:      "*4"
+  port:      3000
+  approot:   "https://ssdesk.paivola.fi"
+  serveroot: "http://ssdesk.paivola.fi"
   copyright: "BPS"
   #analytics: UA-YOURCODE
   animedir:  "/home/sim/anime"

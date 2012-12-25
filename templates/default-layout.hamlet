@@ -21,6 +21,13 @@
               <li>
                 <form.navbar-search.pull-left>
                   <input.search-query type="search" placeholder="Hae">
+              <li.divider-vertical>
+              <li>
+                <a href="http://kemia.ssdesk.paivola.fi">Kemia
+              <li>
+                <a href="http://gitlist.ssdesk.paivola.fi">Gitlist
+              <li>
+                <a href="http://projects.ssdesk.paivola.fi">Projects
 
             <ul .nav.pull-right>
               $maybe authent <- ma
