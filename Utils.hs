@@ -1,13 +1,12 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Dec 18 2012 [16:51:45]
+-- Last Modified: Dec 24 2012 [00:25:35]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
 
 import           Import
-import           Control.Monad
 import           Control.Monad.Random
 import           Data.Char
 import           Data.Time (getCurrentTime)
@@ -18,6 +17,8 @@ import qualified System.FilePath as F
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
 import           Yesod.Default.Config (appExtra)
+import           Data.Time.Format (formatTime, FormatTime)
+import           System.Locale (defaultTimeLocale)
 
 isAdmin' :: Handler Bool
 isAdmin' = maybeAuth >>= \ma -> return $ case ma of
@@ -108,3 +109,11 @@ splitPath' = map T.pack . splitPath . T.unpack
 
 takeDirectory' :: Text -> Text
 takeDirectory' = T.dropWhileEnd (=='/') . fst . T.breakOnEnd "/"
+
+printfTime :: FormatTime t => String -> t -> String
+printfTime = formatTime defaultTimeLocale
+
+-- | Convert a widget to a whole page.
+widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
+widgetToRepHtml w = do pc <- widgetToPageContent w
+                       hamletToRepHtml [hamlet|^{pageBody pc}|]

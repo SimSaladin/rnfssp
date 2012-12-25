@@ -6,8 +6,6 @@ import qualified Data.Text as T
 import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)
 
-import Utils
-
 getRegisterR :: Handler RepHtml
 getRegisterR = do
     (widget, encType) <- generateFormPost registerForm

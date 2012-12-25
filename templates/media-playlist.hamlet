@@ -20,5 +20,12 @@
           <a href="@{PlaylistR "get-force"}">Download as .m3u
 
   <h3##{heading}>
-  <div##{content}.playlist-items>
-    Loading playlist...
+  <table.playlist-items>
+    <thead>
+      <tr>
+        <th>Path
+        <th>Section
+    <tbody##{content}.playlist-items>
+      <tr>
+        <td>
+          <i>Loading playlist...

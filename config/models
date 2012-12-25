@@ -72,7 +72,7 @@ Anime
 LogDownload
    user UserId
    time UTCTime
-   node FilenodeId
+   node FilePath
 
 DlTemp
    date UTCTime

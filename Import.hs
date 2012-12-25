@@ -10,6 +10,7 @@ import           Yesod.Auth           as Import (maybeAuth, requireAuth, maybeAu
 import           Text.Julius          as Import (rawJS)
 
 import           Control.Applicative  as Import (pure, (<$>), (<*>))
+import           Control.Monad        as Import
 import           Data.Text            as Import (Text)
 
 import           Foundation           as Import

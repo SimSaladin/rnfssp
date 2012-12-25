@@ -1,22 +1,5 @@
-<h1>Media #
-  <small>_{MsgMediaDescription}
-
 $maybe ent <- mauth
-  <ul.nav.nav-tabs>
-    $forall (active, route, name, icon) <- sections
-      $if active
-        <li.active>
-          <a href="@{route}">
-            <i.icon-white.icon-#{icon}>
-            &nbsp;
-            #{name}
-      $else
-        <li>
-          <a href="@{route}">
-            <i.icon-white.icon-#{icon}>
-            &nbsp;
-            #{name}
-  ^{playlist ent}
-
+  ^{nav}
+  ^{userPlaylistWidget ent}
 $nothing
   ^{restrictedWidget}

@@ -1,20 +1,23 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Dec 22 2012 [03:38:40]
+-- Last Modified: Dec 25 2012 [00:33:01]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
-module JSBrowser where
-
-import Prelude
-import Yesod
-import Data.Text (Text)
-import qualified Data.Text as T
-import Text.Julius (rawJS)
-import qualified System.FilePath as F (joinPath)
 
 -- | Javascript browser, which utilises the onpopstate functionality of modern
--- browsers. Assumptions this widget makes:
+-- browsers.
+module JSBrowser where
+
+import           Prelude
+import           Yesod
+import           Data.Text (Text)
+import           Control.Arrow ((***))
+import qualified Data.Text as T
+import           Text.Julius (rawJS)
+import qualified System.FilePath as F (joinPath)
+
+-- | Assumptions this widget makes:
 --
 --  The current url must provide content to be shown inside the browser when
 --  the GET parameter "bare" is set. The content can be either HTML (directly
@@ -40,23 +43,22 @@ var dom       = $("##{rawJS browserId}"),
 
 /* Bind the function loadpage() to the browser links */
 function register_links() {
+  debug("register_links");
   dom.find("a.browser-link").click(function() {
     loadpage($(this).attr("href"), true);
     return false;
   });
-  console.log("register_links end");
+  ready = true;
 }
 
 function loadpage(href, push_history) {
-  console.log("loadpage");
   $.get(href + "?bare=1", function(data) {
-
+    debug("loadpage callback");
     // push the new page to history, unless it was just popped.
     if (push_history && previous != href) {
       previous = href;
       window.history.pushState('', '', href);
     }
-
     dom.animate({ opacity: 0 }, 200, function() {
       dom.html(data);
       register_links();
@@ -67,32 +69,34 @@ function loadpage(href, push_history) {
 
 /* when asked to move in history */
 window.onpopstate = function(e) {
-  console.log("onpopstate");
+  debug("onpopstate");
   if (ready) loadpage(location.href, false);
-  else ready = true;
 }
 
+// This calls window.onpopstate at least in chromium, but not in firefox.
 window.history.replaceState('', '', location.href);
 
 dom.load(location.href + "?bare=1", register_links);
+
+function debug(where) {
+  console.log("------> " + where + " <------");
+  console.log("location.href: " + location.href);
+  console.log("previous:      " + previous);
+  console.log("ready:         " + ready);
+}
 })
   |]
 
--- | Convert a widget to a whole page.
-widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
-widgetToRepHtml w = do pc <- widgetToPageContent w
-                       hamletToRepHtml [hamlet|^{pageBody pc}|]
-
 -- | Simple listing content
 simpleListing :: Text                               -- ^ Section
-              -> [(Text, Route master)]             -- ^ Navigation
+              -> [Text]                             -- ^ Url parts
               -> [(Text, Text, [Text], Text, Text)] -- ^ (filename, filetype, fps, size, modified)
               -> ([Text] -> Route master)           -- ^ url to content
               -> (Text -> [Text] -> Route master)   -- ^ url to direct file
               -> (Text, Text, Text)                 -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
-simpleListing section navParts listing routeToContent toFile (msgFilename, msgFileize, msgModified) =
-  simpleNav navParts
+simpleListing section fps listing routeToContent toFile (msgFilename, msgFileize, msgModified) =
+  simpleNav fps routeToContent
   >> [whamlet|
 <table .tablesorter .standout .browser>
   <thead>
@@ -105,7 +109,7 @@ simpleListing section navParts listing routeToContent toFile (msgFilename, msgFi
     $forall (filename, filetype, fps, size, modified) <- listing
       <tr>
         <td.browser-controls>
-          <i .icon-plus .icon-white onclick="alert('aoeu'); playlist.to_playlist('#{section}', '#{toPath fps}'); return false">
+          <a .icon-plus .icon-white href="" onclick="playlist.to_playlist('#{section}', '#{toPath fps}'); return false">
           $if not $ equalsDirectory filetype
             <a .icon-download-alt .icon-white href=@{toFile "force" fps} onclick="">
             <a .icon-play .icon-white href=@{toFile "auto" fps} onclick="" target="_blank">
@@ -126,9 +130,10 @@ simpleListing section navParts listing routeToContent toFile (msgFilename, msgFi
   toPath = T.pack . F.joinPath . map T.unpack
   equalsDirectory = (==) "directory"
 
--- |
-simpleNav :: [(Text, Route master)] -> GWidget sub master ()
-simpleNav parts = [whamlet|
+-- | Construct breadcrumbs into a widget.
+simpleNav :: [Text] -> ([Text] -> Route master) -> GWidget sub master ()
+simpleNav []  _ = [whamlet|<ul.breadcrumb>|]
+simpleNav fps f = [whamlet|
 <ul.breadcrumb>
   $forall (name, route) <- init parts
     <li>
@@ -136,4 +141,5 @@ simpleNav parts = [whamlet|
       <span.divider>/
   $with (name, _) <- last parts
     <li.active>#{name}
-  |]
+|] where
+  parts = map (id *** f) $ zip fps $ foldr (\x -> (:) [x] . map ([x] ++)) [[]] fps

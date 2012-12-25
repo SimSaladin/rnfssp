@@ -52,7 +52,7 @@ postBoardR bname = do
     case result of
       FormSuccess replyD -> d1toBoardPost replyD >>= runDB . insert
                                                  >>= redirect . ThreadR bname
-      FormFailure asdf -> getBoardR bname -- redirect (BoardR bname)
+      FormFailure _ -> getBoardR bname -- redirect (BoardR bname)
       _ -> do notFound -- setMessage "Postaus failasi"
 
 -- /board/b/1

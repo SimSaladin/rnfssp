@@ -1,7 +1,6 @@
-<h1>Media #
-  <small>_{MsgMediaDescription}
 $maybe ent <- mauth
+  ^{nav}
   ^{browser}
-  ^{playlist ent}
+  ^{userPlaylistWidget ent}
 $nothing
   ^{restrictedWidget}

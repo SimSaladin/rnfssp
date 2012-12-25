@@ -1,5 +1,5 @@
 name:              rnfssp
-version:           0.0.5
+version:           0.0.6
 license:           BSD3
 license-file:      LICENSE
 author:            Samuli Thomasson
@@ -45,12 +45,17 @@ library
                      Handler.Blog
                      Handler.Board
                      Handler.Media
+                     Handler.Playlists
                      Handler.Bet
                      Handler.Profile
                      Chat
                      Mpd
                      JSBrowser
                      Utils
+                     Configs
+                     Sections
+                     Sections.Music
+                     Sections.Film
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT

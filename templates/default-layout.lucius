@@ -81,12 +81,10 @@ table.browser {
   table-layout:fixed;
   margin-bottom:1em;
   th, td { padding:0 9px; }
-
   th { line-height:1.8em; }
   th.browser-controls { width:54px; }
   th.browser-size { width:4em; }
   th.browser-modified { width:5em; }
-
   td {
     overflow:hidden;
     text-overflow:ellipsis;
@@ -100,16 +98,27 @@ table.browser {
     opacity:0.1;
     a, i { padding: 0 0 0 4px; }
   }
-  tr:hover td.browser-controls { opacity:0.8; }
+  tr:hover td.browser-controls {
+    opacity:0.8;
+    -o-transition: all 0.1s ease-in-out;
+    -webkit-transition: all 0.1s ease-in-out;
+    -moz-transition: all 0.1s ease-in-out;
+    -ms-transition: all 0.1s ease-in-out;
+    transition: all 0.1s ease-in-out;     
+  }
   a.directory { color:#C1D1FF; }
   a.video { color:#EBDD81; }
   a.audio { color:#35F539; }
+
 }
 
 table.standout {
   *border-collapse: collapse;
   border-spacing: 0;
-  thead, tfoot { color:#{colorFg}; background-color:#{colorElemBg}; }
+  thead th, tfoot th {
+    color:#{colorFg};
+    background-color:#{colorElemBg};
+  }
   thead th:last-child {
     -moz-border-radius: 0 18px 0 0;
     -webkit-border-radius: 0 18px 0 0;
@@ -124,16 +133,16 @@ table.standout {
   tbody tr:nth-child(even) { background-color: #{colorElemAnotherBg} }
   tbody tr:hover {
     background: #{colorElemHlBg};
-     -o-transition: all 0.1s ease-in-out;
-     -webkit-transition: all 0.1s ease-in-out;
-     -moz-transition: all 0.1s ease-in-out;
-     -ms-transition: all 0.1s ease-in-out;
-     transition: all 0.1s ease-in-out;     
+    -o-transition: all 0.1s ease-in-out;
+    -webkit-transition: all 0.1s ease-in-out;
+    -moz-transition: all 0.1s ease-in-out;
+    -ms-transition: all 0.1s ease-in-out;
+    transition: all 0.1s ease-in-out;     
   }
 }
 
 /* playlist */
-.playlist-items {
+table.playlist-items {
   width:100%;
   height:20em;
   overflow:auto;
@@ -161,6 +170,17 @@ a:hover, a:active { color:#EEE; }
   border:none;
   box-shadow:none;
   margin-bottom:0;
+  li {
+    color:#{colorLightBgFg};
+    text-shadow:0 1px 0 #{colorElemBg};
+  }
+}
+.nav-pills li a {
+  background-color:#{colorElemOtherBg};
+}
+.nav-pills li.active a {
+  background-color:#{colorElemBg};
+  color:#{colorNavigationFg};
 }
 .nav-tabs {
   margin-bottom:1px;
