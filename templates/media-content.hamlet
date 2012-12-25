@@ -1,5 +1,6 @@
 $maybe ent <- mauth
   ^{nav}
+  ^{browser}
   ^{userPlaylistWidget ent}
 $nothing
   ^{restrictedWidget}

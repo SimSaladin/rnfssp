@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 31 2012 [02:37:40]
+-- Last Modified: Dec 17 2012 [20:02:57]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -17,6 +17,7 @@
 module Chat where
 
 import Yesod
+import Text.Julius (rawJS)
 import Prelude (Bool, ($), Maybe(..), (.))
 import Control.Monad (return)
 import Control.Concurrent.Chan (Chan, dupChan, writeChan)
@@ -27,25 +28,15 @@ import Language.Haskell.TH.Syntax (Type (VarT), Pred (ClassP), mkName)
 import Blaze.ByteString.Builder.Char.Utf8 (fromText)
 import Data.Monoid (mappend)
 
--- | Our subsite foundation. We keep a channel of events that all connections
--- will share.
 data Chat = Chat (Chan ServerEvent)
 
--- | We need to know how to check if a user is logged in and how to get
--- his/her username (for printing messages).
-class (Yesod master, RenderMessage master FormMessage)
-        => YesodChat master where
+class (Yesod master, RenderMessage master FormMessage) => YesodChat master where
     getUserName :: GHandler sub master Text
-    isLoggedIn :: GHandler sub master Bool
+    isLoggedIn  :: GHandler sub master Bool
+    saveMessage :: (Text, Text) -> GHandler sub master ()
+    getRecent   :: GHandler sub master [(Text, Text)]
 
--- Now we set up our subsite. The first argument is the subsite, very similar
--- to how we've used mkYesod in the past. The second argument is specific to
--- subsites. What it means here is "the master site must be an instance of
--- YesodChat".
---
--- We define two routes: a route for sending messages from the client to the
--- server, and one for opening up the event stream to receive messages from
--- the server.
+
 mkYesodSub "Chat"
     [ ClassP ''YesodChat [VarT $ mkName "master"]
     ] [parseRoutes|
@@ -57,54 +48,35 @@ mkYesodSub "Chat"
 postSendR :: YesodChat master => GHandler Chat master ()
 postSendR = do
     from <- getUserName
-
-    -- Note that we're using GET parameters for simplicity of the Ajax code.
-    -- This could easily be switched to POST. Nonetheless, our overall
-    -- approach is still RESTful since this route can only be accessed via a
-    -- POST request.
     body <- runInputGet $ ireq textField "message"
-
-    -- Get the channel
     Chat chan <- getYesodSub
-    
+
+    -- Set nginx-specific header for eventsource to work.
     setHeader "X-Accel-Buffering" "no"
+
     -- Send an event to all listeners with the user's name and message.
     liftIO $ writeChan chan $ ServerEvent Nothing Nothing $ return $
         fromText from `mappend` fromText ": " `mappend` fromText body
 
+    saveMessage (from, body)
+
 -- | Send an eventstream response with all messages streamed in.
 getReceiveR :: GHandler Chat master ()
 getReceiveR = do
-    -- First we get the main channel
     Chat chan0 <- getYesodSub
-
-    -- We duplicated the channel, which allows us to create broadcast
-    -- channels.
     chan <- liftIO $ dupChan chan0
-
-    -- Now we use the event source API. eventSourceAppChan takes two parameters:
-    -- the channel of events to read from, and the WAI request. It returns a
-    -- WAI response, which we can return with sendWaiResponse.
     req <- waiRequest
     res <- lift $ eventSourceAppChan chan req
+    let (stat, hs, src) = responseSource res
 
     -- for nginx reverse-proxying to work, we add the header X-Accel-Buffering
-    let (stat, hs, src) = responseSource res
     sendWaiResponse $ ResponseSource stat (("X-Accel-Buffering", "no"):hs) src
 
 -- | Provide a widget that the master site can embed on any page.
 chatWidget :: YesodChat master
            => (Route Chat -> Route master)
            -> GWidget sub master ()
--- This toMaster argument tells us how to convert a Route Chat into a master
--- route. You might think this is redundant information, but taking this
--- approach means we can have multiple chat subsites in a single site.
 chatWidget toMaster = do
-    -- Get some unique identifiers to help in creating our HTML/CSS. Remember,
-    -- we have no idea what the master site's HTML will look like, so we
-    -- should not assume we can make up identifiers that won't be reused.
-    -- Also, it's possible that multiple chatWidgets could be embedded in the
-    -- same page.
     chat <- lift newIdent   -- the containing div
     output <- lift newIdent -- the box containing the messages
     input <- lift newIdent  -- input field from the user
@@ -135,7 +107,7 @@ chatWidget toMaster = do
             -- And now that Javascript
             toWidgetBody [julius|
 // Set up the receiving end
-var output = document.getElementById("#{output}");
+var output = document.getElementById("#{rawJS output}");
 var src = new EventSource("@{toMaster ReceiveR}");
 src.onmessage = function(msg) {
     // This function will be called for each new message.
@@ -150,7 +122,7 @@ src.onmessage = function(msg) {
 
 // Set up the sending end: send a message via Ajax whenever the user hits
 // enter.
-var input = document.getElementById("#{input}");
+var input = document.getElementById("#{rawJS input}");
 input.onkeyup = function(event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == '13') {

@@ -5,7 +5,7 @@ dist
 *.swp
 client_session_key.aes
 cabal-dev/
-yesod/foobar/
+yesod-devel/
 static/tmp/*
 yesod-platform/yesod-platform.cabal
 .virthualenv

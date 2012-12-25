@@ -3,14 +3,13 @@ $forall pre <- previews
 
 $if canPost
   <div.page-element.hl>
-    <h3>Add a new post
     <form.form-horizontal method=post action=@{BlogOverviewR} enctype=#{encType}>
-      $case result
-        $of FormFailure reasons
-          $forall reason <- reasons
-            <div.alert.alert-errors>#{reason}
-        $of _
       <fieldset>
-        <legend.clearfix>Teh post info
+        <legend.clearfix>_{MsgBlogNewEntry}
+        $case result
+          $of FormFailure reasons
+            $forall reason <- reasons
+              <div.alert.alert-errors>#{reason}
+          $of _
         ^{widget}
 

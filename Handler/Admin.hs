@@ -7,6 +7,7 @@ import Import
 import qualified Data.Text as T (append)
 import System.Directory (getDirectoryContents, doesDirectoryExist)
 import System.FilePath (combine)
+import qualified Handler.Media as Media (adminWidget)
 
 getAdminR :: Handler RepHtml
 getAdminR = do
@@ -39,7 +40,6 @@ getAdminR = do
 postAdminR :: Handler RepHtml
 postAdminR = do
     ((result, _), _) <- runFormPost newboardForm
-    boards <- runDB $ selectList ([] :: [Filter Board]) []
     case result of
         FormSuccess board -> do
             _ <- runDB $ insert board

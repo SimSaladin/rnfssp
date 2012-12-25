@@ -1,21 +1,6 @@
-module Foundation
-    ( App (..)
-    , Route (..)
-    , AppMessage (..)
-    , resourcesApp
-    , Handler
-    , Widget
-    , Form
-    , maybeAuth
-    , maybeAuthId
-    , requireAuth
-    , requireAuthId
-    , module Settings
-    , module Model
-    , getExtra
-    ) where
+module Foundation where
 
-import Prelude
+import Prelude hiding (appendFile, readFile)
 import Control.Monad (liftM)
 import Yesod
 import Yesod.Static
@@ -25,6 +10,7 @@ import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Network.HTTP.Conduit (Manager)
 import qualified Settings
+import Settings.Development (development)
 import qualified Database.Persist.Store
 import Settings.StaticFiles
 import Database.Persist.GenericSql
@@ -35,6 +21,9 @@ import Web.ClientSession (getKey)
 import Text.Hamlet (hamletFile)
 
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Text.IO (appendFile, readFile)
+import Data.Monoid (mappend)
 
 import Chat
 import Mpd
@@ -52,8 +41,6 @@ data App = App
     , getChat :: Chat
     , getMpd :: Mpd
     }
-
-type Strings = [String]
 
 -- Set up i18n messages. See the message folder.
 mkMessage "App" "messages" "en"
@@ -123,8 +110,8 @@ instance Yesod App where
     isAuthorized AdminR        _     = isAdmin
     isAuthorized MediaAdminR   _     = isAdmin
     isAuthorized BlogOverviewR True  = isAdmin
-    isAuthorized (MediaR [])   False = return Authorized
-    isAuthorized (MediaR _ )   _     = isValidLoggedIn
+    isAuthorized MediaHomeR    False = return Authorized
+    isAuthorized (MediaContentR _ _) _ = isValidLoggedIn
     isAuthorized _             _     = return Authorized
 
     -- This function creates static content files in the static folder
@@ -135,6 +122,11 @@ instance Yesod App where
 
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
+
+    -- What messages should be logged. The following includes all messages when
+    -- in development, and warnings and errors in production.
+    shouldLog _ _source level =
+        development || level == LevelWarn || level == LevelError
 
 isAdmin :: GHandler s App AuthResult
 isAdmin = do
@@ -147,9 +139,10 @@ isAdmin = do
 --            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
 --            | otherwise -> Unauthorized "You must be an admin"
 
-isValidLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
-        YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
-        (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
+--isValidLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
+--        YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
+--        (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
+isValidLoggedIn :: GHandler s App AuthResult
 isValidLoggedIn = do
     mu <- maybeAuth
     return $ case mu of
@@ -202,8 +195,28 @@ getExtra = fmap (appExtra . settings) getYesod
 --
 -- https://github.com/yesodweb/yesod/wiki/Sending-email
 
+chatFile :: FilePath
+chatFile = "chatmessages.txt"
+
 instance YesodChat App where
-   getUserName = liftM (userUsername . entityVal) requireAuth
-   isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
+  getUserName = liftM (userUsername . entityVal) requireAuth
+  isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
       Authorized -> True
       _          -> False
+  saveMessage (from, msg) = liftIO $ appendFile chatFile $ from `mappend` "," `mappend` msg
+  getRecent = liftM (map (T.breakOn ",") . last' 5 . T.lines) $ liftIO $ readFile chatFile
+
+instance YesodMpd App where
+  mpdPort = return 6600
+  mpdHost = return "localhost"
+  mpdPass = return ""
+
+last' :: Int -> [a] -> [a]
+last' n xs
+  | l >= n    = drop (l - n) xs
+  | otherwise = xs
+    where l = length xs
+
+routeToLogin :: Route App
+routeToLogin = AuthR LoginR
+

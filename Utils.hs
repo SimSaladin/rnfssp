@@ -1,23 +1,24 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Sep 01 2012 [05:10:45]
+-- Last Modified: Dec 24 2012 [00:25:35]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
 
 import           Import
-import           Control.Monad
 import           Control.Monad.Random
 import           Data.Char
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Text as T
-import qualified Data.Map as Map
 import           System.FilePath
+import qualified System.FilePath as F
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
 import           Yesod.Default.Config (appExtra)
+import           Data.Time.Format (formatTime, FormatTime)
+import           System.Locale (defaultTimeLocale)
 
 isAdmin' :: Handler Bool
 isAdmin' = maybeAuth >>= \ma -> return $ case ma of
@@ -59,6 +60,10 @@ gdir which = do
             "music" -> return $ extraDirMusic set
             _ -> invalidArgs ["no master directory for: " `T.append` which]
 
+-- | convert section+path to an actual file.
+toFSPath :: Text -> FilePath -> Handler FilePath
+toFSPath section path = liftM (</> path) $ gdir section
+
 gServeroot :: Handler Text
 gServeroot = getYesod >>= return . extraServeroot . appExtra . settings
 
@@ -88,57 +93,27 @@ uniqueFilePath dir template = fmap ((dir </>) . appendBaseName) (randomString 10
   where appendBaseName = replaceBaseName template . (takeBaseName template ++)
 
 randomString :: Int -> IO String
-randomString n = liftM (map chr) (evalRandIO $ sequence $ replicate n rnd)
+randomString n = liftM (map chr) (evalRandIO $ replicateM n rnd)
   where rnd = getRandomR (48, 57)
 
-mapField :: Field sub master (Map.Map Text a)
-mapField = Field
-  { fieldParse = \rawVals -> case rawVals of
-      xs | length xs < 4 -> return $ Left "Must have at least two options"
-         | otherwise -> do
-            let paired = pairs xs
-            return $ Right $ Just Map.empty
+randomText :: Int -> IO Text
+randomText n = liftM (T.pack . map chr) (evalRandIO $ replicateM n rnd)
+  where rnd = getRandomR (65, 90)
 
-  , fieldView = \idAttr nameAttr _ eResult isReq -> do
-    j_add <- lift newIdent
-    toWidget [julius|
-function #{j_add}{
-}
-    |]
-    [whamlet|
-<input id=#{idAttr}-1-factor name="#{nameAttr}-factor" type=text required>
-<input id=#{idAttr}-1 name=#{nameAttr} type=text :isReq:required>
-<br>
-<input id=#{idAttr}-2-factor name="#{nameAttr}-factor" type=text required>
-<input id=#{idAttr}-2 name=#{nameAttr} type=text :isReq:required>
-<br>
-<button onclick="#{j_add}()">Add new option
-    |]
-  }
+toPath :: [Text] -> Text
+toPath = T.pack . F.joinPath . map T.unpack
 
-pairs :: [a] -> [ (a,a) ]
-pairs []       = []
-pairs (x:[])   = [(x,x)]
-pairs (x:y:zs) = (x,y) : pairs zs
+-- | Split text to filepath pieces
+splitPath' :: Text -> [Text]
+splitPath' = map T.pack . splitPath . T.unpack
 
-passwordConfirmField :: Field sub master Text
-passwordConfirmField = Field
-    { fieldParse = \rawVals ->
-        case rawVals of
-            [a, b]
-                | T.length a < 4 -> return $ Left "Password must be at least 4 characters"
-                | a == b -> return $ Right $ Just a
-                | otherwise -> return $ Left "Passwords don't match"
-            [] -> return $ Right Nothing
-            _ -> return $ Left "You must enter two values"
-    , fieldView = \idAttr nameAttr _ eResult isReq -> [whamlet|
-<div.control-group>
-  <div.control-label for=#{idAttr}> Password
-  <div.controls>
-    <input id=#{idAttr} name=#{nameAttr} type=password :isReq:required>
-<div.control-group>
-  <div.control-label for=#{idAttr}-confirm> Confirm password
-  <div.controls>
-    <input id=#{idAttr}-confirm name=#{nameAttr} type=password>
-|]
-    }
+takeDirectory' :: Text -> Text
+takeDirectory' = T.dropWhileEnd (=='/') . fst . T.breakOnEnd "/"
+
+printfTime :: FormatTime t => String -> t -> String
+printfTime = formatTime defaultTimeLocale
+
+-- | Convert a widget to a whole page.
+widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
+widgetToRepHtml w = do pc <- widgetToPageContent w
+                       hamletToRepHtml [hamlet|^{pageBody pc}|]

@@ -13,7 +13,7 @@
       update media database
 
 <div.row-fluid>
-  <div.span6.page-element>
+  <div .span12 .page-element>
     <h3>Users
     <table border="1">
       <tr>
@@ -26,3 +26,6 @@
           <td>#{comment}
           <td>
             <a href=@{AdminR}?action=#{action}&target=#{name}>#{action}
+<div.row-fluid>
+  <div .span6 .page-element>
+    ^{Media.adminWidget}

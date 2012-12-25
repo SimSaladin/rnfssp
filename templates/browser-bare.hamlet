@@ -23,7 +23,7 @@ $else
               <td.browser-controls>
                 <a href="?to_playlist=1" onclick="to_playlist('#{area}', '#{toPath url}'); return false">
                   <i.icon-plus.icon-white>
-                $if not $ isdir ftype
+                $if not $ equalsDirectory ftype
                   <a href=@{MediaServeR "force" area url} onclick="">
                     <i.icon-download-alt.icon-white>
                   <a href=@{MediaServeR "auto" area url} onclick="" target="_blank">

@@ -6,8 +6,6 @@ import qualified Data.Text as T
 import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)
 
-import Utils
-
 getRegisterR :: Handler RepHtml
 getRegisterR = do
     (widget, encType) <- generateFormPost registerForm
@@ -28,7 +26,7 @@ postRegisterR = do
                else do newUser <- setPassword (userPassword user) user
                        _ <- runDB $ insert newUser
                        setMessage "Your registration has been noted. Please, stand by."
-                       redirect $ AuthR LoginR
+                       redirect BlogOverviewR
                        -- TODO: send email?
         FormFailure fails -> reperr fails
         FormMissing -> redirect $ RegisterR

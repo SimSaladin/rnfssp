@@ -14,7 +14,6 @@ import qualified Data.Char as C
 import           Data.Maybe
 import qualified Data.Text as T
 import           Data.Time (formatTime)
-import           Control.Monad
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Markdown (markdownField, markdownToHtml)
 
@@ -27,7 +26,7 @@ postBlogOverviewR :: Handler RepHtml
 postBlogOverviewR = do
     form <- runFormPost $ blogpostForm Nothing
     case fst $ fst form of
-        FormSuccess p -> do pid <- runDB $ insert p
+        FormSuccess p -> do _ <- runDB $ insert p
                             setMessage "New blog post published!"
                             redirect $ BlogViewR $ blogpostUrlpath p
         _             -> overview form
@@ -43,7 +42,7 @@ postBlogViewR path = do
     ent <- runDB $ getBy404 $ UniqueBlogpost path
     form <- runFormPost (commentForm (entityKey ent) Nothing)
     case fst $ fst form of
-        FormSuccess comment -> do commentId <- runDB $ insert comment
+        FormSuccess comment -> do _ <- runDB $ insert comment
                                   setMessage "Comment sent."
                                   redirect $ BlogViewR path
         _                   -> view form ent
@@ -101,8 +100,6 @@ view ((result, formWidget), encType) (Entity key val) = do
         in defaultLayout $ do
             titleRender ["blog", blogpostTitle val]
             $(widgetFile "blog-view")
-  where
-    post = blogpostWidget val
 
 edit :: ((FormResult a, Widget), Enctype) -> Text -> Handler RepHtml
 edit ((result, widget), encType) path = defaultLayout $ do

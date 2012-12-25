@@ -15,3 +15,5 @@ MediaFilename: Filename
 MediaSize: Size
 MediaModified: Modified
 LabelImportant: Important!
+BlogPublishPost: Publish
+BlogNewEntry: New entry

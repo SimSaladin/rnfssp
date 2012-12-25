@@ -1,22 +1,23 @@
 <div.container-fluid>
   <div.row-fluid>
     <div.span12>
-      <div .navbar>
-        <div .navbar-inner>
-          <div .container>
-            <ul .nav>
+      <div.navbar>
+        <div.navbar-inner>
+          <div.container>
+            <ul.nav>
               <li>
                 <a href=@{BlogOverviewR}>Home
-              <li .dropdown>
+              <li.dropdown>
                 <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
-                <ul .dropdown-menu>
-                  <li><a href=@{BoardHomeR}>_{MsgNavAll}</a>
-                  <li .divider>
+                <ul.dropdown-menu>
+                  <li>
+                    <a href=@{BoardHomeR}>_{MsgNavAll}
+                  <li.divider>
                     $forall Entity _ val <- boards
-                      <li><a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}</a>
+                      <li>
+                        <a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}
               <li>
-                $with a <- []
-                  <a href=@{MediaR a}>Media
+                <a href=@{MediaHomeR}>Media
               <li.divider-vertical>
               <li>
                 <form.navbar-search.pull-left>
@@ -29,7 +30,7 @@
               <li>
                 <a href="http://projects.ssdesk.paivola.fi">Projects
 
-            <ul .nav.pull-right>
+            <ul.nav.pull-right>
               $maybe authent <- ma
                 $if userAdmin $ entityVal authent
                   <li>

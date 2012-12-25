@@ -1,24 +1,31 @@
-<div##{main}.page-element>
-  <div##{actions}.btn-toolbar style="float:right">
+<div##{mainI}.page-element>
+  <div##{actionsI}.btn-toolbar style="float:right">
     <div.btn-group>
-      <button.btn.btn-warning onclick="clear_playlist()">Clear
+      <button.btn.btn-warning onclick="playlist.clear_playlist()">Clear
 
     <div.btn-group>
-      <button.btn onclick="alert()">Rename
+      <button.btn onclick="alert('TODO: not yet implemented')">Rename
       <button.btn.dropdown-toggle data-toggle="dropdown">Switch #
         <span.caret>
       <ul.dropdown-menu.pull-right>
         <li>
-          <a onclick="load_playlist()">TODO
+          <a onclick="window.load_playlist()">TODO
 
     <div.btn-group>
-      <a.btn.btn-primary href="@{MediaPlaylistR "get"}" target="_blank">Play! #
+      <a.btn.btn-primary href="@{PlaylistR "get"}" target="_blank">Play! #
       <button.btn.btn-primary.dropdown-toggle data-toggle="dropdown">
         <span.caret>
       <ul.dropdown-menu.pull-right>
         <li>
-          <a href="@{MediaPlaylistR "get-force"}">Download as .m3u
+          <a href="@{PlaylistR "get-force"}">Download as .m3u
 
-  <h3##{heading}>
-  <div##{content}.playlist-items>
-    Loading playlist...
+  <h3##{headI}>
+  <table.playlist-items>
+    <thead>
+      <tr>
+        <th>Path
+        <th>Section
+    <tbody##{contI}.playlist-items>
+      <tr>
+        <td>
+          <i>Loading playlist...

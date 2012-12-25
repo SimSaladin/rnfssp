@@ -1,19 +1,29 @@
-var playlist = {};
-var cont = $("##{content}");
+$(function(){
+/**
+ * NOTE: uses the global window.playlist
+ */
 
+if (window.playlist) {
+  alert("Playlist is already active! (only one instance per page allowed)");
+  throw "Playlist is already initialized (window.playlist is set)";
+}
+
+window.playlist = { data : {} };
+
+var pl = playlist,
+    cont = $("##{rawJS contI}"),
+    head = $("##{rawJS headI}");
 /**
  * Loads active playlist, or creates a new playlist.
  */
-function load_playlist() {
+pl.load_playlist = function() {
   $.ajax(
-    { url: '@{MediaPlaylistR "select"}'
+    { url: '@{PlaylistR "select"}'
     , type: 'POST'
     , dataType: 'json'
-    , success: function(data) { if (data[0] == 0) playlist = data[1];
-                                else playlist = {};
-      }
-    , error: function() { playlist = {}; }
-    , complete: update_playlist
+    , success: function(x) { pl.data = (x[0] == 0) ? x[1] : {} }
+    , error: function() { pl.data = {}; alert("playlist loading failed!") }
+    , complete: pl.update_playlist
     }
   );
 }
@@ -21,11 +31,11 @@ function load_playlist() {
 /**
  * add `what' from `area' to the playlist
  */
-function to_playlist(area, what) {
-  $.post('@{MediaPlaylistR "push"}', JSON.stringify([area, what]), function(data) {
+pl.to_playlist = function(area, what) {
+  $.post('@{PlaylistR "insert"}', JSON.stringify([area, what]), function(data) {
     if (data[0] == 0) {
-      playlist = data[1];
-      update_playlist();
+      pl.data = data[1];
+      pl.update_playlist();
     } else {
       alert("could not add to playlist: " + what + "\n\nresult: " + data);
     }
@@ -35,49 +45,43 @@ function to_playlist(area, what) {
 /**
  * redraw playlist and add default title if none is specified.
  */
-function update_playlist() {
-  var cont = $("##{content}");
-  var head = $("##{heading}");
+pl.update_playlist = function() {
   cont.empty();
   head.empty();
-
-  if (playlist["title"]) {
-    head.text(playlist["title"]);
+  if (pl.data["title"]) {
+    head.text(pl.data["title"]);
   } else {
-    head.append( $('<i/>').text("default") );
+    head.append( $('<i/>').text("Default playlist") );
   }
 
-  var table = $('<table/>', { class : 'browser playlist' });
-  table.append($('<tr/>')
-    .append($('<th/>').text("Filename"))
-    .append($('<th/>').text("Area"))
-  );
-  $.each(playlist["elems"], function(index, value) {
-    table.append(
-      $('<tr/>')
-      .append($('<td title="'+value[1]+'"/>').text(value[1]))
-      .append($('<td/>').text(value[0]))
-    );
-  });
-  
-  cont.append(table);
+  if (pl.data.hasOwnProperty("elems")) {
+    $.each(pl.data["elems"], function(index, value){
+      cont.append($('<tr/>')
+        .append($('<td/>').text(value[0]))
+        .append($('<td title="'+value[1]+'"/>').text(value[1]))
+      )
+    });
+  } else {
+    cont.append($("</i>").text("Something went wrong while loading the playlist.  Try refreshing the page"));
+  }
 }
 
 /**
  * save playlist. title is optional and default is used if == null
  */
-function save_playlist_custom(title) {
+pl.save_playlist_custom = function(title) {
   
 }
 
 /**
  * clear every element from the playlist.
  */
-function clear_playlist() {
-  $.post('@{MediaPlaylistR "clear"}', JSON.stringify([]), function(data) {
-    if (data[0] == 0) { playlist = data[1]; update_playlist(); }
+pl.clear_playlist = function() {
+  $.post('@{PlaylistR "clear"}', JSON.stringify([]), function(data) {
+    if (data[0] == 0) { pl.data = data[1]; pl.update_playlist(); }
     else { alert("could not clear the playlist: " + data[1]); }
   });
 }
 
-$("##{content}").ready(load_playlist)
+cont.ready(pl.load_playlist);
+})
