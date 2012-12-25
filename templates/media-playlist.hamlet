@@ -1,5 +1,5 @@
-<div##{main}.page-element>
-  <div##{actions}.btn-toolbar style="float:right">
+<div##{mainI}.page-element>
+  <div##{actionsI}.btn-toolbar style="float:right">
     <div.btn-group>
       <button.btn.btn-warning onclick="playlist.clear_playlist()">Clear
 
@@ -19,13 +19,13 @@
         <li>
           <a href="@{PlaylistR "get-force"}">Download as .m3u
 
-  <h3##{heading}>
+  <h3##{headI}>
   <table.playlist-items>
     <thead>
       <tr>
         <th>Path
         <th>Section
-    <tbody##{content}.playlist-items>
+    <tbody##{contI}.playlist-items>
       <tr>
         <td>
           <i>Loading playlist...

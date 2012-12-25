@@ -1,9 +1,7 @@
 module Handler.Bet where
 
 import Import
-import Utils
 import Data.Time (getCurrentTime)
-import qualified Data.Map as Map
 
 getBetR :: Handler RepHtml
 getBetR = do
@@ -20,10 +18,10 @@ postBetR = do
   redirect BetR
 
 getBetViewR :: BetId -> Handler RepHtml
-getBetViewR bid = error "Not yet implemented: getBetR"
+getBetViewR _ = error "Not yet implemented: getBetR"
 
 postBetViewR :: BetId -> Handler RepHtml
-postBetViewR bid = error "Not yet implemented: postBetR"
+postBetViewR _ = error "Not yet implemented: postBetR"
 
 newBetForm :: UserId -> Form Bettarget
 newBetForm owner = renderBootstrap $ Bettarget

@@ -8,7 +8,7 @@
 @colorLightBgBg: #E8D0FF;
 @colorLightBgFg: #5C2162;
 
-/* layout elements */
+/* layout elements {{{*/
 body {
   font-size:1.02em;
   line-height:20px;
@@ -69,9 +69,8 @@ legend small {float:right;padding-left:15px;}
 small {padding-left:15px}
 video {
   border:1px solid #9E8DB5;
-}
-
-/* lists & tabular */
+}/*}}}
+lists & tabular{{{*/
 ul, ol {
   padding-left:15px;
 }
@@ -109,9 +108,7 @@ table.browser {
   a.directory { color:#C1D1FF; }
   a.video { color:#EBDD81; }
   a.audio { color:#35F539; }
-
 }
-
 table.standout {
   *border-collapse: collapse;
   border-spacing: 0;
@@ -139,16 +136,15 @@ table.standout {
     -ms-transition: all 0.1s ease-in-out;
     transition: all 0.1s ease-in-out;     
   }
-}
-
-/* playlist */
+}/*}}}
+playlist {{{*/
 table.playlist-items {
   width:100%;
   height:20em;
   overflow:auto;
 }
-
-/* texts */
+/*}}}
+texts {{{*/
 p {color:#{colorLightBgFg};}
 .page-element h1, .page-element h2, .page-element h3,
 .page-element h4, .page-element h5, .page-element h6 { color:#{colorFg}; }
@@ -156,15 +152,13 @@ h1, h2, h3, h4, h5, h6, a { color:#{colorLightBgFg}; }
 i { color:#{colorLightBgFg}; }
 .page-element i {color:#{colorFg}}
 .page-element p {color:#{colorFg}}
-
 a:hover, a:active { color:#EEE; }
 .btn { color:#000; }
 .btn.btn-primary { color:#FFF; }
 .btn.btn-info { color:#FEFEFE; }
 .page-element a { color:#999999; }
-/* a { color:#FEFEB8; } */
-
-/* navigation */
+/*}}}
+navigation {{{*/
 .breadcrumb {
   background:none;
   border:none;
@@ -220,8 +214,8 @@ a:hover, a:active { color:#EEE; }
   background-color:#{colorElemBg};
   background-image:none;
 }
-
-/* blog */
+/*}}}
+blog {{{*/
 cite, .date-box {
   border-radius:5px;
   padding:5px;
@@ -244,9 +238,8 @@ cite, .date-box {
 }
 .blogpost h2 {
   margin-bottom:0.7em;
-}
-
-/* board */
+}/*}}}
+board {{{*/
 .postop, .postreply {
   min-height:80px;
   padding:0px 10px;
@@ -267,8 +260,8 @@ cite, .date-box {
 span.posttitle { color:#47B979; }
 span.postername { color:#F87C7F; }
 span.postdate { font-size:80%; }
-
-/* forms */
+/*}}}
+forms {{{*/
 .form-actions {
   background:rgba(161,106,164,0.57);
   border-top:1px solid #BA7FCB;
@@ -289,8 +282,8 @@ input, textarea, select,.uneditable-input {
   border-color: #A34786;
   border-radius:5px;
 }
-
-/* code */
+/*}}}
+code {{{*/
 pre {
    background:rgba(54, 28, 55, 0.71);
    color: #A8A8A8;
@@ -299,4 +292,4 @@ pre#message {
   background:rgba(72, 88, 111,0.84);
   color:#FFF;
   font-size:1.07em;
-}
+}/*}}}*/

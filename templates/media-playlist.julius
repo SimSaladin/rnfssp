@@ -11,8 +11,8 @@ if (window.playlist) {
 window.playlist = { data : {} };
 
 var pl = playlist,
-    cont = $("##{rawJS content}"),
-    head = $("##{rawJS heading}");
+    cont = $("##{rawJS contI}"),
+    head = $("##{rawJS headI}");
 /**
  * Loads active playlist, or creates a new playlist.
  */
@@ -54,22 +54,13 @@ pl.update_playlist = function() {
     head.append( $('<i/>').text("Default playlist") );
   }
 
-/*
-  var table = $('<table/>', { class : 'browser playlist' });
-  table.append($('<tr/>')
-    .append($('<th/>').text("Filename"))
-    .append($('<th/>').text("Area"))
-    .append($('<th/>').text(""))
-  );
-*/
   if (pl.data.hasOwnProperty("elems")) {
     $.each(pl.data["elems"], function(index, value){
       cont.append($('<tr/>')
-        .append($('<td title="'+value[1]+'"/>').text(value[1]))
         .append($('<td/>').text(value[0]))
+        .append($('<td title="'+value[1]+'"/>').text(value[1]))
       )
     });
-    /*cont.append(table);*/
   } else {
     cont.append($("</i>").text("Something went wrong while loading the playlist.  Try refreshing the page"));
   }
@@ -86,7 +77,7 @@ pl.save_playlist_custom = function(title) {
  * clear every element from the playlist.
  */
 pl.clear_playlist = function() {
-  $.post('@{PlaylistR "delete"}', JSON.stringify([]), function(data) {
+  $.post('@{PlaylistR "clear"}', JSON.stringify([]), function(data) {
     if (data[0] == 0) { pl.data = data[1]; pl.update_playlist(); }
     else { alert("could not clear the playlist: " + data[1]); }
   });

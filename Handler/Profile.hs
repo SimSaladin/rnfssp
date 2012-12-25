@@ -3,7 +3,6 @@ module Handler.Profile where
 import Import
 import qualified Data.Text as T
 import Yesod.Auth.HashDB (setPassword, validateUser)
-import Utils
 
 setTitle' :: User -> Widget
 setTitle' = setTitle . toHtml . T.append "Profile of" . userUsername

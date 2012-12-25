@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Dec 24 2012 [15:35:33]
+-- Last Modified: Dec 25 2012 [17:27:40]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -28,8 +28,7 @@ import           System.IO.Temp (openTempFile)
 -- 
 getPlaylistR :: Text -> Handler RepPlain
 getPlaylistR action
-    | action `T.isPrefixOf` "get" = requireAuth
-      >>= solvePlaylist
+    | action `T.isPrefixOf` "get" = requireAuth >>= solvePlaylist
       >>= generateM3U . entityVal
       >>= if "-force" `T.isSuffixOf` action
         then (setHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\"" >>) 
@@ -54,11 +53,12 @@ postPlaylistR action = do
       "select" -> rsucc pl
       "insert" -> do
           (section, what) <- parseJsonBody_
-          (new, pl') <- add pl section what
+          (new, pl') <- plInsert pl section what
           if new
-            then updatePlaylist plk pl' >>= rsucc
+            then plUpdate plk pl' >>= rsucc
             else rfail "no such path"
-      "delete"  -> updatePlaylist plk (clearPlaylist pl) >>= rsucc
+      "clear" -> plUpdate plk (plClear pl) >>= rsucc
+      "delete"  -> plUpdate plk (plClear pl) >>= rsucc
       _ -> rfail "unknown playlist action"
   where
     rfail :: Text -> Handler RepJson
@@ -68,7 +68,7 @@ postPlaylistR action = do
 -- | Playlist widget customized for a user.
 userPlaylistWidget :: Entity User -> Widget
 userPlaylistWidget (Entity _ uval) = do
-    [main, actions, content, heading] <- replicateM 4 (lift newIdent)
+    [mainI, actionsI, contI, headI] <- replicateM 4 (lift newIdent)
     $(widgetFile "media-playlist")
 
 -- | Retrieve user's playlist using various methods. If all else fails, create
@@ -83,16 +83,16 @@ solvePlaylist :: Entity User -> Handler (Entity Playlist)
 solvePlaylist (Entity k v) = fromGetparam
   where
     fromGetparam = lookupGetParam "title" >>= \mt -> case mt of
-        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromCookie 
-        Nothing    -> fromCookie
+        Just title  -> runDB (getBy $ UniquePlaylist k title) >>= tryMaybe fromCookie 
+        Nothing     -> fromCookie
 
     fromCookie = lookupCookie "playlist-title" >>= \mt' -> case mt' of
-        Just title -> runDB (getBy (UniquePlaylist k title)) >>= tryMaybe fromDB
-        Nothing    -> fromDB
+        Just title  -> runDB (getBy $ UniquePlaylist k title) >>= tryMaybe fromDB
+        Nothing     -> fromDB
 
     fromDB = case userCurrentplaylist v of
-        Just name -> runDB (getBy $ UniquePlaylist k name) >>= tryMaybe fromDBDefault
-        Nothing   -> fromDBDefault
+        Just name   -> runDB (getBy $ UniquePlaylist k name) >>= tryMaybe fromDBDefault
+        Nothing     -> fromDBDefault
 
     fromDBDefault = runDB (getBy $ UniquePlaylist k "") >>= tryMaybe (addDefaultPlaylist k)
 
@@ -131,9 +131,6 @@ generateM3U pl = do
 
 -- * Actions
 
-clearPlaylist :: Playlist -> Playlist
-clearPlaylist pl = pl { playlistElems = [] }
-
 -- | New titleless playlist for user with userId uid.
 -- XXX: doesn't check for duplicates(!)
 addDefaultPlaylist :: UserId -> Handler (Entity Playlist)
@@ -143,25 +140,27 @@ addDefaultPlaylist uid = do
     k <- runDB $ insert pl
     return $ Entity k pl
 
+-- | Get all playlists (whose == Nothing) or a user's (whose == Just UserId) playlists.
+plGet :: Maybe UserId -> Handler [Entity Playlist]
+plGet (Just uid) = runDB $ selectList [PlaylistOwner ==. uid] []
+plGet Nothing    = runDB $ selectList                      [] []
+
+plClear :: Playlist -> Playlist
+plClear pl = pl { playlistElems = [] }
+
 -- | saves (replaces) an existing playlist. This is unsafe (replace) due to
 -- unique constraints. TODO: check title for uniqueness.
-updatePlaylist :: PlaylistId -- ^ id of playlist to replace
-               -> Playlist
-               -> Handler Playlist -- ^ was update successful?
-updatePlaylist plid pl = runDB (replace plid pl) >> return pl
-
--- | Get all playlists (whose == Nothing) or a user's (whose == Just UserId) playlists.
---
--- TODO NOT YET IMPLEMENTED
-get :: Maybe UserId -> Handler [Entity Playlist]
-get whose = runDB $ selectList ([] :: [Filter Playlist]) []
+plUpdate :: PlaylistId -- ^ id of playlist to replace
+         -> Playlist
+         -> Handler Playlist -- ^ was update successful?
+plUpdate plid pl = runDB (replace plid pl) >> return pl
 
 -- | add file OR every child of directory to playlist.
-add :: Playlist
+plInsert :: Playlist
     -> Text -- ^ File area
     -> Text -- ^ File path
     -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
-add pl section path = do
+plInsert pl section path = do
     t <- timeNow
     these' <- onSec section $ flip findr path
     return $ case these' of
@@ -169,3 +168,4 @@ add pl section path = do
       these -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) these
                      , playlistModified = t 
                      })
+

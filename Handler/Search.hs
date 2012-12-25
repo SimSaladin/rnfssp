@@ -1,14 +1,14 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Search.hs
 -- Creation Date: Dec 16 2012 [22:12:57]
--- Last Modified: Dec 17 2012 [18:22:07]
+-- Last Modified: Dec 25 2012 [14:23:28]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Search where
 
 import Import
 -- import Handler.Media
-import Handler.Blog (
+-- import Handler.Blog (
 import qualified Text.Search.Sphinx as S
 import qualified Text.Search.Sphinx as ST
 

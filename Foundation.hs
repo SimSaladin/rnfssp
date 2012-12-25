@@ -206,6 +206,11 @@ instance YesodChat App where
   saveMessage (from, msg) = liftIO $ appendFile chatFile $ from `mappend` "," `mappend` msg
   getRecent = liftM (map (T.breakOn ",") . last' 5 . T.lines) $ liftIO $ readFile chatFile
 
+instance YesodMpd App where
+  mpdPort = return 6600
+  mpdHost = return "localhost"
+  mpdPass = return ""
+
 last' :: Int -> [a] -> [a]
 last' n xs
   | l >= n    = drop (l - n) xs
@@ -214,3 +219,4 @@ last' n xs
 
 routeToLogin :: Route App
 routeToLogin = AuthR LoginR
+

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Dec 25 2012 [01:36:55]
+-- Last Modified: Dec 25 2012 [18:16:59]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -23,7 +23,7 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
 
 videoExtensions :: [FilePath]
-videoExtensions = [".mkv", ".avi", ".jpg"]
+videoExtensions = [".mkv", ".avi", ".jpg", ".m4a", ".ogm", ".sfv", ".ts"]
 
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
@@ -38,7 +38,7 @@ instance MSection FilmSec where
   updateIndex = updateListing
 
 getContent :: FilmSec -> [Text] -> Widget
-getContent fsec@FilmSec{sName = sect, sPath = root, sRoute = route} fps = do
+getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
   (mnode, mchildren) <- lift $ runDB $ do
     case fps of
       [] -> liftM ((,) Nothing . Just) $ selectList [FilenodeParent ==. Nothing] [Asc FilenodePath]
@@ -111,7 +111,7 @@ findFiles FilmSec{sName = sect} = findFiles' where
 
 getFile :: FilmSec -> Text -> Handler FilePath
 getFile FilmSec{sName = sect} path = do
-  Entity k v <- runDB $ getBy404 $ UniqueFilenode sect path
+  Entity _ v <- runDB $ getBy404 $ UniqueFilenode sect path
   if filenodeIsdir v
     then invalidArgs ["Downloading directories is not supported."]
     else toFSPath sect $ T.unpack $ filenodePath v
