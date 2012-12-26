@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Dec 24 2012 [00:25:35]
+-- Last Modified: Dec 26 2012 [15:38:35]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -12,6 +12,7 @@ import           Data.Char
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock (UTCTime)
 import qualified Data.Text as T
+import           Data.List (tail)
 import           System.FilePath
 import qualified System.FilePath as F
 import           System.Posix (FileOffset)
@@ -117,3 +118,6 @@ printfTime = formatTime defaultTimeLocale
 widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
 widgetToRepHtml w = do pc <- widgetToPageContent w
                        hamletToRepHtml [hamlet|^{pageBody pc}|]
+
+removeByIndex :: Int -> [a] -> [a]
+removeByIndex i xs = let (ys,zs) = splitAt i xs in ys ++ tail zs
