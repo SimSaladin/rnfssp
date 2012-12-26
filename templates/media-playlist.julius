@@ -13,9 +13,17 @@ window.playlist = { data : {} };
 var pl = playlist,
     cont = $("##{rawJS contI}"),
     head = $("##{rawJS headI}");
-/**
- * Loads active playlist, or creates a new playlist.
- */
+
+handle_new = function(data) {
+  if (data[0] == 0) {
+    pl.data = data[1];
+    pl.update_playlist();
+  } else {
+    alert("Playlist action failed: " + data[1]);
+  }
+}
+
+/** Loads active playlist, or creates a new playlist.  */
 pl.load_playlist = function() {
   $.ajax(
     { url: '@{PlaylistR "select"}'
@@ -28,23 +36,7 @@ pl.load_playlist = function() {
   );
 }
 
-/**
- * add `what' from `area' to the playlist
- */
-pl.to_playlist = function(area, what) {
-  $.post('@{PlaylistR "insert"}', JSON.stringify([area, what]), function(data) {
-    if (data[0] == 0) {
-      pl.data = data[1];
-      pl.update_playlist();
-    } else {
-      alert("could not add to playlist: " + what + "\n\nresult: " + data);
-    }
-  });
-}
-
-/**
- * redraw playlist and add default title if none is specified.
- */
+/** redraw playlist and add default title if none is specified. */
 pl.update_playlist = function() {
   cont.empty();
   head.empty();
@@ -57,30 +49,36 @@ pl.update_playlist = function() {
   if (pl.data.hasOwnProperty("elems")) {
     $.each(pl.data["elems"], function(index, value){
       cont.append($('<tr/>')
-        .append($('<td/>').text(value[0]))
-        .append($('<td title="'+value[1]+'"/>').text(value[1]))
-      )
+        .append($('<td/>')
+          .append($('<a class="icon-minus icon-white" />')
+            .bind('click', function(){pl.delete_elem(index-1)})
+          )
+        )
+        .append( $('<td/>').text(value[0]) )
+        .append( $('<td title="'+value[1]+'"/>').text(value[1]) )
+      );
     });
   } else {
     cont.append($("</i>").text("Something went wrong while loading the playlist.  Try refreshing the page"));
   }
 }
 
-/**
- * save playlist. title is optional and default is used if == null
- */
-pl.save_playlist_custom = function(title) {
-  
+/** add `what' from `area' to the playlist */
+pl.to_playlist = function(area, what) {
+  $.post('@{PlaylistR "insert"}', JSON.stringify([area, what]), handle_new);
 }
 
-/**
- * clear every element from the playlist.
- */
+/** clear every element from the playlist.  */
 pl.clear_playlist = function() {
-  $.post('@{PlaylistR "clear"}', JSON.stringify([]), function(data) {
-    if (data[0] == 0) { pl.data = data[1]; pl.update_playlist(); }
-    else { alert("could not clear the playlist: " + data[1]); }
-  });
+  $.post('@{PlaylistR "clear"}', handle_new);
+}
+
+pl.delete_elem = function(indeces) {
+  $.post('@{PlaylistR "delete"}', JSON.stringify(indeces), handle_new);
+}
+
+/** save playlist. title is optional and default is used if == null */
+pl.save_playlist_custom = function(title) {
 }
 
 cont.ready(pl.load_playlist);
