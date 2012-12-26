@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Dec 25 2012 [18:16:59]
+-- Last Modified: Dec 26 2012 [17:39:32]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -97,17 +97,28 @@ $maybe s <- filenodeDetails val
     <pre>#{s}
   |]
 
--- | Recursively find all child files (and only files) of a node.
+-- -- | Recursively find all child files (and only files) of a node.
+-- findFiles :: FilmSec -> Text -> Handler [Text]
+-- findFiles FilmSec{sName = sect} = findFiles' where
+--   findFiles' path = do
+--     Entity k v <- runDB $ getBy404 $ UniqueFilenode sect path
+--     if filenodeIsdir v
+--       then do
+--         children <- liftM (map (filenodePath . entityVal)) $ runDB $
+--                     selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
+--         liftM concat $ mapM findFiles' children
+--       else return [filenodePath v]
+-- FIXME use a custom query instead?
 findFiles :: FilmSec -> Text -> Handler [Text]
-findFiles FilmSec{sName = sect} = findFiles' where
-  findFiles' path = do
-    Entity k v <- runDB $ getBy404 $ UniqueFilenode sect path
+findFiles FilmSec{sName = sect} path = runDB $ do
+    Entity k v <- getBy404 $ UniqueFilenode sect path
     if filenodeIsdir v
-      then do
-        children <- liftM (map (filenodePath . entityVal)) $ runDB $
-                    selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
-        liftM concat $ mapM findFiles' children
+      then findChildren k
       else return [filenodePath v]
+  where
+    findChildren parentId = do
+      children <- selectList [FilenodeParent ==. Just parentId] [Asc FilenodePath]
+      liftM ((++) (map (filenodePath . entityVal) $ filter (not . filenodeIsdir . entityVal) children) . concat) $ mapM (findChildren . entityKey) $ filter (filenodeIsdir . entityVal) children
 
 getFile :: FilmSec -> Text -> Handler FilePath
 getFile FilmSec{sName = sect} path = do
