@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Dec 25 2012 [17:27:40]
+-- Last Modified: Dec 26 2012 [15:36:19]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -57,8 +57,8 @@ postPlaylistR action = do
           if new
             then plUpdate plk pl' >>= rsucc
             else rfail "no such path"
-      "clear" -> plUpdate plk (plClear pl) >>= rsucc
-      "delete"  -> plUpdate plk (plClear pl) >>= rsucc
+      "clear"   -> plUpdate plk (plClear pl) >>= rsucc
+      "delete"  -> parseJsonBody_ >>= plUpdate plk . plDelete pl >>= rsucc
       _ -> rfail "unknown playlist action"
   where
     rfail :: Text -> Handler RepJson
@@ -147,6 +147,10 @@ plGet Nothing    = runDB $ selectList                      [] []
 
 plClear :: Playlist -> Playlist
 plClear pl = pl { playlistElems = [] }
+
+plDelete :: Playlist -> Int -> Playlist
+plDelete pl@Playlist{playlistElems = xs} i =
+    pl{ playlistElems = removeByIndex i xs }
 
 -- | saves (replaces) an existing playlist. This is unsafe (replace) due to
 -- unique constraints. TODO: check title for uniqueness.

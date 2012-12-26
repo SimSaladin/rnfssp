@@ -23,6 +23,7 @@
   <table.playlist-items>
     <thead>
       <tr>
+        <th>
         <th>Path
         <th>Section
     <tbody##{contI}.playlist-items>

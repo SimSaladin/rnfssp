@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Dec 17 2012 [20:02:57]
+-- Last Modified: Dec 26 2012 [18:03:32]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -77,11 +77,11 @@ chatWidget :: YesodChat master
            => (Route Chat -> Route master)
            -> GWidget sub master ()
 chatWidget toMaster = do
-    chat <- lift newIdent   -- the containing div
-    output <- lift newIdent -- the box containing the messages
-    input <- lift newIdent  -- input field from the user
-
-    ili <- lift isLoggedIn  -- check if we're already logged in
+    chat <- lift newIdent     -- the containing div
+    output <- lift newIdent   -- the box containing the messages
+    input <- lift newIdent    -- input field from the user
+    recent <- lift getRecent
+    ili <- lift isLoggedIn    -- check if we're already logged in
     if ili
         then do
             -- Logged in: show the widget
@@ -89,6 +89,9 @@ chatWidget toMaster = do
 <div.clearfix ##{chat}>
     <h2>Chat
     <div ##{output}>
+      $forall (poster, msg) <- recent
+        <p>#{poster}: #{msg}
+      <hr>
     <input ##{input} type=text placeholder="Enter Message">
 |]
             -- Just some CSS
