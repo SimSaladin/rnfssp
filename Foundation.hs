@@ -203,8 +203,8 @@ instance YesodChat App where
   isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
       Authorized -> True
       _          -> False
-  saveMessage (from, msg) = liftIO $ appendFile chatFile $ from `mappend` "," `mappend` msg
-  getRecent = liftM (map (T.breakOn ",") . last' 5 . T.lines) $ liftIO $ readFile chatFile
+  saveMessage (from, msg) = liftIO $ appendFile chatFile $ from `mappend` " " `mappend` msg `mappend` "\n"
+  getRecent = liftM (map (T.breakOn " ") . last' 5 . T.lines) $ liftIO $ readFile chatFile
 
 instance YesodMpd App where
   mpdPort = return 6600
