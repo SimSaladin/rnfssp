@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Dec 25 2012 [18:16:59]
+-- Last Modified: Dec 25 2012 [19:31:58]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -188,7 +188,8 @@ toFilenode :: FilePath         -- ^ Real path to the file
            -> FileStatus       -- ^ status of the node
            -> IO Filenode
 toFilenode real section parent path stat = do
-    details <- if' isdir (return Nothing) $ Just <$> getDetails real
+    -- details <- if' isdir (return Nothing) $ Just <$> getDetails real
+    let details = Nothing
     return $ Filenode section parent isdir path
                       (prettyFilesize $ fileSize stat)
                       (posixSecondsToUTCTime $ realToFrac $ modificationTime stat)

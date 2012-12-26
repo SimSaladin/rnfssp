@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Dec 25 2012 [01:55:24]
+-- Last Modified: Dec 26 2012 [00:23:26]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -12,11 +12,15 @@ import           Import
 import           Utils
 import           JSBrowser
 import qualified Mpd as MPD
+import           Data.List (last)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8)
 import           System.FilePath ((</>))
 
-data MPDSec = MPDSec { sName :: Text, sRoute :: [Text] -> Route App, sRoot :: FilePath }
+data MPDSec = MPDSec { sName  :: Text
+                     , sRoot  :: FilePath
+                     , sRoute :: [Text] -> Route App
+                     }
 
 instance MSection MPDSec where
   ident = sName
@@ -39,9 +43,9 @@ musicContent sec@MPDSec{sRoute = route} fps = do
         ("...", "...", "...")
     where
   buildElem res = case res of
-    MPD.LsDirectory (MPD.Path bs)                       -> let p = decodeUtf8 bs in (p, "directory", T.splitOn "/" p, "", "")
-    MPD.LsSong (MPD.Song{MPD.sgFilePath = MPD.Path bs}) -> let p = decodeUtf8 bs in (p, "file", T.splitOn "/" p, "", "")
-    MPD.LsPlaylist (MPD.PlaylistName bs)                -> let p = decodeUtf8 bs in (p, "file", T.splitOn "/" p, "", "")
+    MPD.LsDirectory (MPD.Path bs)                       -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", T.splitOn "/" p, "", "")
+    MPD.LsSong (MPD.Song{MPD.sgFilePath = MPD.Path bs}) -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
+    MPD.LsPlaylist (MPD.PlaylistName bs)                -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
 
 -- | Single Song item Widget.
 songSingle :: MPDSec -> [Text] -> MPD.Song -> Widget
