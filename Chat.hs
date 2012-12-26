@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Dec 26 2012 [18:03:32]
+-- Last Modified: Dec 26 2012 [18:26:44]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -132,7 +132,7 @@ input.onkeyup = function(event) {
         var xhr = new XMLHttpRequest();
         var val = input.value;
         input.value = "";
-        var params = "?message=" + encodeURI(val);
+        var params = "?message=" + encodeURIComponent(val);
         xhr.open("POST", "@{toMaster SendR}" + params);
         xhr.send(null);
     }
