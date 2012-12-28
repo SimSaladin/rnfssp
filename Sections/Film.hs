@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Dec 26 2012 [18:09:48]
+-- Last Modified: Dec 27 2012 [15:45:34]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -39,13 +39,12 @@ instance MSection FilmSec where
 
 getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
-  (mnode, mchildren) <- lift $ runDB $ do
-    case fps of
-      [] -> liftM ((,) Nothing . Just) $ selectList [FilenodeParent ==. Nothing] [Asc FilenodePath]
+  (mnode, mchildren) <- lift . runDB $ case fps of
+      []   -> liftM ((,) Nothing . Just) $ selectList [FilenodeParent ==. Nothing] [Asc FilenodePath]
       fps' -> do
         Entity key val <- getBy404 $ UniqueFilenode sect (T.intercalate "/" fps') -- FIXME; '/' as path separator
         liftM ((,) $ Just $ Entity key val) $ if filenodeIsdir val
-          then liftM Just $ selectList [FilenodeParent ==. (Just key)] [Asc FilenodePath]
+          then liftM Just $ selectList [FilenodeParent ==. Just key] [Asc FilenodePath]
           else return Nothing
   case (mnode, mchildren) of
     (_, Just children) -> simpleListing sect
@@ -98,16 +97,6 @@ $maybe s <- filenodeDetails val
   |]
 
 -- -- | Recursively find all child files (and only files) of a node.
--- findFiles :: FilmSec -> Text -> Handler [Text]
--- findFiles FilmSec{sName = sect} = findFiles' where
---   findFiles' path = do
---     Entity k v <- runDB $ getBy404 $ UniqueFilenode sect path
---     if filenodeIsdir v
---       then do
---         children <- liftM (map (filenodePath . entityVal)) $ runDB $
---                     selectList [FilenodeParent ==. Just k] [Asc FilenodePath]
---         liftM concat $ mapM findFiles' children
---       else return [filenodePath v]
 -- FIXME use a custom query instead?
 findFiles :: FilmSec -> Text -> Handler [Text]
 findFiles FilmSec{sName = sect} path = runDB $ do
@@ -127,10 +116,11 @@ getFile FilmSec{sName = sect} path = do
     then invalidArgs ["Downloading directories is not supported."]
     else toFSPath sect $ T.unpack $ filenodePath v
 
--- | 
+-- | Update files to DB from FS.
+-- recursively find files and directories in `dir` along with properties
+-- TODO: find and update modified (newer than db) entities?
 updateListing :: FilmSec -> Handler ()
 updateListing FilmSec{sPath = dir, sName = section} = do
-  -- recursively find files and directories in `dir` along with properties
   let filterp = foldl (F.||?) (F.fileType F.==? F.Directory F.&&? F.filePath F./=? dir)
                       $ map (F.extension F.==?) videoExtensions
       makeRel = dropWhile (== '/') . drop (length dir)
@@ -158,14 +148,12 @@ updateListing FilmSec{sPath = dir, sName = section} = do
   liftIO . print $ "==> Deleted entries: " ++ show (length deleted)
 
   -- find completely new entities and insert them and their info
-  added <- runDB $ C.runResourceT $ (CL.sourceList filesInFS)
-    C.$= CL.mapMaybeM (\x -> liftM (flip ifNothing x) $ getBy $ UniqueFilenode section $ fst x)
+  added <- runDB $ C.runResourceT $ CL.sourceList filesInFS
+    C.$= CL.mapMaybeM (\x -> liftM (`ifNothing` x) $ getBy $ UniqueFilenode section $ fst x)
     C.$= CL.mapM insertNode
     C.$$ CL.consume
 
   liftIO . print $ "==> # of files added: " ++ show (length added)
-
-  -- TODO: find and update modified (newer than db) entities?
 
   -- Try to add parents to nodes. XXX: This is needed becouse..?
   fixed <- runDB $ C.runResourceT $ selectSource [FilenodeArea ==. section, FilenodeParent ==. Nothing] []

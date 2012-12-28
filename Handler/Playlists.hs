@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Dec 26 2012 [15:36:19]
+-- Last Modified: Dec 27 2012 [15:06:09]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -50,20 +50,21 @@ postPlaylistR :: Text -> Handler RepJson
 postPlaylistR action = do
     Entity plk pl <- solvePlaylist =<< requireAuth
     case action of
-      "select" -> rsucc pl
-      "insert" -> do
-          (section, what) <- parseJsonBody_
-          (new, pl') <- plInsert pl section what
+      "select"  -> rsucc pl
+      "insert"  -> parseJsonBody_ >>= uncurry (plInsert pl) >>= \(new, pl') ->
           if new
             then plUpdate plk pl' >>= rsucc
-            else rfail "no such path"
+            else rfail "No such path."
       "clear"   -> plUpdate plk (plClear pl) >>= rsucc
       "delete"  -> parseJsonBody_ >>= plUpdate plk . plDelete pl >>= rsucc
-      _ -> rfail "unknown playlist action"
+      _ -> rfail "Unknown playlist action."
   where
     rfail :: Text -> Handler RepJson
     rfail msg = jsonToRepJson (1 :: Int, msg)
     rsucc msg = jsonToRepJson (0 :: Int, msg)
+
+getPlaylistListR :: Handler RepHtml
+getPlaylistListR = undefined
 
 -- | Playlist widget customized for a user.
 userPlaylistWidget :: Entity User -> Widget
@@ -80,8 +81,7 @@ userPlaylistWidget (Entity _ uval) = do
 --
 -- XXX: support hidden playlists?
 solvePlaylist :: Entity User -> Handler (Entity Playlist)
-solvePlaylist (Entity k v) = fromGetparam
-  where
+solvePlaylist (Entity k v) = fromGetparam where
     fromGetparam = lookupGetParam "title" >>= \mt -> case mt of
         Just title  -> runDB (getBy $ UniquePlaylist k title) >>= tryMaybe fromCookie 
         Nothing     -> fromCookie

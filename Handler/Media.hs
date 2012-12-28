@@ -76,7 +76,7 @@ restrictedWidget = [whamlet|
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
-sectionWidget s fps = onSec s (flip content fps)
+sectionWidget s fps = onSec s (`content` fps)
 
 
 -- * Playing / Downloading files

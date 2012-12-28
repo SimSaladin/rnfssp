@@ -1,6 +1,5 @@
 /static StaticR Static getStatic
 /auth   AuthR   Auth   getAuth
-
 /chat   ChatR   Chat   getChat
 /mpd    MpdR    Mpd    getMpd
 

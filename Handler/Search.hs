@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Search.hs
 -- Creation Date: Dec 16 2012 [22:12:57]
--- Last Modified: Dec 25 2012 [14:23:28]
+-- Last Modified: Dec 27 2012 [15:27:48]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Search where
@@ -19,7 +19,7 @@ data Result = RBlogPost { rId :: BlogpostId }
 
 -- | run the search and return results in a page.
 getSearchR :: Handler RepHtml
-getSearchR :: do
+getSearchR = do
   ((formRes, searchWidget),_) <- runFormGet searchForm
   searchResults <- case formRes of
     FormSuccess qstring -> getResults qstring

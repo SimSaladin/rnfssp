@@ -29,7 +29,7 @@ postRegisterR = do
                        redirect BlogOverviewR
                        -- TODO: send email?
         FormFailure fails -> reperr fails
-        FormMissing -> redirect $ RegisterR
+        FormMissing -> redirect RegisterR
 
 registerForm :: Html -> MForm App App (FormResult User, Widget)
 registerForm extra = do

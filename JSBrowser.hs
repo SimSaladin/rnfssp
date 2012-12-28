@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Dec 25 2012 [00:33:01]
+-- Last Modified: Dec 27 2012 [14:36:54]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -12,7 +12,7 @@ module JSBrowser where
 import           Prelude
 import           Yesod
 import           Data.Text (Text)
-import           Control.Arrow ((***))
+import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
 import qualified System.FilePath as F (joinPath)
@@ -142,4 +142,4 @@ simpleNav fps f = [whamlet|
   $with (name, _) <- last parts
     <li.active>#{name}
 |] where
-  parts = map (id *** f) $ zip fps $ foldr (\x -> (:) [x] . map ([x] ++)) [[]] fps
+  parts = map (second f) $ zip fps $ foldr (\x -> (:) [x] . map ([x] ++)) [[]] fps

@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File: Mpd.hs
 -- Creation Date: Jul 16 2012 [23:01:24]
--- Last Modified: Dec 25 2012 [18:02:07]
+-- Last Modified: Dec 27 2012 [14:37:16]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -22,7 +22,6 @@ module Mpd
 import Yesod
 import Prelude
 import Control.Monad (liftM)
-import Prelude (Bool(..), ($), (.))
 import Network.MPD
 import Data.Text (Text)
 import qualified Data.Text as T

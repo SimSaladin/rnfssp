@@ -43,10 +43,9 @@ postAdminR = do
     case result of
         FormSuccess board -> do
             _ <- runDB $ insert board
-            setMessage $ toHtml $ "New board added: " `T.append` (boardName board)
-        _ -> do
-            setMessage "Something went wrong while creating the board"
-    redirect $ AdminR
+            setMessage $ toHtml $ "New board added: " `T.append` boardName board
+        _ -> setMessage "Something went wrong while creating the board"
+    redirect AdminR
 
 newboardForm :: Form Board
 newboardForm = renderDivs $ Board
@@ -57,8 +56,8 @@ newboardForm = renderDivs $ Board
 rDirContents :: FilePath -> IO [FilePath]
 rDirContents fp = do
     is_dir <- doesDirectoryExist fp
-    dirc <- case is_dir of
-        True -> getDirectoryContents fp
-        False -> pure []
-    contents <- mapM (\x -> rDirContents $ combine fp x) $ drop 2 dirc
+    dirc <- if is_dir 
+        then getDirectoryContents fp
+        else pure []
+    contents <- mapM (rDirContents . combine fp) $ drop 2 dirc
     return $ concat contents ++ [fp]

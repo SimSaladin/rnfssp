@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Dec 26 2012 [15:38:35]
+-- Last Modified: Dec 27 2012 [14:56:33]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -41,15 +41,14 @@ prettyFilesize off = T.pack $ toprint off
               | x >= lB   = f lB ++ "B"
               | otherwise = "n/a"
         where
-            [lB,lK,lM,lG,lT] = scanl (*) 1 $ take 4 $ repeat 1024
+            [lB,lK,lM,lG,lT] = scanl (*) 1 $ replicate 4 1024
 
 guessFiletype :: FilePath -> Text
-guessFiletype fp = if ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"])
-   then "video"
-   else if ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"])
-      then "audio"
-      else "unknown"
-   where ext = takeExtension fp
+guessFiletype fp
+    | ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"]) = "video"
+    | ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"]) = "audio"
+    | otherwise = "unknown"
+    where ext = takeExtension fp
 
 -- | Get real filepath for @which@ master directory.
 gdir :: Text -> Handler FilePath
@@ -66,7 +65,7 @@ toFSPath :: Text -> FilePath -> Handler FilePath
 toFSPath section path = liftM (</> path) $ gdir section
 
 gServeroot :: Handler Text
-gServeroot = getYesod >>= return . extraServeroot . appExtra . settings
+gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
 
 widgetOnly :: Widget -> Handler RepHtml
 widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
