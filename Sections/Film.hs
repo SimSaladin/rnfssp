@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Dec 31 2012 [08:32:04]
+-- Last Modified: Jan 14 2013 [19:58:34]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -22,8 +22,8 @@ import           System.FilePath ((</>), normalise)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
 
-videoExtensions :: [FilePath]
-videoExtensions = [".mkv", ".avi", ".jpg", ".m4a", ".ogm", ".sfv", ".ts"]
+excludedExts :: [FilePath]
+excludedExts = []
 
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
@@ -123,8 +123,7 @@ getFile FilmSec{sName = sect} path = do
 -- TODO: find and update modified (newer than db) entities?
 updateListing :: FilmSec -> Handler ()
 updateListing FilmSec{sPath = dir, sName = section} = do
-  let filterp = foldl (F.||?) (F.fileType F.==? F.Directory F.&&? F.filePath F./=? dir)
-                      $ map (F.extension F.==?) videoExtensions
+  let filterp = (F.filePath F./=? dir) -- F.&&? (F.fileType F.==? F.Directory F.||? F.file)
       makeRel = dropWhile (== '/') . drop (length dir)
 
   (filesInFS, filesInFS') <- liftIO $ F.fold
