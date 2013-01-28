@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Jan 28 2013 [19:19:08]
+-- Last Modified: Jan 28 2013 [19:20:44]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Configs ( module Sections, browsable, onSec ) where
@@ -16,6 +16,8 @@ browsable :: [(Text, Text)]
 browsable = [ ("anime", "film")
             , ("music", "music")
             , ("hentai", "film")
+            , ("movies", "film")
+            , ("books", "book")
             , ("games", "headphones")
             ]
 
@@ -30,13 +32,23 @@ musicContent = MPDSec "music" "/home/media/music" (MediaContentR "music")
 hentaiContent :: FilmSec
 hentaiContent = FilmSec "hentai" "/home/media/hentai" (MediaContentR "hentai")
 
+<<<<<<< HEAD
 gamesContent :: FilmSec
 gamesContent = FilmSec "games" "/home/media/game" (MediaContentR "games")
+=======
+moviesContent :: FilmSec
+moviesContent = FilmSec "movies" "/home/media/movie" (MediaContentR "movies")
+
+booksContent :: FilmSec
+booksContent = FilmSec "books" "/home/media/books" (MediaContentR "books")
+>>>>>>> 228b3e237602d25ad749ee71c0385d581b17f43c
 
 onSec :: Text -> (forall a. MSection a => a -> b) -> b
 onSec sec f = case sec of
-  "anime" -> f animeContent
-  "music" -> f musicContent
+  "anime"  -> f animeContent
+  "music"  -> f musicContent
   "hentai" -> f hentaiContent
-  "games" -> f gamesContent
-  _       -> error "Unknown content!"
+  "games"  -> f gamesContent
+  "movies" -> f moviesContent
+  "books"  -> f booksContent
+  _        -> error "Unknown content!"
