@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Dec 27 2012 [15:45:34]
+-- Last Modified: Jan 14 2013 [19:58:34]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -22,8 +22,8 @@ import           System.FilePath ((</>), normalise)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
 
-videoExtensions :: [FilePath]
-videoExtensions = [".mkv", ".avi", ".jpg", ".m4a", ".ogm", ".sfv", ".ts"]
+excludedExts :: [FilePath]
+excludedExts = []
 
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
@@ -40,7 +40,9 @@ instance MSection FilmSec where
 getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
   (mnode, mchildren) <- lift . runDB $ case fps of
-      []   -> liftM ((,) Nothing . Just) $ selectList [FilenodeParent ==. Nothing] [Asc FilenodePath]
+      []   -> liftM ((,) Nothing . Just) $ selectList
+          [FilenodeArea ==. sect, FilenodeParent ==. Nothing]
+          [Asc FilenodePath]
       fps' -> do
         Entity key val <- getBy404 $ UniqueFilenode sect (T.intercalate "/" fps') -- FIXME; '/' as path separator
         liftM ((,) $ Just $ Entity key val) $ if filenodeIsdir val
@@ -65,7 +67,7 @@ getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
 
 -- | Single file.
 animeSingle :: FilmSec -> [Text] -> Entity Filenode -> Widget
-animeSingle FilmSec{sRoute = route} fps (Entity _ val) = do
+animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
   simpleNav fps route
   [whamlet|
 <div .container-fluid style="padding:0">
@@ -82,13 +84,13 @@ animeSingle FilmSec{sRoute = route} fps (Entity _ val) = do
           <th>Modified
           <td>#{T.pack $ printfTime "%d.%m -%y" $ filenodeModTime val}
     <div.span5 .page-element>
-      <a.btn.btn-primary href="@{MediaServeR "auto" "anime" fps}" target="_blank">
+      <a.btn.btn-primary href="@{MediaServeR "auto" name fps}" target="_blank">
         <i.icon-white.icon-play> #
         Auto-open
-      <a.btn href="@{MediaServeR "force" "anime" fps}">
+      <a.btn href="@{MediaServeR "force" name fps}">
         <i.icon.icon-download-alt> #
         Download
-      <a.btn onclick="window.playlist.to_playlist('anime', '#{toPath fps}'); return false">
+      <a.btn onclick="window.playlist.to_playlist('#{name}', '#{toPath fps}'); return false">
         Add to playlist
 $maybe s <- filenodeDetails val
   <div .page-element>
@@ -121,8 +123,7 @@ getFile FilmSec{sName = sect} path = do
 -- TODO: find and update modified (newer than db) entities?
 updateListing :: FilmSec -> Handler ()
 updateListing FilmSec{sPath = dir, sName = section} = do
-  let filterp = foldl (F.||?) (F.fileType F.==? F.Directory F.&&? F.filePath F./=? dir)
-                      $ map (F.extension F.==?) videoExtensions
+  let filterp = (F.filePath F./=? dir) -- F.&&? (F.fileType F.==? F.Directory F.||? F.file)
       makeRel = dropWhile (== '/') . drop (length dir)
 
   (filesInFS, filesInFS') <- liftIO $ F.fold
