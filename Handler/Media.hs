@@ -20,9 +20,6 @@ import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
 
-browsable :: [(Text, Text)]
-browsable = [ ("anime", "film"), ("music", "music")]
-
 
 -- * General content
 
@@ -138,7 +135,7 @@ postMediaAdminR :: Handler RepHtml
 postMediaAdminR = do
   ((result, _), _) <- runFormPost adminForm
   case result of
-    FormSuccess (True,_) -> onSec "anime" updateIndex -- TODO update all
+    FormSuccess (True,_) -> mapM_ (\(x,_) -> onSec x updateIndex) browsable
     FormSuccess _        -> setMessage "No actions."
     _ -> setMessage "Form failed!"
   redirect AdminR
