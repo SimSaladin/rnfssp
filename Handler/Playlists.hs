@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Dec 27 2012 [15:06:09]
+-- Last Modified: Feb 02 2013 [00:39:46]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -166,7 +166,7 @@ plInsert :: Playlist
     -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
 plInsert pl section path = do
     t <- timeNow
-    these' <- onSec section $ flip findr path
+    these' <- onSec section $ flip sFind path
     return $ case these' of
       [] -> (False, pl)
       these -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) these

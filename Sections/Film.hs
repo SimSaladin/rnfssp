@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Jan 28 2013 [19:01:55]
+-- Last Modified: Feb 02 2013 [01:47:40]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -10,20 +10,18 @@ module Sections.Film (FilmSec(..)) where
 import           Sections
 import           Import
 import           Utils
-import           Data.List (last)
-import qualified Data.Conduit as C
-import qualified Data.Conduit.List as CL
-import qualified Data.Text as T
+import           Data.List            (last)
+import qualified Data.Conduit         as C
+import qualified Data.Conduit.List    as CL
+import qualified Data.Text            as T
 import           JSBrowser
 import qualified System.FilePath.Find as F
-import qualified Data.Set as S
-import           System.Posix.Files (FileStatus, fileSize, modificationTime, isDirectory)
+import           System.FilePath.Find ( (/=?) )
+import qualified Data.Set             as S
+import           System.Posix.Files   (FileStatus, fileSize, modificationTime, isDirectory, isSymbolicLink, readSymbolicLink, getFileStatus)
 import           System.FilePath ((</>), normalise)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
-
-excludedExts :: [FilePath]
-excludedExts = []
 
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
@@ -31,11 +29,10 @@ data FilmSec = FilmSec { sName  :: Text
                        }
 
 instance MSection FilmSec where
-  ident = sName
-  findr = findFiles
-  content = getContent
-  filepath = getFile
-  updateIndex = updateListing
+  sFind = findFiles
+  sWContent = getContent
+  sFilePath = getFile
+  sUpdateIndex = updateListing
 
 getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
@@ -112,30 +109,38 @@ findFiles FilmSec{sName = sect} path = runDB $ do
       liftM ((++) (map (filenodePath . entityVal) $ filter (not . filenodeIsdir . entityVal) children) . concat) $ mapM (findChildren . entityKey) $ filter (filenodeIsdir . entityVal) children
 
 getFile :: FilmSec -> Text -> Handler FilePath
-getFile FilmSec{sName = sect} path = do
-  Entity _ v <- runDB $ getBy404 $ UniqueFilenode sect path
+getFile FilmSec{sName = sect, sPath = root} file = do
+  Entity _ v <- runDB $ getBy404 $ UniqueFilenode sect file
   if filenodeIsdir v
     then invalidArgs ["Downloading directories is not supported."]
-    else toFSPath sect $ T.unpack $ filenodePath v
+    else return $ root </> (T.unpack $ filenodePath v)
 
 -- | Update files to DB from FS.
 -- recursively find files and directories in `dir` along with properties
 -- TODO: find and update modified (newer than db) entities?
 updateListing :: FilmSec -> Handler ()
-updateListing FilmSec{sPath = dir, sName = section} = do
-  let filterp = (F.filePath F./=? dir) -- F.&&? (F.fileType F.==? F.Directory F.||? F.file)
-      makeRel = dropWhile (== '/') . drop (length dir)
+updateListing FilmSec{sPath = dir', sName = section} = do
+  dir <- liftIO $ getFileStatus dir' >>= \x -> if' (isSymbolicLink x) readSymbolicLink return $ dir'
+  liftIO $ print dir 
 
-  (filesInFS, filesInFS') <- liftIO $ F.fold
-      F.always
-      (\(list, set) fi -> if F.evalClause filterp fi
+  let filterp = (F.filePath /=? dir)
+      makeRel = dropWhile (== '/') . drop (length dir)
+      f (list, set) fi = if F.evalClause filterp fi
           then let tpath = T.pack $ makeRel $ F.infoPath fi
-            in (list ++ [(tpath, F.infoStatus fi)], S.insert tpath set)
-          else (list, set))
-      ([], S.empty)
-      dir
+                in (list ++ [(tpath, F.infoStatus fi)], S.insert tpath set)
+          else (list, set)
+
+  (filesInFS, filesInFS') <- liftIO $ F.fold F.always f ([], S.empty) dir
 
   let fileNotInFS = flip S.notMember filesInFS' . filenodePath . entityVal
+
+      insertNode (path,stat) = do
+          parent <- getBy $ UniqueFilenode section (takeDirectory' path)
+          insert =<< liftIO (toFilenode (dir </> T.unpack path)
+                                        section
+                                        (entityKey <$> parent)
+                                        (T.pack $ normalise $ T.unpack path)
+                                        stat)
 
   liftIO . print $ "==> # of elems in filesInFS: " ++ show (length filesInFS) -- DEBUG
 
@@ -164,13 +169,6 @@ updateListing FilmSec{sPath = dir, sName = section} = do
   liftIO . print $ "==> # of files fixed: " ++ show (length fixed)
   return ()
     where
-  insertNode (path,stat) = do
-      parent <- getBy $ UniqueFilenode section (takeDirectory' path)
-      insert =<< liftIO (toFilenode (dir </> T.unpack path)
-                                    section
-                                    (entityKey <$> parent)
-                                    (T.pack $ normalise $ T.unpack path)
-                                    stat)
 
   fixParent (Entity key val) = do
       parent <- getBy $ UniqueFilenode section (takeDirectory' $ filenodePath val)

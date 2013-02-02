@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Dec 26 2012 [00:23:26]
+-- Last Modified: Feb 02 2013 [00:37:16]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -23,12 +23,11 @@ data MPDSec = MPDSec { sName  :: Text
                      }
 
 instance MSection MPDSec where
-  ident = sName
-  content = musicContent
-  filepath MPDSec{sRoot = root} = return . (</>) root . T.unpack
-  findr _ = MPD.songPaths
-  updateIndex _ = return () -- TODO: mpd update
-  
+  sFind _         = MPD.songPaths
+  sWContent       = musicContent
+  sWSearch        = undefined -- TODO
+  sFilePath MPDSec{sRoot = root} = return . (</>) root . T.unpack
+  sUpdateIndex _  = return () -- TODO: mpd update?
 
 musicContent :: MPDSec -> [Text] -> Widget
 musicContent sec@MPDSec{sRoute = route} fps = do

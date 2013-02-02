@@ -13,7 +13,6 @@ import           Configs
 import           JSBrowser (browser)
 import           Handler.Playlists (userPlaylistWidget)
 import           Data.List (head, tail)
-import qualified Data.Text as T
 import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 
 -- | Maximum time a file can be accessed via a temporary url.
@@ -29,7 +28,7 @@ getMediaHomeR = do
   defaultLayout $ do
     setTitle "Media"
     $(widgetFile "media-home")
-  where nav = navigationWidget ""
+  where nav = renderBrowsable ""
 
 getMediaContentR :: Text -> [Text] -> Handler RepHtml
 getMediaContentR section fps = do
@@ -40,23 +39,7 @@ getMediaContentR section fps = do
       Nothing -> defaultLayout $ do
           setTitle "Media"
           $(widgetFile "media-content")
-  where nav = navigationWidget section
-
-navigationWidget :: Text -> Widget
-navigationWidget current = [whamlet|
-<ul .nav .nav-pills>
-  $forall (name, icon) <- browsable
-    $if current == name
-      <li .active>
-        <a href=@{getRoute name}>
-          <i .icon-white .icon-#{icon}>
-          &nbsp;#{name}
-    $else
-      <li>
-        <a href=@{getRoute name}>
-          <i .icon-white .icon-#{icon}>
-          &nbsp;#{name}
-  |] where getRoute = flip MediaContentR []
+  where nav = renderBrowsable section
 
 restrictedWidget :: Widget
 restrictedWidget = [whamlet|
@@ -73,7 +56,7 @@ restrictedWidget = [whamlet|
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
-sectionWidget s fps = onSec s (`content` fps)
+sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
 
 
 -- * Playing / Downloading files
@@ -97,11 +80,11 @@ getMediaServeR kind section path
     now <- timeNow
     denyIf (diffUTCTime now time > maxTempUrlAlive) "File not available."
     denyIf (target /= toPath (tail path)          ) "Malformed url."
-    toFSPath section $ T.unpack target
+    onSec section (flip sFilePath target)
 
   solvePathWithAuth = do
     uid <- requireAuthId
-    fp  <- onSec section (flip filepath $ toPath path)
+    fp  <- onSec section (flip sFilePath $ toPath path)
     t   <- timeNow
     _   <- runDB $ insert $ LogDownload uid t fp -- TODO: use a log file
     return fp
@@ -135,7 +118,7 @@ postMediaAdminR :: Handler RepHtml
 postMediaAdminR = do
   ((result, _), _) <- runFormPost adminForm
   case result of
-    FormSuccess (True,_) -> mapM_ (\(x,_) -> onSec x updateIndex) browsable
+    FormSuccess (True,_) -> updateIndeces
     FormSuccess _        -> setMessage "No actions."
     _ -> setMessage "Form failed!"
   redirect AdminR

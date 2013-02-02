@@ -6,6 +6,7 @@
 module Settings where
 
 import Prelude
+import Control.Monad (mzero)
 import Text.Shakespeare.Text (st)
 import Language.Haskell.TH.Syntax
 import Database.Persist.Postgresql (PostgresConf)
@@ -17,6 +18,7 @@ import Control.Applicative
 import Settings.Development
 import Data.Default (def)
 import Text.Hamlet
+import Data.Map (Map)
 
 -- | Which Persistent backend this site is using.
 type PersistConfig = PostgresConf
@@ -61,14 +63,28 @@ widgetFile = (if development then widgetFileReload
                              else widgetFileNoReload)
               widgetFileSettings
 
+data MediaConf = MediaConf
+    { mcType :: Text
+    , mcView :: Text
+    , mcIcon :: Text
+    , mcPath :: FilePath
+    } deriving Show
+
+instance FromJSON MediaConf where
+    parseJSON (Object o) = MediaConf
+      <$> o .: "type"
+      <*> o .: "view"
+      <*> o .: "icon"
+      <*> o .: "path"
+    parseJSON _ = mzero
+
 data Extra = Extra
     { extraCopyright :: Text
-    , extraApproot :: Text
+    , extraApproot   :: Text
     , extraServeroot :: Text
     , extraAnalytics :: Maybe Text -- ^ Google Analytics
-    , extraDirAnime :: FilePath
-    , extraDirMusic :: FilePath
-    , extraDirDyn   :: FilePath
+    , extraDirDyn    :: FilePath
+    , extraSections  :: Map Text MediaConf
     } deriving Show
 
 parseExtra :: DefaultEnv -> Object -> Parser Extra
@@ -77,6 +93,5 @@ parseExtra _ o = Extra
     <*> o .:  "approot"
     <*> o .:  "serveroot"
     <*> o .:? "analytics"
-    <*> o .: "animedir"
-    <*> o .: "musicdir"
     <*> o .: "dyndir"
+    <*> o .: "mediasections"

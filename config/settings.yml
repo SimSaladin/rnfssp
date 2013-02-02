@@ -4,10 +4,18 @@ Default: &defaults
   approot:   "http://localhost:3000"
   serveroot: "http://localhost:3000"
   copyright: "BPS"
-  #analytics: UA-YOURCODE
-  animedir:  "/home/sim/anime"
-  musicdir:  "/home/sim/music"
   dyndir:    "/home/sim/rnfssp/files"
+  mediasections:
+    anime:
+      view: "Anime"
+      type: "film"
+      icon: "film"
+      path: "/home/sim/anime"
+    music:
+      view: "Music"
+      type: "mpd"
+      icon: "music"
+      path: "/home/sim/music"
 
 Development:
   <<: *defaults
@@ -23,7 +31,37 @@ Production:
   port:      3001
   approot:   "https://ssdesk.paivola.fi"
   serveroot: "http://ssdesk.paivola.fi"
-  animedir:  "/home/media/anime"
-  musicdir:  "/home/media/music"
   dyndir:    "/srv/sites/rnfssp/files"
+  mediasections:
+    anime:
+      view: "Anime"
+      type: "film"
+      icon: "film"
+      path: "/home/media/anime"
+    music:
+      view: "Music"
+      type: "mpd"
+      icon: "music"
+      path: "/home/media/music"
+    hentai:
+      view: "Hentai"
+      type: "film"
+      icon: "film"
+      path: "/home/media/hentai"
+    games:
+      view: "Games"
+      type: "film"
+      icon: "headphones"
+      path: "/home/media/game"
+    movies:
+      view: "Movies"
+      type: "film"
+      icon: "film"
+      path: "/home/media/movie"
+    books:
+      view: "Books"
+      type: "film"
+      icon: "book"
+      path: "/home/media/books"
   <<: *defaults
+

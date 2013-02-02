@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Dec 27 2012 [14:56:33]
+-- Last Modified: Feb 01 2013 [21:35:58]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -50,19 +50,19 @@ guessFiletype fp
     | otherwise = "unknown"
     where ext = takeExtension fp
 
--- | Get real filepath for @which@ master directory.
-gdir :: Text -> Handler FilePath
-gdir which = do
-   master <- getYesod
-   let set = appExtra $ settings master
-      in case which of
-            "anime" -> return $ extraDirAnime set
-            "music" -> return $ extraDirMusic set
-            _ -> invalidArgs ["no master directory for: " `T.append` which]
+-- -- | Get real filepath for @which@ master directory.
+-- gdir :: Text -> Handler FilePath
+-- gdir which = do
+--    master <- getYesod
+--    let set = appExtra $ settings master
+--       in case which of
+--             "anime" -> return $ extraDirAnime set
+--             "music" -> return $ extraDirMusic set
+--             _ -> invalidArgs ["no master directory for: " `T.append` which]
 
--- | convert section+path to an actual file.
-toFSPath :: Text -> FilePath -> Handler FilePath
-toFSPath section path = liftM (</> path) $ gdir section
+-- -- | convert section+path to an actual file.
+-- toFSPath :: Text -> FilePath -> Handler FilePath
+-- toFSPath section path = liftM (</> path) $ gdir section
 
 gServeroot :: Handler Text
 gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
