@@ -1,2 +1,6 @@
 NOTE: git should not track changes to configs/postgresql.yml, as
       > git update-index --assume-unchanged config/postgresql.yml
+
+BUGS:
+   * mpd section fails with 500 if mpd is not started
+   * section filepaths (at least Film,SingleSourc?) need to be absolute

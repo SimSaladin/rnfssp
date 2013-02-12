@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Feb 02 2013 [00:50:31]
+-- Last Modified: Feb 12 2013 [19:41:20]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Configs
@@ -46,15 +46,17 @@ renderBrowsable :: Text -> Widget
 renderBrowsable current = do
     elements <- lift browsable'
     [whamlet|$newline never
-$forall (ident, view, icon) <- elements
-  $if current == ident
-    <li .active>
-      <a href=@{f ident}>
-        <i .icon-white .icon-#{icon}>
-        &nbsp;#{view}
-  $else
-    <li>
-      <a href=@{f ident}>
-        <i .icon-white .icon-#{icon}>
-        &nbsp;#{view}
+<div .pagination>
+  <ul>
+    $forall (ident, view, icon) <- elements
+      $if current == ident
+        <li .active>
+          <a href=@{f ident}>
+            <i .icon-white .icon-#{icon}>
+            &nbsp;#{view}
+      $else
+        <li>
+          <a href=@{f ident}>
+            <i .icon-white .icon-#{icon}>
+            &nbsp;#{view}
     |] where f = flip MediaContentR []

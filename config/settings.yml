@@ -10,12 +10,12 @@ Default: &defaults
       view: "Anime"
       type: "film"
       icon: "film"
-      path: "/home/sim/anime"
+      path: "/other/sim/anime"
     music:
       view: "Music"
       type: "mpd"
       icon: "music"
-      path: "/home/sim/music"
+      path: "/other/sim/music"
 
 Development:
   <<: *defaults

@@ -159,6 +159,14 @@ a:hover, a:active { color:#EEE; }
 .page-element a { color:#999999; }
 /*}}}
 navigation {{{*/
+.pagination li a {
+  background-color:#{colorElemBg};
+  color:#{colorNavigationFg};
+}
+.pagination .active a {
+  background-color:#{colorElemOtherBg};
+  color:#{colorLightBgFg};
+}
 .breadcrumb {
   background:none;
   border:none;

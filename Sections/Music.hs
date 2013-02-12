@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Feb 02 2013 [00:37:16]
+-- Last Modified: Feb 12 2013 [19:56:10]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ musicContent sec@MPDSec{sRoute = route} fps = do
         (map buildElem contents)
         route
         (flip MediaServeR "music")
-        ("...", "...", "...")
+        ("Filename", "TODO", "TODO")
     where
   buildElem res = case res of
     MPD.LsDirectory (MPD.Path bs)                       -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", T.splitOn "/" p, "", "")
