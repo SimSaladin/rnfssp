@@ -63,5 +63,15 @@ Production:
       type: "film"
       icon: "book"
       path: "/home/media/books"
+    series:
+      view: "Series"
+      type: "film"
+      icon: "film"
+      path: "/home/media/series"
+    images:
+      view: "Images"
+      type: "film"
+      icon: "picture"
+      path: "/home/media/images"
   <<: *defaults
 
