@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Feb 13 2013 [20:19:24]
+-- Last Modified: Feb 14 2013 [19:38:37]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -27,14 +27,14 @@ import           System.IO.Temp (openTempFile)
 --  * get.*-force : include force-download -header.
 -- 
 getPlaylistR :: Text -> Handler RepPlain
-getPlaylistR action
-    | action `T.isPrefixOf` "get" = requireAuth >>= solvePlaylist
-      >>= generateM3U . entityVal
-      >>= if "-force" `T.isSuffixOf` action
-        then (setHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\"" >>) 
-             . sendFile "application/force-download"
-        else sendFile "audio/x-mpegurl"
-    | otherwise = invalidArgs ["Invalid or unsupported action: " `T.append` action]
+getPlaylistR action = do
+    x <- requireAuth >>= solvePlaylist >>= generateM3U . entityVal
+    case action of
+        "play"     -> sendFile "audio/x-mpegurl" x
+        "download" -> do
+            setHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\""
+            sendFile "application/force-download" x
+        _ -> invalidArgs ["Invalid or unsupported action: " `T.append` action]
 
 -- | JSON interface and perform actions on playlists. action is the first part
 -- in the uri.

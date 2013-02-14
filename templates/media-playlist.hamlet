@@ -12,12 +12,12 @@
           <a onclick="window.load_playlist()">TODO
 
     <div.btn-group>
-      <a.btn.btn-primary href="@{PlaylistR "get"}" target="_blank">Play! #
+      <a.btn.btn-primary href="@{PlaylistR "play"}" target="_blank">Play! #
       <button.btn.btn-primary.dropdown-toggle data-toggle="dropdown">
         <span.caret>
       <ul.dropdown-menu.pull-right>
         <li>
-          <a href="@{PlaylistR "get-force"}">Download as .m3u
+          <a href="@{PlaylistR "download"}">Download as .m3u
 
   <h3##{headI}>
   <table.playlist-items>
