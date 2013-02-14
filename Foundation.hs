@@ -33,13 +33,13 @@ import Mpd
 -- starts running, such as database connections. Every handler will have
 -- access to the data present here.
 data App = App
-    { settings :: AppConfig DefaultEnv Extra
-    , getStatic :: Static -- ^ Settings for static file serving.
-    , connPool :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
-    , httpManager :: Manager
+    { settings      :: AppConfig DefaultEnv Extra
+    , getStatic     :: Static -- ^ Settings for static file serving.
+    , connPool      :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
+    , httpManager   :: Manager
     , persistConfig :: Settings.PersistConfig
-    , getChat :: Chat
-    , getMpd :: Mpd
+    , getChat       :: Chat
+    , getMpd        :: Mpd
     }
 
 -- Set up i18n messages. See the message folder.
@@ -67,6 +67,21 @@ mkMessage "App" "messages" "en"
 mkYesodData "App" $(parseRoutesFile "config/routes")
 
 type Form x = Html -> MForm App App (FormResult x, Widget)
+
+data ServeType = ServeTemp
+               | ServeAuto
+               | ServeForceDownload
+               deriving (Show, Read, Eq)
+
+instance PathPiece ServeType where
+  toPathPiece ServeTemp          = "temp"
+  toPathPiece ServeAuto          = "auto"
+  toPathPiece ServeForceDownload = "force"
+
+  fromPathPiece "temp"  = Just ServeTemp
+  fromPathPiece "auto"  = Just ServeAuto
+  fromPathPiece "force" = Just ServeForceDownload
+  fromPathPiece       _ = Nothing
 
 -- Please see the documentation for the Yesod typeclass. There are a number
 -- of settings which can be configured by overriding methods here.

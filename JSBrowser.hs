@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Dec 27 2012 [14:36:54]
+-- Last Modified: Feb 13 2013 [20:40:25]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -10,6 +10,7 @@
 module JSBrowser where
 
 import           Prelude
+import   Foundation
 import           Yesod
 import           Data.Text (Text)
 import           Control.Arrow (second)
@@ -92,7 +93,7 @@ simpleListing :: Text                               -- ^ Section
               -> [Text]                             -- ^ Url parts
               -> [(Text, Text, [Text], Text, Text)] -- ^ (filename, filetype, fps, size, modified)
               -> ([Text] -> Route master)           -- ^ url to content
-              -> (Text -> [Text] -> Route master)   -- ^ url to direct file
+              -> (ServeType -> [Text] -> Route master)   -- ^ url to direct file
               -> (Text, Text, Text)                 -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
 simpleListing section fps listing routeToContent toFile (msgFilename, msgFileize, msgModified) =
@@ -111,8 +112,8 @@ simpleListing section fps listing routeToContent toFile (msgFilename, msgFileize
         <td.browser-controls>
           <a .icon-plus .icon-white href="" onclick="playlist.to_playlist('#{section}', '#{toPath fps}'); return false">
           $if not $ equalsDirectory filetype
-            <a .icon-download-alt .icon-white href=@{toFile "force" fps} onclick="">
-            <a .icon-play .icon-white href=@{toFile "auto" fps} onclick="" target="_blank">
+            <a .icon-download-alt .icon-white href=@{toFile ServeForceDownload fps} onclick="">
+            <a .icon-play .icon-white href=@{toFile ServeAuto fps} onclick="" target="_blank">
         <td.browser-filename title="#{filename}">
           <a.browser-link.#{filetype} href=@{routeToContent fps}>
             <tt>#{filename}

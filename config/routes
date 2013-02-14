@@ -25,7 +25,7 @@
 /playlists/#Text     PlaylistR      GET POST
 
 /files/board/#String             BoardFileR     GET
-/files/media/#Text/#Text/*Texts  MediaServeR    GET
+/files/media/#ServeType/#Text/*Texts  MediaServeR    GET
 
 /bets          BetR     GET POST
 /btes/#BetId   BetViewR GET POST

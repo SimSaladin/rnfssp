@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Feb 02 2013 [01:47:40]
+-- Last Modified: Feb 13 2013 [20:41:51]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -81,10 +81,10 @@ animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
           <th>Modified
           <td>#{T.pack $ printfTime "%d.%m -%y" $ filenodeModTime val}
     <div.span5 .page-element>
-      <a.btn.btn-primary href="@{MediaServeR "auto" name fps}" target="_blank">
+      <a.btn.btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
         <i.icon-white.icon-play> #
         Auto-open
-      <a.btn href="@{MediaServeR "force" name fps}">
+      <a.btn href="@{MediaServeR ServeForceDownload name fps}">
         <i.icon.icon-download-alt> #
         Download
       <a.btn onclick="window.playlist.to_playlist('#{name}', '#{toPath fps}'); return false">

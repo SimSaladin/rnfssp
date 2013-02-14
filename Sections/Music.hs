@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Feb 12 2013 [19:56:10]
+-- Last Modified: Feb 13 2013 [20:41:16]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -66,10 +66,10 @@ songSingle MPDSec{sName = name, sRoute = route} fps MPD.Song
           <th>Length
           <td>#{seconds} seconds
     <div.span5 .page-element>
-      <a.btn.btn-primary href="@{MediaServeR "auto" name fps}" target="_blank">
+      <a.btn.btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
         <i.icon-white.icon-play> #
         Auto-open
-      <a.btn href="@{MediaServeR "force" name fps}">
+      <a.btn href="@{MediaServeR ServeForceDownload name fps}">
         <i.icon.icon-download-alt> #
         Download
       <a.btn onclick="window.playlist.to_playlist('#{name}', '#{toPath fps}'); return false">

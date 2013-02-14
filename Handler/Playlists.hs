@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Feb 02 2013 [00:39:46]
+-- Last Modified: Feb 13 2013 [20:19:24]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -103,7 +103,7 @@ solvePlaylist (Entity k v) = fromGetparam where
 --
 -- > #EXTM3U
 -- > #EXTINF:length, extra_info
--- > @{MediaServeR "temp" hash path}
+-- > @{MediaServeR ServeTemp hash path}
 -- > ...
 --
 generateM3U :: Playlist -> Handler FilePath
@@ -112,7 +112,7 @@ generateM3U pl = do
     yesod    <- getYesod
     time     <- timeNow
     let render a p t = yesodRender
-          yesod resolved (MediaServeR "temp" a (t : splitPath' p)) []
+          yesod resolved (MediaServeR ServeTemp a (t : splitPath' p)) []
 
         write h (area, path) = do
             temp <- randomText 32

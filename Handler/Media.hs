@@ -5,6 +5,7 @@ module Handler.Media
     , getMediaServeR
     , postMediaAdminR
     , adminWidget
+    , ServeType
     ) where
 
 import           Utils
@@ -24,21 +25,21 @@ maxTempUrlAlive = 60 * 60 * 24
 
 getMediaHomeR :: Handler RepHtml
 getMediaHomeR = do
-  mauth <- maybeAuth
-  defaultLayout $ do
-    setTitle "Media"
-    $(widgetFile "media-home")
+    mauth <- maybeAuth
+    defaultLayout $ do
+        setTitle "Media"
+        $(widgetFile "media-home")
   where nav = renderBrowsable ""
 
 getMediaContentR :: Text -> [Text] -> Handler RepHtml
 getMediaContentR section fps = do
-  mauth <- maybeAuth
-  bare <- lookupGetParam "bare"
-  case bare of
-      Just _ -> widgetToRepHtml $ sectionWidget section fps
-      Nothing -> defaultLayout $ do
-          setTitle "Media"
-          $(widgetFile "media-content")
+    mauth <- maybeAuth
+    bare <- lookupGetParam "bare"
+    case bare of
+        Just _ -> widgetToRepHtml $ sectionWidget section fps
+        Nothing -> defaultLayout $ do
+            setTitle "Media"
+            $(widgetFile "media-content")
   where nav = renderBrowsable section
 
 restrictedWidget :: Widget
@@ -51,8 +52,7 @@ restrictedWidget = [whamlet|
     <a.btn.btn-primary href="@{routeToLogin}">Login
     &nbsp;or #
     <a.btn.btn-info href="@{RegisterR}">Register
-    .
-|]
+    .|]
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
@@ -62,32 +62,31 @@ sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
 -- * Playing / Downloading files
 
 -- | Downloading files
-getMediaServeR :: Text   -- ^ kind of download
-               -> Text   -- ^ file section
-               -> [Text] -- ^ file path
+getMediaServeR :: ServeType -- ^ kind of download
+               -> Text      -- ^ file section
+               -> [Text]    -- ^ file path
                -> Handler RepJson
-getMediaServeR kind section path
-  | null path       = invalidArgs ["Invalid file."]
-  | kind == "temp"  = solveTemp >>= send ""
-  | kind == "auto"  = solvePathWithAuth >>= send ""
-  | kind == "force" = solvePathWithAuth >>= send "application/force-download"
-  | otherwise       = invalidArgs ["Invalid or unsupported download type."]
-    where
-  send ct fp = setHeader "Accept-Ranges" "bytes" >> sendFile ct fp
+getMediaServeR stype section   [] = invalidArgs ["No file provided."]
+getMediaServeR stype section path = case stype of
+    ServeTemp           -> solveTemp         >>= send ""
+    ServeAuto           -> solvePathWithAuth >>= send ""
+    ServeForceDownload  -> solvePathWithAuth >>= send "application/force-download"
+  where
+    send ct fp = setHeader "Accept-Ranges" "bytes" >> sendFile ct fp
 
-  solveTemp  = do
-    Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp $ head path
-    now <- timeNow
-    denyIf (diffUTCTime now time > maxTempUrlAlive) "File not available."
-    denyIf (target /= toPath (tail path)          ) "Malformed url."
-    onSec section (flip sFilePath target)
+    solveTemp  = do
+        Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp $ head path
+        now <- timeNow
+        denyIf (diffUTCTime now time > maxTempUrlAlive) "File not available."
+        denyIf (target /= toPath (tail path)          ) "Malformed url."
+        onSec section (`sFilePath` target)
 
-  solvePathWithAuth = do
-    uid <- requireAuthId
-    fp  <- onSec section (flip sFilePath $ toPath path)
-    t   <- timeNow
-    _   <- runDB $ insert $ LogDownload uid t fp -- TODO: use a log file
-    return fp
+    solvePathWithAuth = do
+        uid <- requireAuthId
+        fp  <- onSec section (flip sFilePath $ toPath path)
+        t   <- timeNow
+        _   <- runDB $ insert $ LogDownload uid t fp -- TODO: use a log file
+        return fp
 
 
 -- * Adminspace
@@ -96,8 +95,8 @@ getMediaServeR kind section path
 --   centralised admin page.
 adminWidget :: Widget
 adminWidget = do
-  ((result, widget), encType) <- lift $ runFormPost adminForm
-  [whamlet|
+    ((result, widget), encType) <- lift $ runFormPost adminForm
+    [whamlet|
 <h1>Media
 <div>
   <form.form-horizontal method=post action=@{MediaAdminR} enctype=#{encType}>
@@ -110,20 +109,19 @@ adminWidget = do
         $of _
       ^{widget}
       <div .form-actions>
-        <input .btn .primary type=submit value="Execute actions">
-  |]
+        <input .btn .primary type=submit value="Execute actions">|]
 
 -- | Admin operations in Media.
 postMediaAdminR :: Handler RepHtml
 postMediaAdminR = do
-  ((result, _), _) <- runFormPost adminForm
-  case result of
-    FormSuccess (True,_) -> updateIndeces
-    FormSuccess _        -> setMessage "No actions."
-    _ -> setMessage "Form failed!"
-  redirect AdminR
+    ((result, _), _) <- runFormPost adminForm
+    case result of
+        FormSuccess (True,_) -> updateIndeces
+        FormSuccess _        -> setMessage "No actions."
+        _                    -> setMessage "Form failed!"
+    redirect AdminR
 
 adminForm :: Form (Bool, Bool)
 adminForm = renderBootstrap $ (,)
-   <$> areq boolField "Update every index" (Just False)
-   <*> areq boolField "Not used" (Just False)
+     <$> areq boolField "Update every index" (Just False)
+     <*> areq boolField "Not used" (Just False)
