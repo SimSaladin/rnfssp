@@ -1,4 +1,4 @@
-exec: ../dist/build/a/a
+exec: ../dist/build/rnfssp/rnfssp
 args:
     - production
 host: <<HOST-NOT-SET>>
