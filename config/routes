@@ -3,29 +3,24 @@
 /chat   ChatR   Chat   getChat
 /mpd    MpdR    Mpd    getMpd
 
-/favicon.ico FaviconR GET
-/robots.txt RobotsR GET
+/favicon.ico   FaviconR       GET
+/robots.txt    RobotsR        GET
+/register      RegisterR      GET POST
+/profile       ProfileR       GET POST
+/admin         AdminR         GET POST
+/admin/media   MediaAdminR        POST
 
-/register   RegisterR   GET POST
-/profile    ProfileR    GET POST
-
-/admin         AdminR      GET POST
-/admin/media   MediaAdminR     POST
-
-/           BlogOverviewR  GET POST
-/view/#Text BlogViewR      GET POST
-/edit/#Text BlogEditR      GET POST
-
-/board                     BoardHomeR  GET
-/board/#Text               BoardR      GET POST
-/board/#Text/#BoardpostId  ThreadR     GET POST
-
-/media               MediaHomeR     GET
-/media/#Text/*Texts  MediaContentR  GET
-/playlists/#Text     PlaylistR      GET POST
-
-/files/board/#String             BoardFileR     GET
-/files/media/#ServeType/#Text/*Texts  MediaServeR    GET
+/                                      BlogOverviewR  GET POST
+/view/#Text                            BlogViewR      GET POST
+/edit/#Text                            BlogEditR      GET POST
+/board                                 BoardHomeR     GET
+/board/#Text                           BoardR         GET POST
+/board/#Text/#BoardpostId              ThreadR        GET POST
+/media                                 MediaHomeR     GET
+/media/#Text/*Texts                    MediaContentR  GET
+/playlists/#Text                       PlaylistR      GET POST
+/files/board/#String                   BoardFileR     GET
+/files/media/#ServeType/#Text/*Texts   MediaServeR    GET
 
 /bets          BetR     GET POST
-/btes/#BetId   BetViewR GET POST
+/bets/#BetId   BetViewR GET POST

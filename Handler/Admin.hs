@@ -5,8 +5,6 @@ module Handler.Admin
 
 import Import
 import qualified Data.Text as T (append)
-import System.Directory (getDirectoryContents, doesDirectoryExist)
-import System.FilePath (combine)
 import qualified Handler.Media as Media (adminWidget)
 
 getAdminR :: Handler RepHtml
@@ -15,27 +13,23 @@ getAdminR = do
     target <- lookupGetParam "target"
     case (action, target) of
         (Just "noapprove_user", Just u) -> setApprove u False >> redirect AdminR
-        (Just "approve_user"  , Just u) -> setApprove u True >> redirect AdminR
-        (Just "update_media", _) -> hamletToRepHtml [hamlet||]
-        (Just _, _) -> invalidArgs ["Unknown action!"]
-        (_, _) -> do
+        (Just "approve_user"  , Just u) -> setApprove u True  >> redirect AdminR
+        (Just "update_media"  ,      _) -> hamletToRepHtml [hamlet||]
+        (Just _,_) -> invalidArgs ["Unknown action!"]
+        (     _,_) -> do
             (formWidget, encType) <- generateFormPost newboardForm
-            userEnts <- runDB $ selectList ([] :: [Filter User]) []
-            let users = map usert userEnts
+            users <- liftM (map usert) $ runDB $ selectList ([] :: [Filter User]) []
             defaultLayout $ do
-                setTitle "Admin"
+                setTitle "Adminstration"
                 $(widgetFile "admin")
-    where
-        usert ent = (userUsername val, userComment val, act) where
-            val = entityVal ent
-            act = if userValid val
-                    then "disapprove_user" else "approve_user" :: Text
+  where
+    usert ent = (userUsername val, userComment val, act) where
+        val = entityVal ent
+        act = if userValid val then "disapprove_user" else "approve_user" :: Text
 
-        setApprove name v = runDB $ do
-            ent <- getBy $ UniqueUser name
-            case ent of 
-               Just x -> update (entityKey x) [UserValid =. v]
-               Nothing -> return ()
+    setApprove name value = runDB $ do
+        Entity key _ <- getBy404 $ UniqueUser name
+        update key [UserValid =. value]
 
 postAdminR :: Handler RepHtml
 postAdminR = do
@@ -51,13 +45,3 @@ newboardForm :: Form Board
 newboardForm = renderDivs $ Board
     <$> areq textField "Name" Nothing
     <*> areq textField "Description" Nothing
-
--- | list (sub)dirs and files
-rDirContents :: FilePath -> IO [FilePath]
-rDirContents fp = do
-    is_dir <- doesDirectoryExist fp
-    dirc <- if is_dir 
-        then getDirectoryContents fp
-        else pure []
-    contents <- mapM (rDirContents . combine fp) $ drop 2 dirc
-    return $ concat contents ++ [fp]

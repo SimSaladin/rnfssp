@@ -1,11 +1,9 @@
-{-# LANGUAGE TypeSynonymInstances, FlexibleInstances, ScopedTypeVariables, DoAndIfThenElse #-}
 module Handler.Media
     ( getMediaHomeR
     , getMediaContentR
     , getMediaServeR
     , postMediaAdminR
     , adminWidget
-    , ServeType
     ) where
 
 import           Utils
@@ -19,9 +17,6 @@ import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 -- | Maximum time a file can be accessed via a temporary url.
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
-
-
--- * General content
 
 getMediaHomeR :: Handler RepHtml
 getMediaHomeR = do
@@ -42,6 +37,10 @@ getMediaContentR section fps = do
             $(widgetFile "media-content")
   where nav = renderBrowsable section
 
+-- | Generate content based on section and path.
+sectionWidget :: Text -> [Text] -> Widget
+sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
+
 restrictedWidget :: Widget
 restrictedWidget = [whamlet|
 <div.hero-unit.center-box.small-box>
@@ -54,19 +53,15 @@ restrictedWidget = [whamlet|
     <a.btn.btn-info href="@{RegisterR}">Register
     .|]
 
--- | Generate content based on section and path.
-sectionWidget :: Text -> [Text] -> Widget
-sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
 
-
--- * Playing / Downloading files
+-- * Playing & Downloading
 
 -- | Downloading files
 getMediaServeR :: ServeType -- ^ kind of download
                -> Text      -- ^ file section
                -> [Text]    -- ^ file path
                -> Handler RepJson
-getMediaServeR stype section   [] = invalidArgs ["No file provided."]
+getMediaServeR     _       _   [] = invalidArgs ["No file provided."]
 getMediaServeR stype section path = case stype of
     ServeTemp           -> solveTemp         >>= send ""
     ServeAuto           -> solvePathWithAuth >>= send ""
