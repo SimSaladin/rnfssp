@@ -1,21 +1,41 @@
-$with Entity _ val <- board
-  <h1>/#{bname} - #{boardDescription val}
+$case content
+  $of Left thread
+    $with Entity _ val <- fst thread
+      <h1>/#{boardName bval}/ :: <i>#{fromMaybe "" $ boardpostTitle val}</i>
+  $of Right _
+    <h1>/#{boardName bval} - #{boardDescription bval}
 
-<div.page-elemnt>
-  <form.form-horizontal method=post action=@{BoardR bname} enctype=#{encType}>
+<div .page-element>
+  <form .form-horizontal method=post action=@{BoardR $ boardName bval} enctype=#{encType}>
     $case result
       $of FormFailure reasons
         $forall reason <- reasons
-          <div.alert.alert-errors>#{reason}
-      $of _
+          <div .alert .alert-errors>#{reason}
+      $of FormMissing
+      $of FormSuccess _
+
     <fieldset>
       <legend.clearfix>
       ^{formWidget}
       <div.form-actions>
         <input.btn.primary type=submit value="Submit">
 <hr>
-$forall (op, rest) <- previews
-  ^{widgetThreadPost bname (entityKey op) (entityVal op)}
-  $forall Entity key val <- rest
-    ^{widgetThreadPost bname key val}
-  <hr>
+
+$case content
+  $of Left thread
+    $with (op, replies) <- thread
+      <div .page-element .clearfix>
+        ^{widgetThreadPost (boardName bval) (entityKey op) (entityVal op)}
+        $forall Entity key val <- replies
+          ^{widgetThreadPost (boardName bval) key val}
+
+  $of Right threads
+    $if null threads
+      <div .alert>Nothing to see here. Move along.
+    $else
+      $forall (op, replies) <- threads
+        <div .page-element .clearfix>
+          ^{widgetThreadPost (boardName bval) (entityKey op) (entityVal op)}
+          $forall Entity key val <- replies
+            ^{widgetThreadPost (boardName bval) key val}
+        <hr>
