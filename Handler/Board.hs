@@ -9,7 +9,7 @@ module Handler.Board
     ) where
 
 import Import
-import Prelude (tail)
+import Prelude (tail, head)
 import System.FilePath
 import qualified Data.Text as T
 import Data.Int (Int64)
@@ -28,23 +28,32 @@ getBoardHomeR = do
         setTitle "Lauta"
         $(widgetFile "board-home")
 
+type Thread = (Entity Boardpost, [Entity Boardpost])
+
+renderThreads :: Entity Board
+              -> Either Thread [Thread]
+              -> ((FormResult D1, Widget), Enctype) -- 
+              -> Handler RepHtml
+renderThreads (Entity _ bval) content ((result, formWidget), encType) = do
+    defaultLayout $ do
+        setTitle $ toHtml $ T.concat ["/", boardName bval, "/"]
+        $(widgetFile "board")
+
 -- /board/<board>
 getBoardR :: Text -> Handler RepHtml
 getBoardR bname = do
-    (board, ops, replies) <- runDB $ do
-        b <- getBy404 $ UniqueBoard bname
+    (board, threads) <- runDB $ do
+        b   <- getBy404 $ UniqueBoard bname
         ops <- selectList [ BoardpostLocation ==. entityKey b
-                          , BoardpostParent ==. Nothing
+                          , BoardpostParent   ==. Nothing
                           ]
                           [Asc BoardpostTime]
         replies <- mapM (\op -> selectList [BoardpostParent ==. Just (entityKey op)] []) ops
-        return (b, ops, replies)
-    let previews = zip ops replies
-    ((result,formWidget), encType) <- runFormPost (postForm (entityKey board) Nothing)
-    defaultLayout $ do
-        setTitle $ toHtml $ T.concat ["Lauta//", bname,"/"]
-        $(widgetFile "board")
+        return (b, zip ops replies)
+    form <- runFormPost (postForm (entityKey board) Nothing)
+    renderThreads board (Right threads) form
 
+-- /board/<board> - starting new thread.
 postBoardR :: Text -> Handler RepHtml
 postBoardR bname = do
     Entity bid _ <- runDB $ getBy404 $ UniqueBoard bname
@@ -53,20 +62,18 @@ postBoardR bname = do
       FormSuccess replyD -> d1toBoardPost replyD >>= runDB . insert
                                                  >>= redirect . ThreadR bname
       FormFailure _ -> getBoardR bname -- redirect (BoardR bname)
-      _ -> notFound -- setMessage "Postaus failasi"
+      FormMissing -> notFound -- setMessage "Postaus failasi"
 
 -- /board/b/1
 getThreadR :: Text -> BoardpostId -> Handler RepHtml
 getThreadR bname opKey = do
-    (board, opVal, replies) <- runDB $ do
+    (board, thread) <- runDB $ do
         board <- getBy404 $ UniqueBoard bname
         op <- get404 opKey
         replies <- selectList [BoardpostParent ==. Just opKey] [Asc BoardpostTime]
-        return (board, op, replies)
-    (postWidget, encType) <- generateFormPost (postForm (entityKey board) (Just opKey))
-    defaultLayout $ do
-        setTitle $ toHtml $ T.concat ["Lauta//", bname,"/"]
-        $(widgetFile "board-thread")
+        return (board, (Entity opKey op, replies))
+    form <- runFormPost (postForm (entityKey board) (Just opKey))
+    renderThreads board (Left thread) form
 
 postThreadR :: Text -> BoardpostId -> Handler RepHtml
 postThreadR bname opKey = do
@@ -84,14 +91,11 @@ getBoardFileR fname = getFilesPath >>= \p -> sendFile "" $ p </> fname
 
 widgetThreadPost :: Text -> Key Boardpost -> Boardpost -> Widget
 widgetThreadPost bname n reply = do
-    let isop = isNothing $ boardpostParent reply
-    let time = show $ boardpostTime reply
-    let poster = fromMaybe "anonyymi" (boardpostPoster reply)
-    let title = fromMaybe "" (boardpostTitle reply)
-    let content = case boardpostContent reply of
-            Nothing -> toHtml ("" :: Text)
-            Just c -> toHtml c
-    let number = key2text n
+    let isop    = isNothing $ boardpostParent reply
+    let time    = show $ boardpostTime reply
+    let poster  = fromMaybe "anonyymi" (boardpostPoster reply)
+    let title   = fromMaybe "" (boardpostTitle reply)
+    let number  = key2text n
     let divClass = if isop then "postop" else "postreply" :: String
     $(widgetFile "board-post")
 

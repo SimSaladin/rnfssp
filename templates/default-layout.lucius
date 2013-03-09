@@ -247,28 +247,6 @@ cite, .date-box {
 .blogpost h2 {
   margin-bottom:0.7em;
 }/*}}}
-board {{{*/
-.postop, .postreply {
-  min-height:80px;
-  padding:0px 10px;
-  float:left;
-  clear:both;
-  margin-bottom:5px;
-}
-.postop {
-  background-color:#{colorElemOtherBg};
-  box-shadow:none;
-}
-.postreply {
-  margin-left:7px;
-}
-.posttitle, .postername, .postdate, .postnumber, .postreply {
-  padding-left:5px;
-}
-span.posttitle { color:#47B979; }
-span.postername { color:#F87C7F; }
-span.postdate { font-size:80%; }
-/*}}}
 forms {{{*/
 .form-actions {
   background:rgba(161,106,164,0.57);
@@ -301,3 +279,19 @@ pre#message {
   color:#FFF;
   font-size:1.07em;
 }/*}}}*/
+.postop, .postreply {
+  min-height:80px;
+  padding:0px 10px;
+  float:left;
+  clear:both;
+  margin-bottom:5px;
+}
+.postreply {
+  margin-left:7px;
+}
+.posttitle, .postername, .postdate, .postnumber, .postreply {
+  padding-left:5px;
+}
+span.posttitle { color:#47B979; }
+span.postername { color:#F87C7F; }
+span.postdate { font-size:80%; }

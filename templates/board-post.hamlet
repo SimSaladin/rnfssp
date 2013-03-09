@@ -1,15 +1,22 @@
-<div.page-element.#{divClass}>
+<div .#{divClass}>
   <div.postinfo>
     $maybe img <- boardpostFilepath reply
       <img src=@{BoardFileR img}>
+
     <input name="" type="checkbox">
     <span.posttitle>#{title}
     <span.postername>#{poster}
+
     $maybe mail <- boardpostEmail reply
       <sup><a href="mailto:#{mail}" >#{mail}</a>
+
     <span.postdate>#{time}
-    <span.postnumber># <a href="">#{number}</a>
+    <a.postnumber href=""># #{number}
+
     $if isop
-      <span.postreply><a href=@{ThreadR bname n}>reply</a>
-  <div.postcontent>
-    #{content}
+      <span .postreply><a href=@{ThreadR bname n}>reply</a>
+    $else
+
+  $maybe html <- boardpostContent reply
+    <div .postcontent>#{html}
+
