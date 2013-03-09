@@ -1,7 +1,6 @@
 module Foundation where
 
 import Prelude hiding (appendFile, readFile)
-import Control.Monad (liftM)
 import Yesod
 import Yesod.Static
 import Yesod.Auth
@@ -19,7 +18,9 @@ import Model
 import Text.Jasmine (minifym)
 import Web.ClientSession (getKey)
 import Text.Hamlet (hamletFile)
+import System.Log.FastLogger (Logger)
 
+import Control.Monad (liftM)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.IO (appendFile, readFile)
@@ -38,6 +39,7 @@ data App = App
     , connPool      :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
     , httpManager   :: Manager
     , persistConfig :: Settings.PersistConfig
+    , appLogger :: Logger
     , getChat       :: Chat
     , getMpd        :: Mpd
     }
@@ -143,7 +145,6 @@ instance Yesod App where
             | development = "autogen-" ++ base64md5 lbs
             | otherwise   = base64md5 lbs
 
-
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody
 
@@ -151,6 +152,8 @@ instance Yesod App where
     -- in development, and warnings and errors in production.
     shouldLog _ _source level =
         development || level == LevelWarn || level == LevelError
+
+    getLogger = return . appLogger
 
 isAdmin :: GHandler s App AuthResult
 isAdmin = do

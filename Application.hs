@@ -11,11 +11,14 @@ import Yesod.Auth
 import Yesod.Default.Config
 import Yesod.Default.Main
 import Yesod.Default.Handlers
-import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
+import Network.Wai.Middleware.RequestLogger
 import qualified Database.Persist.Store
 import Database.Persist.GenericSql (runMigration)
 import Network.HTTP.Conduit (newManager, def)
-import Control.Concurrent.Chan (newChan)
+import Control.Monad.Logger (runLoggingT)
+import Control.Concurrent (newChan)
+import System.IO (stdout)
+import System.Log.FastLogger (mkLogger)
 
 -- Import all relevant handler modules here.
 -- Don't forget to add new modules to your cabal file!
@@ -42,12 +45,22 @@ mkYesodDispatch "App" resourcesApp
 makeApplication :: AppConfig DefaultEnv Extra -> IO Application
 makeApplication conf = do
     foundation <- makeFoundation conf
+
+    -- Initialize the logging middleware
+    logWare <- mkRequestLogger def
+        { outputFormat =
+            if development
+                then Detailed True
+                else Apache FromSocket
+        , destination = Logger $ appLogger foundation
+        }
+
+    -- Create the WAI application and apply middlewares
     app <- toWaiAppPlain foundation
     return $ logWare app
-  where
-    logWare   = if development then logStdoutDev
-                               else logStdout
 
+-- | Loads up any necessary settings, creates your foundation datatype, and
+-- performs some initialization.
 makeFoundation :: AppConfig DefaultEnv Extra -> IO App
 makeFoundation conf = do
     chan <- newChan
@@ -57,8 +70,15 @@ makeFoundation conf = do
               Database.Persist.Store.loadConfig >>=
               Database.Persist.Store.applyEnv
     p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
-    Database.Persist.Store.runPool dbconf (runMigration migrateAll) p
-    return $ App conf s p manager dbconf (Chat chan) Mpd
+    logger <- mkLogger True stdout
+    let foundation = App conf s p manager dbconf logger (Chat chan) Mpd
+
+    -- Perform database migration using our application's logging settings.
+    runLoggingT
+        (Database.Persist.Store.runPool dbconf (runMigration migrateAll) p)
+        (messageLoggerSource foundation logger)
+
+    return foundation
 
 -- for yesod devel
 getApplicationDev :: IO (Int, Application)
