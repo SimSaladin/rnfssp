@@ -1,80 +1,50 @@
-<div.container-fluid>
-  <div.row-fluid>
-    <div.span12>
-      <div.navbar>
-        <div.navbar-inner>
-          <div.container>
-            <ul.nav>
-              <li>
-                <a href=@{BlogOverviewR}>Home
-              <li.dropdown>
-                <a href="#" data-toggle="dropdown" .dropdown-toggle>Lauta<b class="caret"></b>
-                <ul.dropdown-menu>
-                  <li>
-                    <a href=@{BoardHomeR}>_{MsgNavAll}
-                  <li.divider>
-                    $forall Entity _ val <- boards
-                      <li>
-                        <a href=@{BoardR (boardName val)}>/#{boardName val}/ - #{boardDescription val}
-              <li>
-                <a href=@{MediaHomeR}>Media
-              <li.divider-vertical>
-              <li>
-                <form.navbar-search.pull-left>
-                  <input.search-query type="search" placeholder="Hae">
-              <li.divider-vertical>
-              <li>
-                <a href="http://kemia.ssdesk.paivola.fi">Kemia
-              <li>
-                <a href="http://gitlist.ssdesk.paivola.fi">Gitlist
-              <li>
-                <a href="http://projects.ssdesk.paivola.fi">Projects
 
-            <ul.nav.pull-right>
-              $maybe authent <- ma
-                $if userAdmin $ entityVal authent
-                  <li>
-                    <a href=@{AdminR}>Admin
-                <li>
-                  <a href=@{ProfileR}>#{userUsername $ entityVal authent}
-                <li .divider-vertical>
-                <li>
-                  <a href=@{AuthR LogoutR}>_{MsgLogout}
-              $nothing
-                <li>
-                  <a href=@{RegisterR}>_{MsgRegister}
-                <li>
-                  <a href=@{AuthR LoginR}>_{MsgLogin}
-      $maybe msg <- mmsg
-        <pre #message>#{msg}
-  <div.row-fluid>
-    <div.span9>
-      ^{widget}
-    <div.span3>
-      <div.page-element>
-        ^{cwidget}
-      <div.page-element>
-        <h4>TODO:
-        <ul>
-          <li>
-            <span style="text-decoration:line-through">local niceditor; image
-              upload #
-            (Implemented markdown)
-          <li>move these todo's somewhere
-          <li>search
-          <li>playlist manipulation (search, filter, sort, ...)
-          <li>
-            <span style="text-decoration:line-through">web play #
-            DONE
-          <li>
-            <span style="text-decoration:line-through">localplay #
-            DONE
-          <li>MPD support
-          <li>user profiles
-          <li>easy ProfileR user
-          <li>blog post editing
-          <li>blog post deletion
-          <li>news feed
-          <li>clean up default-layout.lucius
-          <li>themes and changer
-          <li>IRC integration (the haiku project)
+<div#content>
+  $maybe msg <- mmsg
+    <pre #message>#{msg}
+  ^{widget}
+
+<hr>
+<footer .grid .grid--divide-3>
+  <div .grid_unit .test .clearfix>
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+    <span>Mui.
+  <div .grid_unit .clearfix>
+    <h4>TODO
+    <ul .small>
+      <li>
+        <span style="text-decoration:line-through">local niceditor; image
+          upload #
+        (Implemented markdown)
+      <li>move these todo's somewhere
+      <li>search
+      <li>playlist manipulation (search, filter, sort, ...)
+      <li>
+        <span style="text-decoration:line-through">web play #
+        DONE
+      <li>
+        <span style="text-decoration:line-through">localplay #
+        DONE
+      <li>MPD support
+      <li>user profiles
+      <li>easy ProfileR user
+      <li>blog post editing
+      <li>blog post deletion
+      <li>news feed
+      <li>clean up default-layout.lucius
+      <li>themes and changer
+      <li>IRC integration (the haiku project)
+  <div .grid_unit .clearfix>
+    ^{cwidget}

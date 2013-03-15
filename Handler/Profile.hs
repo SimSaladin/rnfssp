@@ -13,6 +13,7 @@ getProfileR = do
   (passwdW, encType) <- generateFormPost passwordChangeForm
   defaultLayout $ do
     setTitle' uval
+    navigation "Profile"
     $(widgetFile "profile")
   where own = True
 
@@ -30,6 +31,7 @@ postProfileR = do
       redirect ProfileR
     _ -> defaultLayout $ do
       setTitle' uval
+      navigation "Profile"
       $(widgetFile "profile")
   where own = True
 

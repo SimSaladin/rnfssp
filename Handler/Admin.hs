@@ -20,6 +20,7 @@ getAdminR = do
             (formWidget, encType) <- generateFormPost newboardForm
             users <- liftM (map usert) $ runDB $ selectList ([] :: [Filter User]) []
             defaultLayout $ do
+                navigation "Admin"
                 setTitle "Adminstration"
                 $(widgetFile "admin")
   where

@@ -23,6 +23,7 @@ getMediaHomeR = do
     mauth <- maybeAuth
     defaultLayout $ do
         setTitle "Media"
+        navigation "Media"
         $(widgetFile "media-home")
   where nav = renderBrowsable ""
 
@@ -34,6 +35,7 @@ getMediaContentR section fps = do
         Just _ -> widgetToRepHtml $ sectionWidget section fps
         Nothing -> defaultLayout $ do
             setTitle "Media"
+            navigation "Media"
             $(widgetFile "media-content")
   where nav = renderBrowsable section
 

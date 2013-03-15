@@ -7,11 +7,9 @@ $newline never
 <html class="no-js" lang="en"> <!--<![endif]-->
     <head>
         <meta charset="UTF-8">
-
-        <title>SS :: #{pageTitle pc}
+        <title>#{pageTitle pc}
         <meta name="description" content="">
         <meta name="author" content="">
-
         <meta name="viewport" content="width=device-width,initial-scale=1">
 
         ^{pageHead pc}
@@ -20,22 +18,10 @@ $newline never
         \<script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
         \<![endif]-->
 
-        <script src=@{StaticR js_json2_js}>
-        <script src=@{StaticR js_jquery_js}>
-        <script src=@{StaticR js_jquery_ui_js}>
-        <script src=@{StaticR js_bootstrap_dropdown_js}>
-        <script src=@{StaticR js_jquery_tablesorter_min_js}>
         <script>
           document.documentElement.className = document.documentElement.className.replace(/\bno-js\b/,'js');
-    <body>
-        <div id="container">
-            <header>
-            <div id="main" role="main">
-              ^{pageBody pc}
-            <!--
-            <footer>
-                &copy 2012 #{extraCopyright $ appExtra $ settings master}
-             -->
+    <body style="padding:0 1rem">
+        ^{pageBody pc}
 
         $maybe analytics <- extraAnalytics $ appExtra $ settings master
             <script>

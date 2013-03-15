@@ -39,7 +39,7 @@ data App = App
     , connPool      :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
     , httpManager   :: Manager
     , persistConfig :: Settings.PersistConfig
-    , appLogger :: Logger
+    , appLogger     :: Logger
     , getChat       :: Chat
     , getMpd        :: Mpd
     }
@@ -99,21 +99,14 @@ instance Yesod App where
         return . Just $ clientSessionBackend2 key getCachedDate
 
     defaultLayout widget = do
+        let cwidget = chatWidget ChatR
         master <- getYesod
         mmsg <- getMessage
-        boards <- runDB $ selectList ([] :: [Filter Board]) []
-        ma <- maybeAuth
-
-        -- We break up the default layout into two components:
-        -- default-layout is the contents of the body tag, and
-        -- default-layout-wrapper is the entire page. Since the final
-        -- value passed to hamletToRepHtml cannot be a widget, this allows
-        -- you to use normal widget features in default-layout.
-
         pc <- widgetToPageContent $ do
             $(widgetFile "normalize")
-            addStylesheet $ StaticR css_bootstrap_css
-            let cwidget = chatWidget ChatR
+            addStylesheet $ StaticR css_ingrid_min_css
+            addScript $ StaticR js_json2_js
+            addScript $ StaticR js_zepto_min_js
             $(widgetFile "default-layout")
         hamletToRepHtml $(hamletFile "templates/default-layout-wrapper.hamlet")
 
@@ -204,6 +197,7 @@ instance YesodAuth App where
 
     loginHandler = defaultLayout $ do
         setTitle "Login"
+        navigation "Login"
         $(widgetFile "login")
 
 -- This instance is required to use forms. You can modify renderMessage to
@@ -247,3 +241,62 @@ last' n xs
 routeToLogin :: Route App
 routeToLogin = AuthR LoginR
 
+navigation :: Text -> GWidget sub App ()
+navigation active = do
+    ma <- lift maybeAuth
+    boards <- liftM boards2widget $ lift $ runDB $ selectList [] []
+    let es =
+          [ ("Blog" :: Text, Right BlogOverviewR)
+          , ("Lauta", Left boards)
+          , ("Media", Right MediaHomeR)
+          ]
+
+    let es' = [ ("Kemia",    "http://kemia.ssdesk.paivola.fi")
+              , ("Gitlist",  "http://gitlist.ssdesk.paivola.fi")
+              , ("Projects", "http://projects.ssdesk.paivola.fi")
+              ] :: [ (Text, Text) ]
+    [whamlet|
+<div>
+  <nav .clearfix>
+    <ul>
+      $forall (topic, e) <- es
+        $with isactive <- topic == active
+          <li :isactive:.active>
+            $case e
+              $of Left w
+                <a href="#">#{topic}
+                ^{w}
+              $of Right route
+                <a href=@{route}>#{topic}
+      $forall (topic, href) <- es'
+        <li>
+          <a href="#{href}">#{topic}
+
+      $maybe authent <- ma
+        $if userAdmin $ entityVal authent
+          $with isactive <- active == "Admin"
+            <li :isactive:.active>
+              <a href=@{AdminR}>Admin
+        <li>
+          $with isactive <- active == "Profile"
+            <a href=@{ProfileR} :isactive:.active>#{userUsername $ entityVal authent}
+        <li .divider-vertical>
+        <li>
+          <a href=@{AuthR LogoutR}>_{MsgLogout}
+      $nothing
+        $with isactive <- active == "Register"
+          <li :isactive:.active>
+            <a href=@{RegisterR}>_{MsgRegister}
+        $with isactive <- active == "Login"
+          <li :isactive:.active>
+            <a href=@{AuthR LoginR}>_{MsgLogin}
+  |]
+    where boards2widget boards = [whamlet|$newline never
+<ul>
+  <li>
+    <a href=@{BoardHomeR}>_{MsgNavAll}
+  <li.divider>
+  $forall Entity _ val <- boards
+    <li>
+      <a href=@{BoardR (boardName val)}><b>#{boardName val}</b> - #{boardDescription val}
+  |]

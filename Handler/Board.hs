@@ -26,6 +26,7 @@ getBoardHomeR = do
     boards <- runDB $ selectList ([] :: [Filter Board]) []
     defaultLayout $ do
         setTitle "Lauta"
+        navigation "Lauta"
         $(widgetFile "board-home")
 
 type Thread = (Entity Boardpost, [Entity Boardpost])
@@ -37,6 +38,7 @@ renderThreads :: Entity Board
 renderThreads (Entity _ bval) content ((result, formWidget), encType) = do
     defaultLayout $ do
         setTitle $ toHtml $ T.concat ["/", boardName bval, "/"]
+        navigation "Lauta"
         $(widgetFile "board")
 
 -- /board/<board>

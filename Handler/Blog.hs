@@ -84,6 +84,7 @@ overview ((result, widget), encType) = do
         -- TODO: calculate omitted pages and add navigation
     defaultLayout $ do
         titleRender ["blog"]
+        navigation "Blog"
         $(widgetFile "blog-home")
   where
     genWidget ent cn = blogpostWidget (entityVal ent) cn True
@@ -99,6 +100,7 @@ view ((result, formWidget), encType) (Entity key val) = do
         route    = BlogViewR $ blogpostUrlpath val
         in defaultLayout $ do
             titleRender ["blog", blogpostTitle val]
+            navigation "Blog"
             $(widgetFile "blog-view")
 
 edit :: ((FormResult a, Widget), Enctype) -> Text -> Handler RepHtml
