@@ -5,6 +5,14 @@ import Import hiding (fail)
 import qualified Data.Text as T
 import Data.Maybe (isJust)
 import Yesod.Auth.HashDB (setPassword)
+import Chat
+
+getHomePageR :: Handler RepHtml
+getHomePageR = do
+    defaultLayout $ do
+        setTitle "SS"
+        navigation "SS" -- HomePage ?
+        $(widgetFile "home")
 
 getRegisterR :: Handler RepHtml
 getRegisterR = do

@@ -10,9 +10,10 @@
 /admin         AdminR         GET POST
 /admin/media   MediaAdminR        POST
 
-/                                      BlogOverviewR  GET POST
-/view/#Text                            BlogViewR      GET POST
-/edit/#Text                            BlogEditR      GET POST
+/                                      HomePageR      GET
+/blog                                  BlogOverviewR  GET POST
+/blog/view/#Text                       BlogViewR      GET POST
+/blog/edit/#Text                       BlogEditR      GET POST
 /board                                 BoardHomeR     GET
 /board/#Text                           BoardR         GET POST
 /board/#Text/#BoardpostId              ThreadR        GET POST

@@ -99,12 +99,12 @@ instance Yesod App where
         return . Just $ clientSessionBackend2 key getCachedDate
 
     defaultLayout widget = do
-        let cwidget = chatWidget ChatR
         master <- getYesod
-        mmsg <- getMessage
         pc <- widgetToPageContent $ do
-            $(widgetFile "normalize")
-            addStylesheet $ StaticR css_ingrid_min_css
+            addStylesheet $ StaticR $ if development
+                then yaml_core_base_css
+                else yaml_core_base_min_css
+            addStylesheet $ StaticR yaml_screen_typography_css
             addScript $ StaticR js_json2_js
             addScript $ StaticR js_zepto_min_js
             $(widgetFile "default-layout")
@@ -245,9 +245,11 @@ navigation :: Text -> GWidget sub App ()
 navigation active = do
     ma <- lift maybeAuth
     boards <- liftM boards2widget $ lift $ runDB $ selectList [] []
+    mmsg <- lift getMessage
     let es =
-          [ ("Blog" :: Text, Right BlogOverviewR)
-          , ("Lauta", Left boards)
+          [ ("SS", Right HomePageR)
+          , ("Blog" :: Text, Right BlogOverviewR)
+          , ("Lauta", Left (BoardHomeR, boards))
           , ("Media", Right MediaHomeR)
           ]
 
@@ -256,47 +258,51 @@ navigation active = do
               , ("Projects", "http://projects.ssdesk.paivola.fi")
               ] :: [ (Text, Text) ]
     [whamlet|
-<div>
-  <nav .clearfix>
-    <ul>
-      $forall (topic, e) <- es
-        $with isactive <- topic == active
-          <li :isactive:.active>
-            $case e
-              $of Left w
-                <a href="#">#{topic}
-                ^{w}
-              $of Right route
-                <a href=@{route}>#{topic}
-      $forall (topic, href) <- es'
-        <li>
-          <a href="#{href}">#{topic}
-
-      $maybe authent <- ma
-        $if userAdmin $ entityVal authent
-          $with isactive <- active == "Admin"
-            <li :isactive:.active>
-              <a href=@{AdminR}>Admin
-        <li>
-          $with isactive <- active == "Profile"
-            <a href=@{ProfileR} :isactive:.active>#{userUsername $ entityVal authent}
-        <li .divider-vertical>
-        <li>
-          <a href=@{AuthR LogoutR}>_{MsgLogout}
-      $nothing
-        $with isactive <- active == "Register"
-          <li :isactive:.active>
-            <a href=@{RegisterR}>_{MsgRegister}
-        $with isactive <- active == "Login"
-          <li :isactive:.active>
-            <a href=@{AuthR LoginR}>_{MsgLogin}
-  |]
-    where boards2widget boards = [whamlet|$newline never
-<ul>
-  <li>
-    <a href=@{BoardHomeR}>_{MsgNavAll}
-  <li.divider>
-  $forall Entity _ val <- boards
-    <li>
-      <a href=@{BoardR (boardName val)}><b>#{boardName val}</b> - #{boardDescription val}
-  |]
+<header #main-header>
+    <nav .ym-wrapper>
+        <ul>
+          $forall (topic, e) <- es
+            $with isactive <- topic == active
+              <li :isactive:.active>
+                $case e
+                  $of Left stuff
+                    $with (route, w) <- stuff
+                        <a href=@{route}>#{topic}
+                        ^{w}
+                  $of Right route
+                    <a href=@{route}>#{topic}
+          $forall (topic, href) <- es'
+            <li>
+              <a href="#{href}">
+                <i>#{topic}
+        <ul .pull-right>
+          $maybe authent <- ma
+            $if userAdmin $ entityVal authent
+              $with isactive <- active == "Admin"
+                <li :isactive:.active>
+                  <a href=@{AdminR}>Admin
+            <li>
+              $with isactive <- active == "Profile"
+                <a href=@{ProfileR} :isactive:.active>#{userUsername $ entityVal authent}
+            <li .divider-vertical>
+            <li>
+              <a href=@{AuthR LogoutR}>_{MsgLogout}
+          $nothing
+            $with isactive <- active == "Register"
+              <li :isactive:.active>
+                <a href=@{RegisterR}>_{MsgRegister}
+            $with isactive <- active == "Login"
+              <li :isactive:.active>
+                <a href=@{AuthR LoginR}>_{MsgLogin}
+$maybe msg <- mmsg
+ <p #message .box .info>#{msg}
+  |] where boards2widget boards = [whamlet|$newline never
+$if null boards
+$else
+   <ul>
+      $forall Entity _ val <- boards
+         <li>
+            <a href=@{BoardR (boardName val)}>
+               <b>/#{boardName val}/ #
+               <i>#{boardDescription val}
+|]

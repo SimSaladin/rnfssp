@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Dec 26 2012 [18:26:44]
+-- Last Modified: Mar 25 2013 [22:51:43]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -87,8 +87,7 @@ chatWidget toMaster = do
             -- Logged in: show the widget
             [whamlet|
 <div.clearfix ##{chat}>
-    <h2>Chat
-    <div ##{output}>
+    <div ##{output} .chat-output>
       $forall (poster, msg) <- recent
         <p>#{poster}: #{msg}
       <hr>
@@ -97,9 +96,8 @@ chatWidget toMaster = do
             -- Just some CSS
             toWidget [lucius|
  ##{output} {
-    width: auto;
-    height: 300px;
-    border: 1px solid #999;
+    width: 100%;
+    max-height: 300px;
     overflow: auto;
 } ##{input} {
    width: 100%;

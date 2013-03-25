@@ -1,3 +1,8 @@
+
+Of interest
+
+ * http://www.catswhocode.com/blog/10-useful-tools-to-simplify-css3-development
+
 NOTE: git should not track changes to configs/postgresql.yml, as
       > git update-index --assume-unchanged config/postgresql.yml
 
