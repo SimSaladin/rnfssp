@@ -47,7 +47,7 @@ registerForm :: Html -> MForm App App (FormResult User, Widget)
 registerForm extra = do
     (resName, viewName) <- mreq textField "Username" Nothing
     (resComm, viewComm) <- mreq textareaField "Comment" Nothing
-    (resPass, viewPass) <- mreq passwordConfirmField "Password" Nothing
+    (resPass, viewPass) <- mreq passwordConfirmFieldYaml "Password" Nothing
     let resUser = User <$> resName
                        <*> resPass
                        <*> pure ""

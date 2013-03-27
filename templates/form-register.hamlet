@@ -1,10 +1,10 @@
 #{extra}
-<div.control-group>
-  <div.control-label for=#{fvId viewName}>^{fvLabel viewName}
-  <div.controls>^{fvInput viewName}
+<div .ym-fbox-text>
+   <label for=#{fvId viewName}>^{fvLabel viewName}
+   <div>^{fvInput viewName}
 
 ^{fvInput viewPass}
 
-<div.control-group>
-  <div.control-label for=#{fvId viewComm}>^{fvLabel viewComm}
-  <div.controls>^{fvInput viewComm}
+<div.ym-fbox-text>
+   <label for=#{fvId viewComm}>^{fvLabel viewComm}
+   <div>^{fvInput viewComm}

@@ -1,0 +1,7 @@
+<div .ym-column .linearize-level-1>
+   <div .ym-col1>
+      <div .ym-cbox>^{content}
+   <div .ym-col3>
+      <div .ym-cbox>^{chatWidget ChatR}
+      <hr>
+      <div .ym-cbox>^{tags}

@@ -1,19 +1,36 @@
 /* LAYOUT */
 
 html, body { height:100% }
-#main { min-height:100%; position:relative }
-   
-body > header { min-width: 380px; }
+#main > header { min-width: 380px; }
+body > footer {
+   padding: 2em 1.5em;
+   margin: 1em 0 0 0;
+   min-width: 380px;
+
+}
 .ym-wrapper { max-width: 80em; }
 .ym-wbox { padding: 10px }
-body > footer {
-   padding: 2em 5em;
-   margin: 1em 0 0 0;
+#main { min-height:100%; position:relative; }
+.text-right { text-align:right; display:inline-block; width:80%; }
+
+.standout { padding:2em; }
+.center-box {
+   margin: 0 auto;
+   box-sizing:border-box;
+   -moz-box-sizing:border-box;
+}
+.text-center { text-align:center }
+.small-box, .small-box > * { min-width:380px; max-width:40em; }
+
+@media screen and ( max-width: 480px ) {
+   .standout { padding:2em 1em; }
+   .center-box { margin: 1em auto; }
 }
 
-@media screen and ( max-width: 760px )  {
+@media screen and ( max-width: 760px ) {
    /* linearization for grid module */
-   .linearize-level-1, .linearize-level-1 > [class*="ym-g"] {
+   .linearize-level-1, .linearize-level-1 > [class*="ym-g"],
+   .linearize-level-1 > [class*="ym-c"] {
       display: block;
       float: none;
       padding: 0;
@@ -22,7 +39,8 @@ body > footer {
    }
 
    /* reset defined gutter values */
-   .linearize-level-1 > [class*="ym-g"] > [class*="ym-gbox"] {
+   .linearize-level-1 > [class*="ym-g"] > [class*="ym-gbox"],
+   .linearize-level-1 > [class*="ym-c"] > [class*="ym-gbox"] {
       overflow: hidden; /* optional for containing floats */
       padding: 0;
       margin: 0;
@@ -140,102 +158,101 @@ body > footer {
 html[xmlns] .clearfix { display: block; }
 * html .clearfix { height: 1%; }
 
+/*) Blog */
+.info-block { display:block; }
+.blog-nav a {
+   text-align:center;
+   box-sizing:border-box;
+   -moz-box-sizing:border-box;
+   display:inline-block;
+   width:33%;
+   margin:1em 0em;
+}
+.blog-nav a:first-child { float:right; }
+.blog-nav a:nth-child(2) { float:left; }
+.blog-post {
+   margin: 0 0 1em 0;
+   footer { margin: 0 4em 0 0 }
+   .poster { margin-top: 0.7em; }
+   .content-align { margin-left:5em; }
+   header h1, header h3 { margin:0; }
+   header div:last-child { display:inline-block}
+}
+.blog-wrapper {
+   padding:0 1em 1em 1em;
+   margin:0 0 1em 0;
+   -webkit-box-shadow: 7px 10px 10px 0px rgba(0, 0, 0, 1);
+   box-shadow: 7px 10px 10px 0px rgba(0, 0, 0, 1);
+}
+.date-box {
+   float:left;
+   position:relative;
+   margin:0.8em 0 0 0.8em;
+   width:5em;
+   height:1.9em;
+   font-family: "Droid Sans", Arial, Helvetica, sans-serif;
+   line-height: 0;
 
-/* THEME */
-
-
-/* Primary Color: */
-@pia: #A30066;
-@pib: #532945;
-@pic: #330020;
-@pid: #B9167D;
-
-/* Secondary Color A: */
-@seaa: #CB000F;
-@seab: #683337;
-@seac: #400005;
-@sead: #D81A28;
-
-/* Secondary Color B: */
-@seba: #55058C;
-@sebb: #392447;
-@sebc: #1A002C;
-@sebd: #6E19A8;
-
-/* Complementary Color: */
-@coa: #89C400;
-@cob: #556431;
-@coc: #2B3E00;
-
-@base:      #333333;
-@textBase:  #EEEEEE;
-
-@darkBase:  #121212;
-@darkCompl: #242424;
-
-@link:    #888888;
-@linkAlt: #AA8888;
-
-/* Base */
-
-body {
-   background-color:#{base};
-   color:#{textBase};
-   footer {
-      background-color:#222;
+   .year {
+      position:absolute;
+      bottom:0.6em;
+      right:0;
+      -webkit-transform:rotate(-90deg);
+      -moz-transform:rotate(-90deg);
+      -ms-transform:rotate(-90deg);
+      -o-transform:rotate(-90deg);
+      font-size:1.4em;
+      letter-spacing:0.1em;
    }
+   .month { position:absolute; top:0; left:0; font-size:1.35em; }
+   .day { position:absolute; bottom:0; left:0; font-size:2em }
+}
+.date-wrapper {
+   width:5em;
+   height:6em;
+   margin:-0.5em 1em 0 0;
+   padding-top:0.5em;
+   box-sizing:border-box;
+   -moz-box-sizing:border-box;
+   display:inline-block;
+   position:relative;
+}
+.date-wrapper:after {
+   content:'';
+   width:0;
+   height:0;
+   display:inline-block;
+   border-width:2.5em;
+   border-style:solid;
+   position:absolute;
+   top:6em;
+   left:0;
 }
 
-a { color:#{link} } 
-h1, h2, h3, h4, h5, h6 { color: #EEE }
-blockquote { color:#AAA; }
 
-hr {
-  border:0;
-  padding:0;
-  height: 1px;
-  background-image: -webkit-linear-gradient(left, #{base}, rgba(255,255,255,0.75), #{base}); 
-  background-image:    -moz-linear-gradient(left, #{base}, rgba(255,255,255,0.75), #{base}); 
-  background-image:     -ms-linear-gradient(left, #{base}, rgba(255,255,255,0.75), #{base}); 
-  background-image:      -o-linear-gradient(left, #{base}, rgba(255,255,255,0.75), #{base}); 
+blockquote {
+   border-radius: 4px;
+   -moz-border-radius: 4px;
+   -webkit-border-radius: 4px;
+   position:relative;
+   padding:1em;
+   margin-right:2em;
 }
-h2 { border-bottom:1px solid #AA0000; }
-
-#main-header { background-color:#{base}; }
-#main-header, #main-header nav {
-   background-color: #222;
-   box-shadow: 0 5px 10px 0px #555
-}
-#main-header {
-	ul li a:focus, ul li a:hover, ul li a:active  {
-		color: #ccc;
-		background:#666;
-		background: rgba(255,255,255,.25);
-	}
+blockquote:before {
+   content:'';
+   width:0;
+   height:0;
+   display:block;
+   border-width:10px;
+   border-style:solid;
+   position:absolute;
+   top:-20px;
+   left:20px;
 }
 
+hr { border:0; padding:0; }
 .chat-output p { margin:0; }
-.todo-done { text-decoration:line-through; color:#ccc }
-.todo-fix { color:#00FF00; }
-
 
 /* TESTS */
 
 div.test { border: #F02547 1px solid }
-div.test span:nth-child(1) { color:#{pia} }
-div.test span:nth-child(2) { color:#{pib} }
-div.test span:nth-child(3) { color:#{pic} }
-div.test span:nth-child(4) { color:#{pid} }
-div.test span:nth-child(5) { color:#{seaa} }
-div.test span:nth-child(6) { color:#{seab} }
-div.test span:nth-child(7) { color:#{seac} }
-div.test span:nth-child(8) { color:#{sead} }
-
-div.test span:nth-child(9)  { color:#{seba} }
-div.test span:nth-child(10) { color:#{sebb} }
-div.test span:nth-child(11) { color:#{sebc} }
-div.test span:nth-child(12) { color:#{sebd} }
-
-div.test span:nth-child(12) { color:#{coa} }
-div.test span:nth-child(13) { color:#{cob} }
-div.test span:nth-child(14) { color:#{coc} }

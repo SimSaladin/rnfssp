@@ -1,20 +1,32 @@
-<div.page-element.blogpost>
-  <div.date-box>
-      #{month}
-      <span>#{day}
-  <h2>#{title}
-  $if preview
-    <p>^{toWidget rendered}
-  $else
-    <p>^{toWidget rendered}
-  <cite.info-block>
-    Posted by #{poster} under ... | #
-    <a href=@{link}>Link #
-    | #
-    <a href=@{link}>
-      $if (==) commentCount 0
-        No comments yet
-      $elseif (==) commentCount 1
-        1 comment
+<article .blog-post>
+   <header>
+      <div .date-wrapper>
+         <div .date-box>
+            <div .year>#{year}
+            <div .month>#{month}
+            <div .day>#{day}
+      <div>
+         $if preview
+            <h3>
+               <a href=@{link}>#{title}
+         $else
+            <h1>#{title}
+         <div .poster>by #
+            <a href="#">#{poster}
+   <div .content-align>
+      $if preview
+         <p>^{toWidget rendered}
       $else
-        #{show commentCount} comments
+         <p>^{toWidget rendered}
+   <footer :preview:.content-align>
+      $if preview
+         $if (==) commentCount 0
+            <a href="@{link}#comments">
+               <i>No comments. #
+               Write one.
+         $elseif (==) commentCount 1
+            <a href="@{link}#comments">Read the 1 comment.
+         $else
+            <a href="@{link}#comments">Read the #{show commentCount} comments.
+      $if editing
+         <a href=@{BlogEditR $ blogpostUrlpath post}>Edit

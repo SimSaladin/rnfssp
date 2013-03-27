@@ -1,18 +1,16 @@
-<div.page-element.center-box.small-box>
-  <form.form-horizontal method="post" action="/auth/page/hashdb/login">
+<div .standout .center-box .small-box>
+  <form .ym-form .ym-full method="post" action="/auth/page/hashdb/login">
     <fieldset>
       <legend.clearfix>Login
-        <small>
+        <small .text-right>
           Need an account?
           <a.btn.btn-mini.btn-inverse href="@{RegisterR}">
             Register!
-      <div.control-group>
-        <label.control-label for="username">Username
-        <div.controls>
-          <input name="username" type="text">
-      <div.control-group>
-        <label.control-label for="password">Password
-        <div.controls>
-          <input name="password" type="password">
-      <div.form-actions>
-        <input.btn.btn-primary.btn-large type="submit" value="Login">
+      <div .ym-fbox-text>
+         <label for="username">Username
+         <input name="username" type="text">
+      <div .ym-fbox-text>
+         <label for="password">Password
+         <input name="password" type="password">
+      <div .ym-fbox-button>
+         <input type="submit" value="Login">

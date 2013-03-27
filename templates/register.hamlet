@@ -1,12 +1,12 @@
-<div.page-element.center-box.small-box>
-  <form.form-horizontal method=post enctype=#{encType}>
+<div .standout .center-box .small-box>
+  <form.ym-form .ym-full method=post enctype=#{encType}>
     <fieldset>
-      <legend.clearfix>_{MsgRegister}
+      <legend .clearfix>_{MsgRegister}
         <small>
           <span.label.label-important>_{MsgLabelImportant}
           _{MsgRegisterNote}
       $forall fail <- fails
         <div.alert>#{fail}
       ^{widget}
-      <div.form-actions>
-        <input.btn.btn-primary.btn-large type="submit" value="_{MsgGo}">
+      <div .ym-fbox-button>
+        <input type="submit" value="_{MsgGo}">

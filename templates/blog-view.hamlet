@@ -1,16 +1,28 @@
-^{post}
-<h4>Comments
-<div.comments>
-  ^{comments}
-<h3>Leave a comment
-<form.page-element.form-horizontal method=post action=@{route} enctype=#{encType}>
-  <fieldset>
-    <legend.clearfix>
-    $case result
-      $of FormFailure reasons
-        $forall reason <- reasons
-          <div.alert.alert-error>#{reason}
-      $of _
-  ^{formWidget}
-  <div.form-actions>
-    <input.btn.btn-primary type=submit value=Reply>
+<div .blog-nav>
+   $maybe next <- liftM entityVal mnext
+      <a href=@{BlogViewR $ blogpostUrlpath next}>Next: #{blogpostTitle next} &rarr;
+   $nothing
+      <a href="#">&nbsp;
+   $maybe prev <- liftM entityVal mprev
+      <a href=@{BlogViewR $ blogpostUrlpath prev}>&larr; Previous: #{blogpostTitle prev}
+   $nothing
+      <a href="#">&nbsp;
+   <a href=@{BlogOverviewR}>Back to index
+<br>
+<div .blog-wrapper>
+   ^{post}
+   <h3>Comments
+   <div.comments>^{commentsWidget}
+   <hr>
+   <h3>Leave a comment
+   <form .ym-form .ym-full method=post action=@{route} enctype=#{encType}>
+      <fieldset>
+         <legend.clearfix>
+         $case result
+            $of FormFailure reasons
+               $forall reason <- reasons
+                  <div .alert .alert-error>#{reason}
+            $of _
+      ^{formWidget}
+      <div .ym-fbox-button>
+         <input type=submit value=Reply>

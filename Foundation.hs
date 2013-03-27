@@ -105,6 +105,10 @@ instance Yesod App where
                 then yaml_core_base_css
                 else yaml_core_base_min_css
             addStylesheet $ StaticR yaml_screen_typography_css
+            addStylesheet $ StaticR yaml_forms_gray_theme_css
+
+            -- TODO: theme changer
+            $(widgetFile "theme_senjougahara")
             addScript $ StaticR js_json2_js
             addScript $ StaticR js_zepto_min_js
             $(widgetFile "default-layout")

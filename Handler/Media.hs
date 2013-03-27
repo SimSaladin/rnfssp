@@ -45,7 +45,7 @@ sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
 
 restrictedWidget :: Widget
 restrictedWidget = [whamlet|
-<div.hero-unit.center-box.small-box>
+<div .center-box .small-box .text-center>
   <h1>Access restricted
   <p>
     You must be explicitly granted access to this part.<br/>

@@ -1,0 +1,83 @@
+/*
+body {
+  background-image:url('@{StaticR img_senjougahara_3_jpg}');
+  background-repeat:no-repeat;
+  background-attachment:fixed;
+  background-position:center;
+}
+*/
+
+@shadow: #111;
+
+@dark: #303030;
+@light_text: #E6E6FF;
+@light_text_alt: #FFF0DF;
+@light_text2: #BDBDBD;
+
+@light: #EEE;
+@light_hl: #A66295;
+@dark_text: #5A3A5A;
+@dark_text_alt: #31295C;
+@dark_text_alt2: #2B2A30;
+
+/* Layout elements */
+body { background-color:#{dark}; color: #{light_text}; }
+body > footer { background-color:#{shadow}; }
+blockquote { color:#AAA; background:#222; }
+blockquote:before { border-color:transparent transparent #222 transparent; }
+hr {
+  height: 1px;
+  background-image: -webkit-linear-gradient(left, #{shadow}, rgba(255,255,255,0.75), #{shadow}); 
+  background-image:    -moz-linear-gradient(left, #{shadow}, rgba(255,255,255,0.75), #{shadow}); 
+  background-image:     -ms-linear-gradient(left, #{shadow}, rgba(255,255,255,0.75), #{shadow}); 
+  background-image:      -o-linear-gradient(left, #{shadow}, rgba(255,255,255,0.75), #{shadow}); 
+}
+
+/* Text */
+a { color:#{light_text2} } 
+a:hover { background:transparent; color:#{light_hl} }
+h1, h2, h3, h4, h5, h6 { color: #DDD }
+h2 { border-bottom:1px solid #AA0000; }
+h3 a:active, h3 a:hover { color: #DDD; background:transparent }
+
+::selection { background:#{light_hl} }
+
+/* Main Navigation */
+#main-header, #main-header nav {
+   background-color: #{shadow};
+   box-shadow: 0 5px 10px 0px #{shadow};
+}
+#main-header {
+	ul li a:focus, ul li a:hover, ul li a:active  {
+		color: #ccc;
+		background:#666;
+		background: rgba(255,255,255,.25);
+	}
+}
+
+/* Blog */
+.blog-wrapper {
+   color:#{dark_text_alt2};
+   background:#{light};
+   h1 { color:#{dark_text_alt2} }
+   h2, h3, h4, h5, h6 { color:#{dark_text}; }
+   h2 a, h3 a, h4 a, h5 a, h6 a { color:#{dark_text}; }
+   h2 a:hover, h3 a:hover, h4 a:hover, h5 a:hover, h6 a:hover { color:#{dark_text_alt2}; }
+   hr { background-image: none; background-color:#{shadow} }
+   a { color:#{dark_text_alt} }
+   a:hover { background:transparent; color:#{dark_text} }
+   ::selection { color:#FFF }
+}
+.date-wrapper { 
+   background:#{light_hl};
+   color:#{dark_text};
+   -webkit-box-shadow: -2px -3px 6px 1px #{shadow};
+   /* box-shadow: 7px 10px 10px 0px #{shadow}; */
+}
+.date-wrapper:after {
+   border-color: #{light_hl} transparent transparent transparent;
+}
+
+/* Misc */
+.todo-done { text-decoration:line-through; color:#ccc }
+.todo-fix { color:#00FF00; }

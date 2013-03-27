@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Feb 01 2013 [21:35:58]
+-- Last Modified: Mar 27 2013 [12:46:17]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -22,9 +22,7 @@ import           Data.Time.Format (formatTime, FormatTime)
 import           System.Locale (defaultTimeLocale)
 
 isAdmin' :: Handler Bool
-isAdmin' = maybeAuth >>= \ma -> return $ case ma of
-    Nothing -> False
-    Just ent -> userAdmin $ entityVal ent
+isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
 
 titleRender :: [Text] -> Widget
 titleRender = setTitle . toHtml . T.concat
@@ -120,3 +118,23 @@ widgetToRepHtml w = do pc <- widgetToPageContent w
 
 removeByIndex :: Int -> [a] -> [a]
 removeByIndex i xs = let (ys,zs) = splitAt i xs in ys ++ tail zs
+
+renderYaml :: FormRender sub master a
+renderYaml aform fragment = do
+    (res, views') <- aFormToForm aform
+    let views = views' []
+        has (Just _) = True
+        has Nothing  = False
+    let widget = [whamlet|
+$newline never
+\#{fragment}
+$forall view <- views
+    <div .ym-fbox-text :fvRequired view:.required :not $ fvRequired view:.optional :has $ fvErrors view:.error>
+        <label for=#{fvId view}>#{fvLabel view}
+        ^{fvInput view}
+        $maybe tt <- fvTooltip view
+            <span .help-block>#{tt}
+        $maybe err <- fvErrors view
+            <span .help-block>#{err}
+|]
+    return (res, widget)
