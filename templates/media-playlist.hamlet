@@ -1,25 +1,13 @@
-<div##{mainI}.page-element>
-  <div##{actionsI}.btn-toolbar style="float:right">
-    <div.btn-group>
-      <button.btn.btn-warning onclick="playlist.clear_playlist()">Clear
+<div ##{mainI} .media-playlist>
+  <h3 ##{headI}>
+  <div ##{actionsI} .btn-toolbar>
+    <div .btn-group>
+      <a .btn onclick="playlist.clear_playlist(); return false">Clear
+      <a .btn onclick="alert('TODO: not yet implemented'); return false">Rename
+      <a .btn onclick="window.load_playlist(); return false">TODO
+      <a .btn href="@{PlaylistR "play"}" target="_blank">Play!
+      <a .btn href="@{PlaylistR "download"}">Download as .m3u
 
-    <div.btn-group>
-      <button.btn onclick="alert('TODO: not yet implemented')">Rename
-      <button.btn.dropdown-toggle data-toggle="dropdown">Switch #
-        <span.caret>
-      <ul.dropdown-menu.pull-right>
-        <li>
-          <a onclick="window.load_playlist()">TODO
-
-    <div.btn-group>
-      <a.btn.btn-primary href="@{PlaylistR "play"}" target="_blank">Play! #
-      <button.btn.btn-primary.dropdown-toggle data-toggle="dropdown">
-        <span.caret>
-      <ul.dropdown-menu.pull-right>
-        <li>
-          <a href="@{PlaylistR "download"}">Download as .m3u
-
-  <h3##{headI}>
   <table.playlist-items>
     <thead>
       <tr>

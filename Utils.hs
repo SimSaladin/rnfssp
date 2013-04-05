@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Mar 27 2013 [12:46:17]
+-- Last Modified: Apr 03 2013 [10:37:02]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -21,68 +21,67 @@ import           Yesod.Default.Config (appExtra)
 import           Data.Time.Format (formatTime, FormatTime)
 import           System.Locale (defaultTimeLocale)
 
+-- * Combinators
+
+tryMaybe :: Monad m => m a -> Maybe a -> m a
+tryMaybe = flip maybe return
+
+if' :: Bool -> a -> a -> a
+if' cond th el = if cond then th else el
+
+removeByIndex :: Int -> [a] -> [a]
+removeByIndex i xs = let (ys,zs) = splitAt i xs in ys ++ tail zs
+
+-- * Handler utils
+
 isAdmin' :: Handler Bool
 isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
-
-titleRender :: [Text] -> Widget
-titleRender = setTitle . toHtml . T.concat
-
--- | File size prettified
-prettyFilesize :: FileOffset -> Text
-prettyFilesize off = T.pack $ toprint off
-  where
-    f n = printf "%.0f" (fromIntegral off / n :: Float)
-    toprint x | x >= lT   = f lT ++ "T"
-              | x >= lG   = f lG ++ "G"
-              | x >= lM   = f lM ++ "M"
-              | x >= lK   = f lK ++ "K"
-              | x >= lB   = f lB ++ "B"
-              | otherwise = "n/a"
-        where
-            [lB,lK,lM,lG,lT] = scanl (*) 1 $ replicate 4 1024
-
-guessFiletype :: FilePath -> Text
-guessFiletype fp
-    | ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"]) = "video"
-    | ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"]) = "audio"
-    | otherwise = "unknown"
-    where ext = takeExtension fp
-
--- -- | Get real filepath for @which@ master directory.
--- gdir :: Text -> Handler FilePath
--- gdir which = do
---    master <- getYesod
---    let set = appExtra $ settings master
---       in case which of
---             "anime" -> return $ extraDirAnime set
---             "music" -> return $ extraDirMusic set
---             _ -> invalidArgs ["no master directory for: " `T.append` which]
-
--- -- | convert section+path to an actual file.
--- toFSPath :: Text -> FilePath -> Handler FilePath
--- toFSPath section path = liftM (</> path) $ gdir section
-
-gServeroot :: Handler Text
-gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
-
-widgetOnly :: Widget -> Handler RepHtml
-widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
 
 -- | convienience
 timeNow :: Handler UTCTime
 timeNow = liftIO getCurrentTime
 
-tryMaybe :: Monad m => m a -> Maybe a -> m a
-tryMaybe this unlessJust = case unlessJust of
-    Just a -> return a
-    Nothing -> this
-
-if' :: Bool -> a -> a -> a
-if' cond th el = if cond then th else el
-
 denyIf :: Bool -> Text -> Handler ()
 denyIf True  = permissionDenied
 denyIf False = const (return ())
+
+gServeroot :: Handler Text
+gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
+
+-- * 
+
+titleRender :: [Text] -> Widget
+titleRender = setTitle . toHtml . T.concat
+
+widgetOnly :: Widget -> Handler RepHtml
+widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
+
+-- | Convert a widget to a whole page.
+widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
+widgetToRepHtml w = do pc <- widgetToPageContent w
+                       hamletToRepHtml [hamlet|^{pageBody pc}|]
+
+renderYaml :: FormRender sub master a
+renderYaml aform fragment = do
+    (res, views') <- aFormToForm aform
+    let views = views' []
+        has (Just _) = True
+        has Nothing  = False
+    let widget = [whamlet|
+$newline never
+\#{fragment}
+$forall view <- views
+    <div .ym-fbox-text :fvRequired view:.required :not $ fvRequired view:.optional :has $ fvErrors view:.error>
+        <label for=#{fvId view}>#{fvLabel view}
+        ^{fvInput view}
+        $maybe tt <- fvTooltip view
+            <span .help-block>#{tt}
+        $maybe err <- fvErrors view
+            <span .help-block>#{err}
+|]
+    return (res, widget)
+
+-- * Filepath utils
 
 uniqueFilePath :: FilePath -- ^ directory
                -> FilePath -- ^ template
@@ -108,33 +107,28 @@ splitPath' = map T.pack . splitPath . T.unpack
 takeDirectory' :: Text -> Text
 takeDirectory' = T.dropWhileEnd (=='/') . fst . T.breakOnEnd "/"
 
+-- * Text rendering
+
 printfTime :: FormatTime t => String -> t -> String
 printfTime = formatTime defaultTimeLocale
 
--- | Convert a widget to a whole page.
-widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
-widgetToRepHtml w = do pc <- widgetToPageContent w
-                       hamletToRepHtml [hamlet|^{pageBody pc}|]
+-- | File size prettified
+prettyFilesize :: FileOffset -> Text
+prettyFilesize off = T.pack $ toprint off
+  where
+    f n = printf "%.0f" (fromIntegral off / n :: Float)
+    toprint x | x >= lT   = f lT ++ "T"
+              | x >= lG   = f lG ++ "G"
+              | x >= lM   = f lM ++ "M"
+              | x >= lK   = f lK ++ "K"
+              | x >= lB   = f lB ++ "B"
+              | otherwise = "n/a"
+        where
+            [lB,lK,lM,lG,lT] = scanl (*) 1 $ replicate 4 1024
 
-removeByIndex :: Int -> [a] -> [a]
-removeByIndex i xs = let (ys,zs) = splitAt i xs in ys ++ tail zs
-
-renderYaml :: FormRender sub master a
-renderYaml aform fragment = do
-    (res, views') <- aFormToForm aform
-    let views = views' []
-        has (Just _) = True
-        has Nothing  = False
-    let widget = [whamlet|
-$newline never
-\#{fragment}
-$forall view <- views
-    <div .ym-fbox-text :fvRequired view:.required :not $ fvRequired view:.optional :has $ fvErrors view:.error>
-        <label for=#{fvId view}>#{fvLabel view}
-        ^{fvInput view}
-        $maybe tt <- fvTooltip view
-            <span .help-block>#{tt}
-        $maybe err <- fvErrors view
-            <span .help-block>#{err}
-|]
-    return (res, widget)
+guessFiletype :: FilePath -> Text
+guessFiletype fp
+    | ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"]) = "video"
+    | ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"]) = "audio"
+    | otherwise = "unknown"
+    where ext = takeExtension fp

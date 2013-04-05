@@ -387,9 +387,6 @@
 		width:100%;
 		border-collapse:collapse;
 		margin: 1.3571em 0 0 0;
-		color:#333;
-		border-top: 1px #ccc solid;
-		border-bottom: 1px #ccc solid;
 	}
 
 	table.narrow {
@@ -428,8 +425,6 @@
 
 	thead th {
 		text-align: left;
-		color:#000;
-		border-bottom:2px #000 solid;
 	}
 
 	.bordertable thead th {
@@ -459,11 +454,5 @@
 
 	.bordertable tbody td {
 		border-right:1px solid #ccc;
-	}
-
-	/* highlight row on mouse over */
-	tbody tr:hover th,
-	tbody tr:hover td {
-		background:#f8f8f8;
 	}
 }

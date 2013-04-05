@@ -55,6 +55,8 @@ h3 a:active, h3 a:hover { color: #DDD; background:transparent }
 	}
 }
 
+.subnavbar { ul { border-color: #FFF; } }
+
 /* Blog */
 .blog-wrapper {
    color:#{dark_text_alt2};
@@ -74,8 +76,12 @@ h3 a:active, h3 a:hover { color: #DDD; background:transparent }
    -webkit-box-shadow: -2px -3px 6px 1px #{shadow};
    /* box-shadow: 7px 10px 10px 0px #{shadow}; */
 }
-.date-wrapper:after {
-   border-color: #{light_hl} transparent transparent transparent;
+.date-wrapper:after { border-color: #{light_hl} transparent transparent transparent; }
+
+.browser {
+   .misc span { color:#{shadow}; }
+   .entry:nth-child(odd) { background:#333333 }
+   .entry:nth-child(even) { background:#444444 }
 }
 
 /* Misc */

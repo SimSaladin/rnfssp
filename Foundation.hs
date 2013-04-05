@@ -123,24 +123,29 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    isAuthorized AdminR        _     = isAdmin
-    isAuthorized MediaAdminR   _     = isAdmin
+    -- Blog
     isAuthorized BlogOverviewR True  = isAdmin
-    isAuthorized MediaHomeR    False = return Authorized
+    -- Media
+    isAuthorized MediaHomeR          _ = isValidLoggedIn
     isAuthorized (MediaContentR _ _) _ = isValidLoggedIn
-    isAuthorized _             _     = return Authorized
+    isAuthorized (MediaServeR _ _ _) _ = isValidLoggedIn
+    isAuthorized MediaAdminR         _ = isAdmin
+    -- Misc
+    isAuthorized AdminR        _     = isAdmin
+    isAuthorized _                   _ = return Authorized
 
     -- This function creates static content files in the static folder
     -- and names them based on a hash of their content. This allows
     -- expiration dates to be set far in the future without worry of
     -- users receiving stale content.
     addStaticContent =
-        addStaticContentExternal minifym genFileName Settings.staticDir (StaticR . flip StaticRoute [])
+        addStaticContentExternal minifier genFileName Settings.staticDir (StaticR . flip StaticRoute [])
       where
         -- Generate a unique filename based on the content itself
         genFileName lbs
             | development = "autogen-" ++ base64md5 lbs
             | otherwise   = base64md5 lbs
+        minifier = if development then Right else minifym
 
     -- Place Javascript at bottom of the body tag so the rest of the page loads first
     jsLoader _ = BottomOfBody

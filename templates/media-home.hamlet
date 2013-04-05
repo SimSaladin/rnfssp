@@ -1,5 +1,2 @@
-$maybe ent <- mauth
-  ^{nav}
-  ^{userPlaylistWidget ent}
-$nothing
-  ^{restrictedWidget}
+^{nav}
+^{userPlaylistWidget ent}

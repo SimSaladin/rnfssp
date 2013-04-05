@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Feb 13 2013 [20:40:25]
+-- Last Modified: Apr 05 2013 [22:11:44]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -16,120 +16,126 @@ import           Data.Text (Text)
 import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
+import           Text.Coffee
 import qualified System.FilePath as F (joinPath)
 
 -- | Assumptions this widget makes:
 --
---  The current url must provide content to be shown inside the browser when
+--  1. The current url must provide content to be shown inside the browser when
 --  the GET parameter "bare" is set. The content can be either HTML (directly
 --  injected to the browser) or JSON (converted to HTML via in-scope JS function
 --  browser_content_to_html.
 --
---  Before injecting, every <a class="browser-link> -element's click is bind to
+--  2. Before injecting, every <a class="browser-link> -element's click is bind to
 --  loadpage, with "?bare=1" appended to href.
 --
---  The loadpage function again fetches the content, replaces links in it and
+--  3. The loadpage() function again fetches the content, replaces links in it and
 --  injects it to the browser.
 --
---  NOTE: Currently only one browser instance can be safely based on a single
---  site!
-browser :: GWidget sub master ()
-browser = do
-  browserId <- lift newIdent
-  toWidget [hamlet|<div##{browserId}>|]
-  toWidget [julius|$(function(){
-var dom       = $("##{rawJS browserId}"),
-    previous  = location.href,
-    ready     = false;
+--  NOTE: Only one browser instance may be safely based on a single page.
+browser :: GWidget sub master () -- ^ Initial content of the browser.
+        -> GWidget sub master ()
+browser content = do
+    browserId <- lift newIdent
+    [whamlet|$newline never
+<div##{browserId}>
+    ^{content}
+|]
+    toWidget [coffee|
+$ ->
+    dom = $ "#%{rawJS browserId}"
 
-/* Bind the function loadpage() to the browser links */
-function register_links() {
-  debug("register_links");
-  dom.find("a.browser-link").click(function() {
-    loadpage($(this).attr("href"), true);
-    return false;
-  });
-  ready = true;
-}
+    ### Bind the function loadpage() to the browser links ###
+    register_links = ->
+        dom.find("a.browser-link").on "click", ->
+            loadpage $(this).attr("href"), true
+            return false
 
-function loadpage(href, push_history) {
-  $.get(href + "?bare=1", function(data) {
-    debug("loadpage callback");
-    // push the new page to history, unless it was just popped.
-    if (push_history && previous != href) {
-      previous = href;
-      window.history.pushState('', '', href);
+    ### Load page href. Push the new page to history, unless it was popped. ###
+    loadpage = (href, forward) ->
+        $.get href + "?bare=1", (data) ->
+            window.history.pushState('', '', href) if forward
+            dom.animate { opacity: 0 }, 200, "ease", ->
+                dom.html(data)
+                register_links()
+                dom.animate { opacity:1.0 }, 200
+
+    ###
+    window.onpopstate is called on page load at least in chromium but not in
+    firefox. This is undesired, but on page load e.state is null. Then we also
+    replace the current state to be non-null.
+    ###
+    window.history.replaceState {}, '', location.href
+    window.onpopstate = (e) ->
+        loadpage(location.href, false) if e.state isnt null
+
+    ### Register links in the initial content ###
+    register_links()
+|]
+
+data SimpleListingSettings = SimpleListingSettings
+    { slSect    :: Text     -- ^ Section
+    , slCurrent :: [Text]   -- ^ Url parts
+    , slCount   :: Int      -- ^ Total number of elements to scroll
+    , slPage    :: Int      -- ^ Nth page
+    , slLimit   :: Int      -- ^ Elements per page
+    , slContent :: [(Text, Text, [Text], Text, Text)] -- ^ (filename, filetype, fps, size, modified)
     }
-    dom.animate({ opacity: 0 }, 200, function() {
-      dom.html(data);
-      register_links();
-      dom.animate({ opacity:1.0 }, 200);
-    });
-  });
-}
 
-/* when asked to move in history */
-window.onpopstate = function(e) {
-  debug("onpopstate");
-  if (ready) loadpage(location.href, false);
-}
-
-// This calls window.onpopstate at least in chromium, but not in firefox.
-window.history.replaceState('', '', location.href);
-
-dom.load(location.href + "?bare=1", register_links);
-
-function debug(where) {
-  console.log("------> " + where + " <------");
-  console.log("location.href: " + location.href);
-  console.log("previous:      " + previous);
-  console.log("ready:         " + ready);
-}
-})
-  |]
-
--- | Simple listing content
-simpleListing :: Text                               -- ^ Section
-              -> [Text]                             -- ^ Url parts
-              -> [(Text, Text, [Text], Text, Text)] -- ^ (filename, filetype, fps, size, modified)
+simpleListingSettings :: SimpleListingSettings
+simpleListingSettings = SimpleListingSettings
+    { slSect    = ""
+    , slCurrent = []
+    , slCount   = 0
+    , slPage    = 0
+    , slLimit   = 50
+    , slContent = []
+    }
+-- | Simple listing type content.
+simpleListing :: SimpleListingSettings
               -> ([Text] -> Route master)           -- ^ url to content
               -> (ServeType -> [Text] -> Route master)   -- ^ url to direct file
               -> (Text, Text, Text)                 -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
-simpleListing section fps listing routeToContent toFile (msgFilename, msgFileize, msgModified) =
-  simpleNav fps routeToContent
-  >> [whamlet|
-<table .tablesorter .standout .browser>
-  <thead>
-    <tr>
-      <th.browser-controls scope="col">
-      <th.browser-filename scope="col">#{msgFilename}
-      <th.browser-size scope="col">#{msgFileize}
-      <th.browser-modified scope="col">#{msgModified}
-  <tbody>
-    $forall (filename, filetype, fps, size, modified) <- listing
-      <tr>
-        <td.browser-controls>
-          <a .icon-plus .icon-white href="" onclick="playlist.to_playlist('#{section}', '#{toPath fps}'); return false">
-          $if not $ equalsDirectory filetype
-            <a .icon-download-alt .icon-white href=@{toFile ServeForceDownload fps} onclick="">
-            <a .icon-play .icon-white href=@{toFile ServeAuto fps} onclick="" target="_blank">
-        <td.browser-filename title="#{filename}">
-          <a.browser-link.#{filetype} href=@{routeToContent fps}>
-            <tt>#{filename}
-        <td.browser-size>#{size}
-        <td.browser-modified>#{modified}
-  <tfoot>
-    <tr>
-      <th.browser-controls scope="col">
-      <th.browser-filename scope="col">#{msgFilename}
-      <th.browser-size scope="col">#{msgFileize}
-      <th.browser-modified scope="col">#{msgModified}
-
-  |]
-    where
-  toPath = T.pack . F.joinPath . map T.unpack
-  equalsDirectory = (==) "directory"
+simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
+    simpleNav (slCurrent sl) routeToContent
+    pageNav
+    [whamlet|
+<div .browser>
+    $forall (filename, filetype, fps, size, modified) <- slContent sl
+      <div .entry>
+        <div .browser-controls>
+            $if (/=) filetype directory
+              <a .icon-download-alt .icon-white href=@{toFile ServeForceDownload fps} onclick="">
+                  DL
+              <a .icon-play .icon-white href=@{toFile ServeAuto fps} onclick="" target="_blank">
+                  PLAY
+            <a .icon-plus href="" onclick="playlist.to_playlist('#{slSect sl}', '#{toPath fps}'); return false">
+                ADD
+        <a .browser-link .#{filetype} href=@{routeToContent fps}>
+            <span .filename>#{filename}
+            <span .misc>
+                <span><i>#{msgModified}:</i> #{modified}
+                $if (/=) filetype directory
+                    <span>#{msgFilesize}: #{size}
+    |]
+    pageNav
+        where
+    toPath      = T.pack . F.joinPath . map T.unpack -- FIXME ...
+    directory   = "directory"
+    file_other  = "file"
+    pages       = [1 .. (ceiling $ (fromIntegral (slCount sl) :: Double) / fromIntegral (slLimit sl) :: Int)]
+    pageNav     = [whamlet|
+$if length pages > 1
+    <div .top-nav>
+        $if slPage sl > 0
+            <a href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl - 1}>Previous
+        <span>
+            $forall n <- pages
+                <a href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{n - 1}> #{n}
+        $if slPage sl < length pages
+            <a href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl + 1}>Next
+|]
 
 -- | Construct breadcrumbs into a widget.
 simpleNav :: [Text] -> ([Text] -> Route master) -> GWidget sub master ()

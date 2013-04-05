@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Feb 13 2013 [20:41:16]
+-- Last Modified: Apr 05 2013 [16:21:48]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -35,11 +35,15 @@ musicContent sec@MPDSec{sRoute = route} fps = do
   case contents of
     [MPD.LsSong song] -> songSingle sec fps song
     [MPD.LsPlaylist (MPD.PlaylistName bs)] -> undefined
-    _ -> simpleListing "music" fps
-        (map buildElem contents)
-        route
-        (flip MediaServeR "music")
-        ("Filename", "TODO", "TODO")
+    _ -> let sl = SimpleListingSettings
+                 { slSect       = sName sec
+                 , slCurrent    = fps
+                 , slCount      = 0
+                 , slLimit      = 0
+                 , slPage       = 0
+                 , slContent    = map buildElem contents
+                 }
+        in simpleListing sl route (flip MediaServeR "music") ("Filename", "TODO", "TODO")
     where
   buildElem res = case res of
     MPD.LsDirectory (MPD.Path bs)                       -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", T.splitOn "/" p, "", "")

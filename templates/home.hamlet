@@ -4,7 +4,8 @@
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
       <div .ym-gbox>
-         <h2>Blog
+         <h2>
+            <a href=@{BlogOverviewR}>Blog
          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus at
             ligula neque. Vivamus eu purus nulla, id posuere velit. Nunc tincidunt,
             purus sed pulvinar tempor, tortor sem lacinia mi, eu gravida arcu dui
@@ -31,7 +32,8 @@
          <h2>Chat
          ^{chatWidget ChatR}
       <div .ym-gbox>
-         <h2>Board
+         <h2>
+            <a href=@{BoardHomeR}>Board
          <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus at
             ligula neque. Vivamus eu purus nulla, id posuere velit. Nunc tincidunt,
             purus sed pulvinar tempor, tortor sem lacinia mi, eu gravida arcu dui
@@ -42,7 +44,8 @@
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
       <div .ym-gbox>
-         <h2>Media
+         <h2>
+            <a href=@{MediaHomeR}>Media
    <div .ym-g38 .ym-gl>
       <div .ym-gbox>
          <h2>TODOs

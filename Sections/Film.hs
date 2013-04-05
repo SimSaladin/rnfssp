@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Feb 13 2013 [20:41:51]
+-- Last Modified: Apr 05 2013 [16:35:42]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -34,26 +34,44 @@ instance MSection FilmSec where
   sFilePath = getFile
   sUpdateIndex = updateListing
 
+-- | GET params:
+--  * limit_to  - how many results per page
+--  * page      - the page to show
 getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
-  (mnode, mchildren) <- lift . runDB $ case fps of
-      []   -> liftM ((,) Nothing . Just) $ selectList
-          [FilenodeArea ==. sect, FilenodeParent ==. Nothing]
-          [Asc FilenodePath]
-      fps' -> do
-        Entity key val <- getBy404 $ UniqueFilenode sect (T.intercalate "/" fps') -- FIXME; '/' as path separator
-        liftM ((,) $ Just $ Entity key val) $ if filenodeIsdir val
-          then liftM Just $ selectList [FilenodeParent ==. Just key] [Asc FilenodePath]
-          else return Nothing
-  case (mnode, mchildren) of
-    (_, Just children) -> simpleListing sect
-                                        fps
-                                        (map (buildElem . entityVal) children)
-                                        route
-                                        (flip MediaServeR sect)
-                                        ("Filename", "File size", "Modified")
-    (Just node, _) -> animeSingle fsec fps node
-    _ -> lift notFound
+    limit <- liftM (maybe 50 (read . T.unpack)) $ lift $ lookupGetParam "limit_to"
+    page  <- liftM (maybe 0 (read . T.unpack)) $ lift $ lookupGetParam "page"
+    let opts = [Asc FilenodePath, LimitTo limit, OffsetBy $ limit * page]
+
+    -- Left children, Right node
+    res <- lift . runDB $ case fps of
+        []   -> let filters = [FilenodeArea ==. sect, FilenodeParent ==. Nothing]
+                    in liftM Left $ do
+                        a <- selectList filters opts
+                        b <- count filters
+                        return (a, b)
+        fps' -> do
+            -- the node
+            node@(Entity key val) <- getBy404 $ UniqueFilenode sect (T.intercalate "/" fps') -- FIXME; '/' as path separator
+            if filenodeIsdir val
+                then let filters = [FilenodeParent ==. Just key]
+                    in liftM Left $ do
+                        a <- selectList filters opts
+                        b <- count filters
+                        return (a, b)
+                else return $ Right node
+    case res of
+        Left (children, siblingCount) ->
+            let sl = simpleListingSettings
+                    { slSect    = sect
+                    , slCurrent = fps
+                    , slCount   = siblingCount
+                    , slPage    = page
+                    , slLimit   = limit
+                    , slContent = map (buildElem . entityVal) children
+                    }
+                in simpleListing sl route (flip MediaServeR sect) ("Filename", "File size", "Modified")
+        Right node -> animeSingle fsec fps node
     where
   buildElem val = ( last $ T.splitOn "/" $ filenodePath val
                   , if' (filenodeIsdir val) "directory" "file"

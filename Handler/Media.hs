@@ -20,7 +20,7 @@ maxTempUrlAlive = 60 * 60 * 24
 
 getMediaHomeR :: Handler RepHtml
 getMediaHomeR = do
-    mauth <- maybeAuth
+    ent <- requireAuth
     defaultLayout $ do
         setTitle "Media"
         navigation "Media"
@@ -29,15 +29,16 @@ getMediaHomeR = do
 
 getMediaContentR :: Text -> [Text] -> Handler RepHtml
 getMediaContentR section fps = do
-    mauth <- maybeAuth
+    ent <- requireAuth
     bare <- lookupGetParam "bare"
     case bare of
-        Just _ -> widgetToRepHtml $ sectionWidget section fps
+        Just  _ -> widgetToRepHtml contents
         Nothing -> defaultLayout $ do
             setTitle "Media"
             navigation "Media"
             $(widgetFile "media-content")
-  where nav = renderBrowsable section
+  where nav      = renderBrowsable section
+        contents = sectionWidget section fps
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget

@@ -1,6 +1,4 @@
-$maybe ent <- mauth
-  ^{nav}
-  ^{browser}
-  ^{userPlaylistWidget ent}
-$nothing
-  ^{restrictedWidget}
+^{nav}
+<div .ym-grid .ym-equalize .linearize-level-1>
+   <div .ym-g62 .ym-gl>^{browser contents}
+   <div .ym-g38 .ym-gl>^{userPlaylistWidget ent}
