@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections.hs
 -- Creation Date: Dec 23 2012 [23:10:22]
--- Last Modified: Feb 02 2013 [00:31:15]
+-- Last Modified: Apr 06 2013 [21:57:57]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -13,7 +13,7 @@ import Import
 class MSection a where
 
   -- | Find stuff to add on a specific path
-  sFind :: a -> Text -> Handler [Text]
+  sFind :: a -> [Text] -> Handler [Text]
 
   -- | Content widget for a path
   sWContent :: a -> [Text] -> Widget

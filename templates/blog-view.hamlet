@@ -1,4 +1,4 @@
-<div .blog-nav>
+<div .nav-three>
    $maybe next <- liftM entityVal mnext
       <a href=@{BlogViewR $ blogpostUrlpath next}>Next: #{blogpostTitle next} &rarr;
    $nothing

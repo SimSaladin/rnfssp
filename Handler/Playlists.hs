@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Apr 05 2013 [21:06:46]
+-- Last Modified: Apr 06 2013 [21:57:47]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -162,11 +162,11 @@ plUpdate plid pl = runDB (replace plid pl) >> return pl
 -- | add file OR every child of directory to playlist.
 plInsert :: Playlist
     -> Text -- ^ File area
-    -> Text -- ^ File path
+    -> [Text] -- ^ File paths
     -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
-plInsert pl section path = do
+plInsert pl section paths = do
     t <- timeNow
-    these' <- onSec section $ flip sFind path
+    these' <- onSec section $ flip sFind paths
     return $ case these' of
       [] -> (False, pl)
       these -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) these

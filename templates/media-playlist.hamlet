@@ -4,9 +4,7 @@
     <div .btn-group>
       <a .btn onclick="playlist.clear_playlist(); return false">Clear
       <a .btn onclick="alert('TODO: not yet implemented'); return false">Rename
-      <a .btn onclick="window.load_playlist(); return false">TODO
-      <a .btn href="@{PlaylistR "play"}" target="_blank">Play!
-      <a .btn href="@{PlaylistR "download"}">Download as .m3u
-
+      <a .btn href="@{PlaylistR "play"}" target="_blank">Play
+      <a .btn href=@{PlaylistR "download"} download type="audio/x-mpegurl">Download
   <div ##{contI} .playlist-items>
     <i>Loading playlist...

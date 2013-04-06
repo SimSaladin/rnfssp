@@ -164,10 +164,18 @@ body > footer {
    }
    li.active { border-bottom: 4px solid; }
 }
-
-/* Media : playlist */
-.media-playlist > .btn-toolbar { float:right; }
-
+.breadcrumb {
+   list-style:none;
+   li {
+      margin:0;
+      display:inline-block;
+      max-width:20em;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+      overflow:hidden;
+   }
+   li:last-child { max-width:100%; }
+}
 .btn-group {
    padding: 0.5em 0;
    .btn { }
@@ -195,9 +203,11 @@ html[xmlns] .clearfix { display: block; }
 
 /* Media */
 .browser {
-   margin-left:0.5em;
+   margin:1em 0.5em 1em 0.5em;
 
-   .entry { margin-top:0.5em; }
+   .entry {
+      padding:0 0.5em 0 0.3em;
+   }
    .browser-link > span {
       display:block;
       white-space:nowrap;
@@ -210,14 +220,35 @@ html[xmlns] .clearfix { display: block; }
    .misc { margin:0; }
    .misc span { padding:0 1em; }
 }
-.media-playlist playlist-items {
-   span { display:block; }
+
+/* Media : playlist */
+.media-playlist > h3 { float:left; margin-top:0.5em; margin-right: 1em; }
+.media-playlist > .btn-toolbar { display:inline-block; }
+.media-playlist {
+   margin:1em 0.5em 1em 0.5em;
+   .playlist-items { clear:both; }
+   .entry {
+      padding:0 0.5em 0 0.3em;
+      -webkit-transition: all 5s ease-in-out;
+   }
+   .entry > span {
+      display:block;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+      overflow:hidden;
+   }
+   .entry > .controls { float:right; }
 }
+.details { margin-top:1em; }
 
 /* Blog */
 .info-block { display:block; }
-.blog-nav a:first-child { float:right; }
-.blog-nav a:nth-child(2) { float:left; }
+
+.nav-three > * { display:inline-block; width:33%; }
+.nav-three > *:first-child { text-align:right; float:right; }
+.nav-three > *:nth-child(2) { float:left; }
+.nav-three > *:last-child { text-align:center; }
+
 .blog-post {
    margin: 0 0 1em 0;
    footer { margin: 0 4em 0 0 }
@@ -299,6 +330,7 @@ blockquote:before {
 
 hr { border:0; padding:0; }
 .chat-output p { margin:0; }
+.pull-right { float:right; }
 
 /* TESTS */
 

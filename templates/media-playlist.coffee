@@ -38,26 +38,36 @@ class Playlist
       else
          @head.append( $('<i/>').text("Default playlist") )
       if @data.hasOwnProperty("elems")
-         $.each @data["elems"], (index, value) ->
-            that.cont.append(
-               $('<div class="entry"/>').append(
-                  $('<a/>').text("DEL").bind('click', -> that.delete_elem(index-1))
-               ).append( $('<span/>').text(value[0])).append(
-                  $('<span title="'+value[1]+'"/>').text(value[1])
-               )
-            )
+         $.each @data["elems"], (index, value) -> that.add_entry(index, value)
       else
          @cont.append($("</i>").text("Something went wrong while loading the playlist.  Try refreshing the page."))
 
+   add_entry: (index, value) ->
+      that = this
+      @cont.append(
+         $('<div class="entry"/>').append(
+            $('<div class="controls">').append(
+               $('<a href="#"/>').text("DEL").bind('click', -> that.delete_elem(index-1))
+            )
+         ).append( $('<span title="'+value[1]+'"/>').text(value[1].split("/").pop())
+         ).append( $('<span class="misc" />').text(value[0])
+         )
+      )
+
    ### add `what' from `area' to the playlist ###
-   to_playlist: (area, what) ->
+   to_playlist: (area, paths) ->
       that = this
       $.ajax
          url:        '@{PlaylistR "insert"}'
          type:       'POST'
          dataType:   'json'
-         data:       JSON.stringify([area, what])
+         data:       JSON.stringify([area, paths])
          success:    (x) -> that.handle_new(x)
+
+   add_from_element_contents: (elements, area) ->
+       xs = []
+       $.each elements, -> xs.push this.innerText
+       @to_playlist area, xs
 
    ### clear every element from the playlist. ###
    clear_playlist: ->

@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File: Mpd.hs
 -- Creation Date: Jul 16 2012 [23:01:24]
--- Last Modified: Dec 27 2012 [14:37:16]
+-- Last Modified: Apr 06 2013 [22:00:58]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -56,9 +56,9 @@ mpdFullWidget = do
 pathContents :: YesodMpd master => [Text] -> GHandler sub master [LsResult]
 pathContents = execMpd . lsInfo . Path . encodeUtf8 . T.intercalate "/"
 
-songPaths :: YesodMpd master => Text -> GHandler sub master [Text]
-songPaths = liftM (map $ \(Path x) -> decodeUtf8 x)
-    . execMpd . listAll . Path . encodeUtf8
+songPaths :: YesodMpd master =>[ Text] -> GHandler sub master [Text]
+songPaths = liftM (f . concat) . mapM (execMpd . listAll . Path . encodeUtf8)
+        where f = map $ \(Path x) -> decodeUtf8 x
 
 execMpd :: YesodMpd master => MPD a -> GHandler sub master a
 execMpd action = do

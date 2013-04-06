@@ -79,9 +79,21 @@ h3 a:active, h3 a:hover { color: #DDD; background:transparent }
 .date-wrapper:after { border-color: #{light_hl} transparent transparent transparent; }
 
 .browser {
+   box-shadow: 0 0 5px 2px rgba(0,0,0,0.2);
+   a.file { color:#{light_text}; }
+   a.file:hover { color:#{light_hl}; }
    .misc span { color:#{shadow}; }
-   .entry:nth-child(odd) { background:#333333 }
-   .entry:nth-child(even) { background:#444444 }
+   .entry:nth-child(even) { background:#333333 }
+   .entry:nth-child(odd) { background:#444444 }
+}
+
+.media-playlist {
+   .playlist-items {
+      box-shadow: 0 0 5px 2px rgba(0,0,0,0.2);
+   }
+   .misc { color:#{shadow}; }
+   .entry:nth-child(even) { background:#333333 }
+   .entry:nth-child(odd) { background:#444444 }
 }
 
 /* Misc */

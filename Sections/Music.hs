@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Apr 05 2013 [16:21:48]
+-- Last Modified: Apr 06 2013 [23:19:43]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -57,7 +57,7 @@ songSingle MPDSec{sName = name, sRoute = route} fps MPD.Song
   , MPD.sgLength = seconds
   } = do
   let path = decodeUtf8 bs
-  simpleNav fps route
+  simpleNav name fps route
   [whamlet|
 <div .container-fluid style="padding:0">
   <div .row-fluid>

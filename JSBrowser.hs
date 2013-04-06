@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Apr 05 2013 [23:54:18]
+-- Last Modified: Apr 06 2013 [23:24:38]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -13,6 +13,7 @@ import           Prelude
 import   Foundation
 import           Yesod
 import           Data.Text (Text)
+import           Data.Monoid
 import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
@@ -53,7 +54,7 @@ $ ->
 
     ### Load page href. Push the new page to history, unless it was popped. ###
     loadpage = (href, forward) ->
-        $.get href + "?bare=1", (data) ->
+        $.get href, {bare: 1}, (data) ->
             window.history.pushState('', '', href) if forward
             dom.animate { opacity: 0 }, 200, "ease", ->
                 dom.html(data)
@@ -99,21 +100,30 @@ simpleListing :: SimpleListingSettings
               -> (Text, Text, Text)                      -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
 simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
-    simpleNav (slCurrent sl) routeToContent
+    let options = [25, 50, 100, 200] :: [Int]
+    [whamlet|
+<div .pull-right>
+    Per page: #
+    $forall n <- options
+        <a .browser-link href="?limit_to=#{n}&page=#{slPage sl}">#{n} #
+    <a .btn onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{slSect sl}'); return false" title="Adds all files in this folder.">Add files
+|]
+    simpleNav (slSect sl) (slCurrent sl) routeToContent
     pageNav
     [whamlet|
 <div .browser>
     $forall (filename, filetype, fps, size, modified) <- slContent sl
-      <div .entry>
+      <div .entry .type-#{filetype}>
+        <div .data-field style="display:none">#{toPath fps}
         <div .browser-controls>
             $if (/=) filetype directory
               <a .icon-download-alt .icon-white href=@{toFile ServeForceDownload fps} onclick="">
                   DL
               <a .icon-play .icon-white href=@{toFile ServeAuto fps} onclick="" target="_blank">
                   PLAY
-            <a .icon-plus href="" onclick="playlist.to_playlist('#{slSect sl}', '#{toPath fps}'); return false">
+            <a .action .icon-plus href="" onclick="playlist.to_playlist('#{slSect sl}', [this.parentElement.parentElement.firstChild.innerText]); return false">
                 ADD
-        <a .browser-link .#{filetype} href=@{routeToContent fps}>
+        <a .browser-link .#{filetype} href="@{routeToContent fps}">
             <span .filename>#{filename}
             <span .misc>
                 <span><i>#{msgModified}:</i> #{modified}
@@ -128,25 +138,40 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
     pages       = [1 .. (ceiling $ (fromIntegral (slCount sl) :: Double) / fromIntegral (slLimit sl) :: Int)]
     pageNav     = [whamlet|
 $if length pages > 1
-    <div .top-nav>
-        $if slPage sl > 0
-            <a href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl - 1}>Previous
+    <div .nav-three>
+        <span>
+            $if slPage sl < length pages
+                <a .browser-link href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl + 1}>Next
+            $else
+                &nbsp;
+        <span>
+            $if slPage sl > 0
+                <a .browser-link href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl - 1}>Previous
+            $else
+                &nbsp;
         <span>
             $forall n <- pages
-                <a href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{n - 1}> #{n}
-        $if slPage sl < length pages
-            <a href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl + 1}>Next
+                $if n == (slPage sl + 1)
+                    <span>#{n}
+                $else
+                    <a .browser-link href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{n - 1}> #{n}
 |]
 
 -- | Construct breadcrumbs into a widget.
-simpleNav :: [Text] -> ([Text] -> Route master) -> GWidget sub master ()
-simpleNav []  _ = [whamlet|<ul.breadcrumb>|]
-simpleNav fps f = [whamlet|
+simpleNav :: Text -> [Text]
+          -> ([Text] -> Route master)
+          -> GWidget sub master ()
+simpleNav _    []  _ = [whamlet|<ul.breadcrumb>&nbsp;|]
+simpleNav home fps f = [whamlet|
 <ul.breadcrumb>
+    <li>
+        <a .browser-link href=@{f mempty}>
+            <i>#{home}
+    <li .divider>/
   $forall (name, route) <- init parts
     <li>
-      <a.browser-link href=@{route}>#{name}
-      <span.divider>/
+      <a .browser-link href=@{route}>#{name}
+    <li .divider>/
   $with (name, _) <- last parts
     <li.active>#{name}
 |] where

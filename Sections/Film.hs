@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Apr 05 2013 [16:35:42]
+-- Last Modified: Apr 06 2013 [23:19:55]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
     limit <- liftM (maybe 50 (read . T.unpack)) $ lift $ lookupGetParam "limit_to"
     page  <- liftM (maybe 0 (read . T.unpack)) $ lift $ lookupGetParam "page"
-    let opts = [Asc FilenodePath, LimitTo limit, OffsetBy $ limit * page]
+    let opts = [Desc FilenodeIsdir, Asc FilenodePath, LimitTo limit, OffsetBy $ limit * page]
 
     -- Left children, Right node
     res <- lift . runDB $ case fps of
@@ -83,12 +83,19 @@ getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
 -- | Single file.
 animeSingle :: FilmSec -> [Text] -> Entity Filenode -> Widget
 animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
-  simpleNav fps route
+  simpleNav name fps route
   [whamlet|
-<div .container-fluid style="padding:0">
-  <div .row-fluid>
-    <div .span7 .page-element>
-      <table>
+<div .details>
+    <div .btn-toolbar>
+      <a.btn .btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
+        <i.icon-white.icon-play> #
+        Auto-open
+      <a.btn href="@{MediaServeR ServeForceDownload name fps}">
+        <i.icon.icon-download-alt> #
+        Download
+      <a.btn onclick="window.playlist.to_playlist('#{name}', ['#{toPath fps}']); return false">
+        Add to playlist
+    <table>
         <tr>
           <th>Filename
           <td><i>#{filenodePath val}
@@ -98,15 +105,6 @@ animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
         <tr>
           <th>Modified
           <td>#{T.pack $ printfTime "%d.%m -%y" $ filenodeModTime val}
-    <div.span5 .page-element>
-      <a.btn.btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
-        <i.icon-white.icon-play> #
-        Auto-open
-      <a.btn href="@{MediaServeR ServeForceDownload name fps}">
-        <i.icon.icon-download-alt> #
-        Download
-      <a.btn onclick="window.playlist.to_playlist('#{name}', '#{toPath fps}'); return false">
-        Add to playlist
 $maybe s <- filenodeDetails val
   <div .page-element>
     <h4>Mediainfo
@@ -115,16 +113,18 @@ $maybe s <- filenodeDetails val
 
 -- -- | Recursively find all child files (and only files) of a node.
 -- FIXME use a custom query instead?
-findFiles :: FilmSec -> Text -> Handler [Text]
-findFiles FilmSec{sName = sect} path = runDB $ do
-    Entity k v <- getBy404 $ UniqueFilenode sect path
-    if filenodeIsdir v
-      then findChildren k
-      else return [filenodePath v]
+findFiles :: FilmSec -> [Text] -> Handler [Text]
+findFiles FilmSec{sName = sect} paths = runDB $ do
+    entities <- selectList [ FilenodeArea ==. sect, FilenodePath <-. paths ] []
+    liftM concat $ mapM findFiles entities
   where
     findChildren parentId = do
       children <- selectList [FilenodeParent ==. Just parentId] [Asc FilenodePath]
       liftM ((++) (map (filenodePath . entityVal) $ filter (not . filenodeIsdir . entityVal) children) . concat) $ mapM (findChildren . entityKey) $ filter (filenodeIsdir . entityVal) children
+
+    findFiles (Entity k v) = if filenodeIsdir v
+        then findChildren k
+        else return [filenodePath v]
 
 getFile :: FilmSec -> Text -> Handler FilePath
 getFile FilmSec{sName = sect, sPath = root} file = do
