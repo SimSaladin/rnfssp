@@ -29,7 +29,6 @@ class Playlist
 
    ### redraw playlist and add default title if none is specified. ###
    update_playlist: ->
-      console.log this
       that = this
       @cont.empty()
       @head.empty()
@@ -41,12 +40,10 @@ class Playlist
       if @data.hasOwnProperty("elems")
          $.each @data["elems"], (index, value) ->
             that.cont.append(
-               $('<tr/>').append(
-                  $('<td/>').append(
-                     $('<a class="icon-minus icon-white" />').bind('click', -> that.delete_elem(index-1))
-                  )
-               ).append( $('<td/>').text(value[0])).append(
-                  $('<td title="'+value[1]+'"/>').text(value[1])
+               $('<div class="entry"/>').append(
+                  $('<a/>').text("DEL").bind('click', -> that.delete_elem(index-1))
+               ).append( $('<span/>').text(value[0])).append(
+                  $('<span title="'+value[1]+'"/>').text(value[1])
                )
             )
       else
@@ -64,10 +61,21 @@ class Playlist
 
    ### clear every element from the playlist. ###
    clear_playlist: ->
-      $.post('@{PlaylistR "clear"}', handle_new)
+      that = this
+      $.ajax
+         url:       '@{PlaylistR "clear"}'
+         type:      'POST'
+         dataType:  'json'
+         success:    (x) -> that.handle_new(x)
 
    delete_elem: (indeces) ->
-      $.post('@{PlaylistR "delete"}', JSON.stringify(indeces), handle_new)
+      that = this
+      $.ajax
+         url:        '@{PlaylistR "delete"}'
+         type:       'POST'
+         dataType:   'json'
+         data:       JSON.stringify(indeces)
+         success:    (x) -> that.handle_new(x)
 
    ### save playlist. title is optional and default is used if == null ###
    save_playlist_custom: (title) ->

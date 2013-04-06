@@ -128,7 +128,6 @@ instance Yesod App where
     -- Media
     isAuthorized MediaHomeR          _ = isValidLoggedIn
     isAuthorized (MediaContentR _ _) _ = isValidLoggedIn
-    isAuthorized (MediaServeR _ _ _) _ = isValidLoggedIn
     isAuthorized MediaAdminR         _ = isAdmin
     -- Misc
     isAuthorized AdminR        _     = isAdmin

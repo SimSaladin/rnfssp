@@ -8,13 +8,5 @@
       <a .btn href="@{PlaylistR "play"}" target="_blank">Play!
       <a .btn href="@{PlaylistR "download"}">Download as .m3u
 
-  <table.playlist-items>
-    <thead>
-      <tr>
-        <th>
-        <th>Path
-        <th>Section
-    <tbody##{contI}.playlist-items>
-      <tr>
-        <td>
-          <i>Loading playlist...
+  <div ##{contI} .playlist-items>
+    <i>Loading playlist...

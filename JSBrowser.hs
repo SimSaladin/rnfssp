@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Apr 05 2013 [22:11:44]
+-- Last Modified: Apr 05 2013 [23:54:18]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -91,11 +91,12 @@ simpleListingSettings = SimpleListingSettings
     , slLimit   = 50
     , slContent = []
     }
--- | Simple listing type content.
+
+-- | Simple listing of content.
 simpleListing :: SimpleListingSettings
-              -> ([Text] -> Route master)           -- ^ url to content
+              -> ([Text] -> Route master)                -- ^ url to content
               -> (ServeType -> [Text] -> Route master)   -- ^ url to direct file
-              -> (Text, Text, Text)                 -- ^ (msgFilename, msgFileize, msgModified)
+              -> (Text, Text, Text)                      -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
 simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
     simpleNav (slCurrent sl) routeToContent

@@ -210,6 +210,9 @@ html[xmlns] .clearfix { display: block; }
    .misc { margin:0; }
    .misc span { padding:0 1em; }
 }
+.media-playlist playlist-items {
+   span { display:block; }
+}
 
 /* Blog */
 .info-block { display:block; }

@@ -59,7 +59,8 @@ restrictedWidget = [whamlet|
 
 -- * Playing & Downloading
 
--- | Downloading files
+-- | Downloading files.
+-- /tmp does not require authentication, other kinds do.
 getMediaServeR :: ServeType -- ^ kind of download
                -> Text      -- ^ file section
                -> [Text]    -- ^ file path
