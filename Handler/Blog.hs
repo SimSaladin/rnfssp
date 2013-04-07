@@ -5,6 +5,7 @@ module Handler.Blog
     , postBlogViewR
     , getBlogEditR
     , postBlogEditR
+    , newestPost
     ) where
 
 import           Utils
@@ -122,8 +123,19 @@ getParam which fallback = fromGet
   where fromGet = lookupGetParam which >>= maybe (fromCookie) return
         fromCookie = lookupCookie which >>= return . maybe fallback id
 
+newestPost :: Widget
+newestPost = do
+    mpost <- lift $ runDB $ selectFirst [] [Desc BlogpostTime]
+    maybe mempty constructPost mpost
+    where
+    constructPost (Entity key val) = do
+        commentCount <- lift $ runDB $ count [BlogcommentPost ==. key]
+        blogpostWidget val commentCount True False
+
+
 -- * Widgets
 
+-- | Wrap blog content with chat and tags.
 renderBlog :: Widget -> Widget
 renderBlog content = do
     $(widgetFile "blog-wrapper")

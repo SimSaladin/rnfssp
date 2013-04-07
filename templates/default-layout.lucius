@@ -250,7 +250,7 @@ html[xmlns] .clearfix { display: block; }
 .nav-three > *:last-child { text-align:center; }
 
 .blog-post {
-   margin: 0 0 1em 0;
+   margin: 2em 0 1em 0;
    footer { margin: 0 4em 0 0 }
    .poster { margin-top: 0.7em; }
    .content-align { margin-left:5em; }
@@ -260,8 +260,8 @@ html[xmlns] .clearfix { display: block; }
 .blog-wrapper {
    padding:0 1em 1em 1em;
    margin:0 0 1em 0;
-   -webkit-box-shadow: 7px 10px 10px 0px rgba(0, 0, 0, 1);
    box-shadow: 7px 10px 10px 0px rgba(0, 0, 0, 1);
+   -webkit-box-shadow: 1px 1px 10px 2px rgba(0, 0, 0, 1);
 }
 .date-box {
    float:left;

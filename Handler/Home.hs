@@ -1,17 +1,19 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Home where
 
-import Import hiding (fail)
 import qualified Data.Text as T
-import Data.Maybe (isJust)
-import Yesod.Auth.HashDB (setPassword)
+import           Data.Maybe (isJust)
+import           Yesod.Auth.HashDB (setPassword)
+
+import Import hiding (fail)
 import Chat
+import Handler.Blog
 
 getHomePageR :: Handler RepHtml
 getHomePageR = do
     defaultLayout $ do
         setTitle "SS"
-        navigation "SS" -- HomePage ?
+        navigation "SS"
         $(widgetFile "home")
 
 getRegisterR :: Handler RepHtml

@@ -4,48 +4,25 @@
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
       <div .ym-gbox>
-         <h2>
-            <a href=@{BlogOverviewR}>Blog
-         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus at
-            ligula neque. Vivamus eu purus nulla, id posuere velit. Nunc tincidunt,
-            purus sed pulvinar tempor, tortor sem lacinia mi, eu gravida arcu dui
-            vel est. Fusce a erat sed lorem posuere posuere. Proin purus ante,
-            facilisis et ultrices at, lobortis ac erat. Praesent ut sapien orci.
-            Morbi elementum ante ante. Nullam at eros in orci feugiat ultrices.
-
-         <p>Proin orci erat, pretium ac vehicula in, volutpat quis ante.
-            Pellentesque aliquet euismod libero, nec lobortis dolor consectetur
-            eget. Praesent sit amet urna nec justo varius fermentum eget sit amet
-            massa. Suspendisse a leo sit amet libero laoreet sodales ac ut augue.
-            Cras cursus, erat vitae ullamcorper interdum, augue mauris luctus orci,
-            vitae accumsan erat lacus eu massa. Aenean enim lectus, cursus eu
-            gravida eu, varius vel tellus. Quisque condimentum sollicitudin
-            ultrices. Fusce sapien magna, lacinia a varius non, egestas ut orci.
-            Morbi vulputate convallis metus, quis mollis felis porttitor vel.
-            Pellentesque nisl nibh, pulvinar non sollicitudin ut, viverra vel sem.
-            Praesent ut tristique justo. Integer ullamcorper adipiscing mollis. Sed
-            nec tellus sit amet lectus vestibulum venenatis ac ac quam. Suspendisse
-            faucibus fermentum est, at auctor arcu feugiat non. Integer eget diam
-            elit.
+         <div .blog-wrapper>
+            ^{newestPost}
+         <a href=@{BlogOverviewR}>
+            <i>More posts...
    <div .ym-g38 .ym-gr>
       <div .ym-gbox>
-         <h2>Chat
+         <h6>Chat
          ^{chatWidget ChatR}
       <div .ym-gbox>
          <h2>
             <a href=@{BoardHomeR}>Board
-         <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Phasellus at
-            ligula neque. Vivamus eu purus nulla, id posuere velit. Nunc tincidunt,
-            purus sed pulvinar tempor, tortor sem lacinia mi, eu gravida arcu dui
-            vel est. Fusce a erat sed lorem posuere posuere. Proin purus ante,
-            facilisis et ultrices at, lobortis ac erat. Praesent ut sapien orci.
-            Morbi elementum ante ante. Nullam at eros in orci feugiat ultrices.
 
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
       <div .ym-gbox>
          <h2>
             <a href=@{MediaHomeR}>Media
+         <div>
+            Recent media stuff.
    <div .ym-g38 .ym-gl>
       <div .ym-gbox>
          <h2>TODOs
@@ -69,7 +46,8 @@
             <li>MPD support
             <li>user profiles
             <li>easy ProfileR user
-            <li>blog post editing
+            <li>
+               <span .todo-done>blog post editing
             <li>blog post deletion
             <li>news feed
             <li>clean up default-layout.lucius

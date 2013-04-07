@@ -42,6 +42,12 @@ h3 a:active, h3 a:hover { color: #DDD; background:transparent }
 
 ::selection { background:#{light_hl} }
 
+#message {
+   margin:1em;
+   padding:0.5em 1em;
+   color:#{dark_text};
+   background:#{light_hl};
+} 
 /* Main Navigation */
 #main-header, #main-header nav {
    background-color: #{shadow};
