@@ -1,3 +1,4 @@
+^{pageNav'}
 $forall preview <- previews
    <div .blog-wrapper>
       ^{preview}

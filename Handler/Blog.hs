@@ -20,6 +20,7 @@ import           Yesod.Markdown (markdownField, markdownToHtml)
 import Chat
 
 -- * Handlers
+-- ** Overview
 
 getBlogOverviewR :: Handler RepHtml
 getBlogOverviewR = overview =<< runFormPost (blogpostForm Nothing)
@@ -33,6 +34,33 @@ postBlogOverviewR = do
             setMessage "New blog post published!"
             redirect $ BlogViewR $ blogpostUrlpath p
         _ -> overview form
+
+overview :: ((FormResult a, Widget), Enctype) -> Handler RepHtml
+overview ((result, widget), encType) = do
+    perPage    <- liftM (read . T.unpack) (getParam "per_page" "5")
+    page       <- liftM (read . T.unpack) (getParam "page" "1")
+    canPost    <- isAdmin'
+    (pcount, posts, ccounts) <- runDB $ do
+        pcount <- count ([] :: [Filter Blogpost])
+        posts  <- selectList [] [ Desc BlogpostTime
+                                , LimitTo perPage
+                                , OffsetBy $ (page - 1) * perPage
+                                ]
+        ccounts <- mapM (count . genFilter) posts
+        return (pcount, posts, ccounts)
+    let genWidget ent cn = blogpostWidget (entityVal ent) cn True canPost
+        previews         = zipWith genWidget posts ccounts
+        pages            = reverse [1 .. (ceiling $ (fromIntegral pcount :: Double) / fromIntegral perPage :: Int)]
+        pageNav'         = pageNav pages page perPage BlogOverviewR
+        -- TODO: calculate omitted pages and add navigation
+    defaultLayout $ do
+        setTitle "SS Blog"
+        navigation "Blog"
+        renderBlog $ $(widgetFile "blog-overview")
+  where
+    genFilter x = [BlogcommentPost ==. entityKey x]
+
+-- ** View
 
 getBlogViewR :: Text -> Handler RepHtml
 getBlogViewR path = do
@@ -50,6 +78,26 @@ postBlogViewR path = do
             setMessage "Comment sent."
             redirect $ BlogViewR path
         _  -> view form ent
+
+view :: ((FormResult a, Widget), Enctype) -- ^ commentForm widget
+     -> Entity Blogpost                   -- ^ post to view
+     -> Handler RepHtml
+view ((result, formWidget), encType) (Entity key val) = do
+    (mprev, mnext) <- runDB $ do
+        a <- selectFirst [BlogpostId <. key] [Desc BlogpostId]
+        b <- selectFirst [BlogpostId >. key] [Desc BlogpostId]
+        return (a, b)
+    comments <- runDB $ selectList [BlogcommentPost ==. key] [Desc BlogcommentTime]
+    post <- liftM (blogpostWidget val (length comments) False) isAdmin'
+    let commentsWidget = blogcommentsWidget Nothing comments
+        route          = BlogViewR $ blogpostUrlpath val
+    defaultLayout $ do
+        setTitle $ toHtml (blogpostTitle val) `mappend` " - SS Blog"
+        navigation "Blog"
+        renderBlog $ $(widgetFile "blog-view")
+
+
+-- ** Edit
 
 getBlogEditR :: Text -> Handler RepHtml
 getBlogEditR path = do
@@ -71,52 +119,12 @@ postBlogEditR path = do
           redirect $ BlogViewR path
       _ -> edit form path
 
--- * Helpers
-
-overview :: ((FormResult a, Widget), Enctype) -> Handler RepHtml
-overview ((result, widget), encType) = do
-    perPage    <- liftM (read . T.unpack) (getParam "results" "20")
-    pageNumber <- liftM (read . T.unpack) (getParam "page" "1")
-    canPost    <- isAdmin'
-    (pcount, posts, ccounts) <- runDB $ do
-        pcount <- count ([] :: [Filter Blogpost])
-        posts  <- selectList [] [ Desc BlogpostTime
-                                , LimitTo perPage
-                                , OffsetBy $ (pageNumber - 1) * perPage
-                                ]
-        ccounts <- mapM (count . genFilter) posts
-        return (pcount, posts, ccounts)
-    let genWidget ent cn = blogpostWidget (entityVal ent) cn True canPost
-        previews = zipWith genWidget posts ccounts
-        -- TODO: calculate omitted pages and add navigation
-    defaultLayout $ do
-        titleRender ["blog"]
-        navigation "Blog"
-        renderBlog $ $(widgetFile "blog-overview")
-  where
-    genFilter x = [BlogcommentPost ==. entityKey x]
-
-view :: ((FormResult a, Widget), Enctype) -- ^ commentForm widget
-     -> Entity Blogpost                   -- ^ post to view
-     -> Handler RepHtml
-view ((result, formWidget), encType) (Entity key val) = do
-    (mprev, mnext) <- runDB $ do
-        a <- selectFirst [BlogpostId <. key] [Desc BlogpostId]
-        b <- selectFirst [BlogpostId >. key] [Desc BlogpostId]
-        return (a, b)
-    comments <- runDB $ selectList [BlogcommentPost ==. key] [Desc BlogcommentTime]
-    post <- liftM (blogpostWidget val (length comments) False) isAdmin'
-    let commentsWidget = blogcommentsWidget Nothing comments
-        route          = BlogViewR $ blogpostUrlpath val
-    defaultLayout $ do
-        titleRender ["blog", blogpostTitle val]
-        navigation "Blog"
-        renderBlog $ $(widgetFile "blog-view")
-
 edit :: ((FormResult a, Widget), Enctype) -> Text -> Handler RepHtml
 edit ((result, widget), encType) path = defaultLayout $ do
-    titleRender ["blog/edit"]
+    setTitle $ "editing: " `mappend` toHtml path `mappend` " - SS Blog"
     renderBlog $ $(widgetFile "blog-edit")
+
+-- * Helpers
 
 getParam :: Text -> Text -> Handler Text
 getParam which fallback = fromGet
@@ -132,8 +140,34 @@ newestPost = do
         commentCount <- lift $ runDB $ count [BlogcommentPost ==. key]
         blogpostWidget val commentCount True False
 
+pageNav :: [Int]     -- ^ Available pages.
+        -> Int       -- ^ Current page.
+        -> Int       -- ^ Limit per page.
+        -> Route App -- ^ Route for links.
+        -> Widget
+pageNav pages current limit route = [whamlet|
+$if length pages > 1
+    <div .nav-three>
+        <span>
+            $if current > 1
+                <a href=@{route}?per_page=#{limit}&page=#{current - 1}>Newer
+            $else
+                &nbsp;
+        <span>
+            $if current < length pages
+                <a href=@{route}?per_page=#{limit}&page=#{current + 1}>Older
+            $else
+                &nbsp;
+        <span>
+            $forall n <- pages
+                $if n == current
+                    <span>#{n}
+                $else
+                    <a href=@{route}?per_page=#{limit}&page=#{n}> #{n}
+|]
 
--- * Widgets
+
+-- ** Widgets
 
 -- | Wrap blog content with chat and tags.
 renderBlog :: Widget -> Widget
@@ -148,7 +182,7 @@ blogpostWidget :: Blogpost -- ^ Post to render.
                -> Bool     -- ^ Render as preview?
                -> Bool     -- ^ Include editing shortcuts?
                -> Widget
-blogpostWidget post commentCount preview editing = $(widgetFile "blogpost")
+blogpostWidget post commentCount preview editing = $(widgetFile "blog-post")
       where title    = blogpostTitle post
             poster   = blogpostPoster post
             link     = BlogViewR $ blogpostUrlpath post
@@ -174,7 +208,7 @@ tags = do
     |]
 
 
--- * Forms
+-- ** Forms
 
 blogpostForm :: Maybe Blogpost -> Html -> MForm App App (FormResult Blogpost, Widget)
 blogpostForm mp extra = do

@@ -12,7 +12,7 @@ import Handler.Blog
 getHomePageR :: Handler RepHtml
 getHomePageR = do
     defaultLayout $ do
-        setTitle "SS"
+        setTitle "SS Home"
         navigation "SS"
         $(widgetFile "home")
 
@@ -21,7 +21,7 @@ getRegisterR = do
     (widget, encType) <- generateFormPost registerForm
     let fails = [] :: [Text]
         in defaultLayout $ do
-          setTitle "Registration"
+          setTitle "SS Registration"
           navigation "Register"
           $(widgetFile "register")
 
@@ -29,7 +29,7 @@ postRegisterR :: Handler RepHtml
 postRegisterR = do
     ((res, widget), encType) <- runFormPost registerForm
     let reperr fails = defaultLayout $ do
-          setTitle "Registration: ERROR"
+          setTitle "ERROR - SS Registration"
           navigation "Register"
           $(widgetFile "register")
     case res of
