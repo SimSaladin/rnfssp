@@ -1,8 +1,12 @@
 $forall Entity key val <- parents
-  <div.page-element>
-    <cite.info-block>#{blogcommentAuthor val} #
-      <span> writes
-      <div.date>#{show $ blogcommentTime val}
-    <div>#{blogcommentContent val}
-    <div.reply>reply
-    <div>^{blogcommentsWidget (Just key) children}
+   <div .blog-comment>
+      <div .avatar>&nbsp;
+      <div .content>
+         <div .info-block>
+            #{blogcommentAuthor val}
+            <span .balloon .date>
+               #{formatTime defaultTimeLocale "%H:%M %d-%m-%Y" $ blogcommentTime val}
+         <p>#{blogcommentContent val}
+         <footer>
+            <span .reply>reply TODO
+         ^{blogcommentsWidget' (Just key) children}

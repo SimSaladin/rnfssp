@@ -4,6 +4,7 @@ module Handler.Admin
     ) where
 
 import Import
+import Utils
 import qualified Data.Text as T (append)
 import qualified Handler.Media as Media (adminWidget)
 
@@ -18,6 +19,12 @@ getAdminR = do
         (Just _,_) -> invalidArgs ["Unknown action!"]
         (     _,_) -> do
             (formWidget, encType) <- generateFormPost newboardForm
+            let form = renderFormH
+                  (submitButtonI MsgBoardCreate)
+                  MsgBoardCreate
+                  AdminR
+                  FormMissing formWidget encType
+
             users <- liftM (map usert) $ runDB $ selectList ([] :: [Filter User]) []
             defaultLayout $ do
                 navigation "Admin"

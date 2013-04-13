@@ -32,8 +32,7 @@ newBetForm owner = renderBootstrap $ Bettarget
   <*> areq mapField "Options and Factors" Nothing
 
 bets2table :: [Bettarget] -> Widget
-bets2table targets = do
-  [whamlet|$newline never
+bets2table targets = [whamlet|$newline never
 <table>
   <tr>
     <th>Opened

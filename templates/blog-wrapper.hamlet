@@ -4,4 +4,4 @@
    <div .ym-col3>
       <div .ym-cbox>^{chatWidget ChatR}
       <hr>
-      <div .ym-cbox>^{tags}
+      <div .ym-cbox>^{tags current}

@@ -9,12 +9,15 @@ User
    UniqueUser username
 
 Blogpost
-   time UTCTime
-   poster Text
-   title Text
-   urlpath Text
-   markdown Markdown
-   rendered Html
+   time              UTCTime
+   poster            Text
+   title             Text
+   urlpath           Text
+   markdown          Markdown
+   tags              [Text] default='[]' Update
+   rendered          Html
+   renderedPreview   Html default='preview_not_available' Update
+   previewSame       Bool default=true Update
    UniqueBlogpost urlpath
 
 Blogcomment

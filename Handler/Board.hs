@@ -35,11 +35,10 @@ renderThreads :: Entity Board
               -> Either Thread [Thread]
               -> ((FormResult D1, Widget), Enctype) -- 
               -> Handler RepHtml
-renderThreads (Entity _ bval) content ((result, formWidget), encType) = do
-    defaultLayout $ do
-        setTitle $ toHtml $ T.concat ["/", boardName bval, "/"]
-        navigation "Lauta"
-        $(widgetFile "board")
+renderThreads (Entity _ bval) content ((result, formWidget), encType) = defaultLayout $ do
+    setTitle $ toHtml $ T.concat ["/", boardName bval, "/"]
+    navigation "Lauta"
+    $(widgetFile "board")
 
 -- /board/<board>
 getBoardR :: Text -> Handler RepHtml

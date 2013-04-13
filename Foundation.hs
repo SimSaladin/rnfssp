@@ -5,6 +5,7 @@ import Yesod
 import Yesod.Static
 import Yesod.Auth
 import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
+import qualified Yesod.Auth.Message as Msg
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Network.HTTP.Conduit (Manager)
@@ -105,7 +106,6 @@ instance Yesod App where
                 then yaml_core_base_css
                 else yaml_core_base_min_css
             addStylesheet $ StaticR yaml_screen_typography_css
-            addStylesheet $ StaticR yaml_forms_gray_theme_css
 
             -- TODO: theme changer
             $(widgetFile "theme_senjougahara")
@@ -124,7 +124,7 @@ instance Yesod App where
     authRoute _ = Just $ AuthR LoginR
 
     -- Blog
-    isAuthorized BlogOverviewR True  = isAdmin
+    isAuthorized BlogHomeR True  = isAdmin
     -- Media
     isAuthorized MediaHomeR          _ = isValidLoggedIn
     isAuthorized (MediaContentR _ _) _ = isValidLoggedIn
@@ -192,21 +192,31 @@ instance YesodPersist App where
 instance YesodAuth App where
     type AuthId App = UserId
 
-    -- Where to send a user after successful login
-    loginDest _ = BlogOverviewR
-    -- Where to send a user after logout
-    logoutDest _ = BlogOverviewR
+    loginDest         _ = HomePageR
+    logoutDest        _ = HomePageR
+    redirectToReferer _ = True 
+    onLogout            = setMessageI MsgLoggedOut
 
-    getAuthId = getAuthIdHashDB AuthR (Just . UniqueUser)
-
-    authPlugins _ = [authHashDB (Just . UniqueUser)]
-
+    getAuthId       = getAuthIdHashDB AuthR (Just . UniqueUser)
+    authPlugins   _ = [ (authHashDB $ Just . UniqueUser) { apLogin = hashLogin } ]
     authHttpManager = httpManager
 
-    loginHandler = defaultLayout $ do
-        setTitle "Login"
-        navigation "Login"
-        $(widgetFile "login")
+    loginHandler = do
+        homeIfLoggedIn
+        defaultLayout $ do
+            setTitleI Msg.LoginTitle
+            navigation "Login"
+            tm <- lift getRouteToMaster
+            master <- lift getYesod
+            mapM_ (flip apLogin tm) (authPlugins master)
+
+hashLogin :: (Route Auth -> Route App) -> GWidget sub App ()
+hashLogin tm  = $(widgetFile "login")
+  where route = tm $ PluginR "hashdb" ["login"]
+
+homeIfLoggedIn :: GHandler sub App ()
+homeIfLoggedIn = maybeAuth >>= maybe (return ())
+    (const $ setMessageI Msg.NowLoggedIn >> redirect HomePageR)
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
@@ -256,7 +266,7 @@ navigation active = do
     mmsg <- lift getMessage
     let es =
           [ ("SS", Right HomePageR)
-          , ("Blog" :: Text, Right BlogOverviewR)
+          , ("Blog" :: Text, Right BlogHomeR)
           , ("Lauta", Left (BoardHomeR, boards))
           , ("Media", Right MediaHomeR)
           ]

@@ -1,10 +1,9 @@
 module Handler.Blog
-    ( getBlogOverviewR
-    , postBlogOverviewR
-    , getBlogViewR
-    , postBlogViewR
-    , getBlogEditR
-    , postBlogEditR
+    ( getBlogHomeR
+    , getBlogViewR, postBlogViewR
+    , getBlogEditR, postBlogEditR
+    , getBlogAddR,  postBlogAddR
+    , getBlogTagR
     , newestPost
     ) where
 
@@ -13,132 +12,174 @@ import           Import
 import qualified Data.List as L
 import qualified Data.Char as C
 import           Data.Maybe
+import qualified Data.Conduit         as C
+import qualified Data.Conduit.List    as CL
 import qualified Data.Text as T
 import           Data.Time (formatTime)
 import           System.Locale (defaultTimeLocale)
-import           Yesod.Markdown (markdownField, markdownToHtml)
+import           Yesod.Markdown (Markdown(..), markdownField, markdownToHtml)
+import           Database.Persist.GenericSql (rawSql)
 import Chat
 
--- * Handlers
--- ** Overview
 
-getBlogOverviewR :: Handler RepHtml
-getBlogOverviewR = overview =<< runFormPost (blogpostForm Nothing)
+-- * Viewing
 
-postBlogOverviewR :: Handler RepHtml
-postBlogOverviewR = do
-    form <- runFormPost $ blogpostForm Nothing
-    case fst $ fst form of
-        FormSuccess p -> do
-            _ <- runDB $ insert p
-            setMessage "New blog post published!"
-            redirect $ BlogViewR $ blogpostUrlpath p
-        _ -> overview form
+renderView :: Blogpost -> Widget -> Handler RepHtml
+renderView post x = defaultLayout $ do
+    setTitle $ toHtml (blogpostTitle post) `mappend` " - SS Blog"
+    renderBlog (blogpostTitle post) x
 
-overview :: ((FormResult a, Widget), Enctype) -> Handler RepHtml
-overview ((result, widget), encType) = do
-    perPage    <- liftM (read . T.unpack) (getParam "per_page" "5")
-    page       <- liftM (read . T.unpack) (getParam "page" "1")
-    canPost    <- isAdmin'
-    (pcount, posts, ccounts) <- runDB $ do
-        pcount <- count ([] :: [Filter Blogpost])
-        posts  <- selectList [] [ Desc BlogpostTime
-                                , LimitTo perPage
-                                , OffsetBy $ (page - 1) * perPage
-                                ]
-        ccounts <- mapM (count . genFilter) posts
-        return (pcount, posts, ccounts)
-    let genWidget ent cn = blogpostWidget (entityVal ent) cn True canPost
-        previews         = zipWith genWidget posts ccounts
-        pages            = reverse [1 .. (ceiling $ (fromIntegral pcount :: Double) / fromIntegral perPage :: Int)]
-        pageNav'         = pageNav pages page perPage BlogOverviewR
-        -- TODO: calculate omitted pages and add navigation
-    defaultLayout $ do
-        setTitle "SS Blog"
-        navigation "Blog"
-        renderBlog $ $(widgetFile "blog-overview")
+-- | 
+getWidgets :: Entity Blogpost
+           -> Handler (Widget, Widget) -- ^ (Blogpost Widget, comments Widget)
+getWidgets (Entity key val) = do
+    comments <- runDB $ selectList [BlogcommentPost ==. key] [Desc BlogcommentTime]
+    post     <- liftM (blogpostWidget val (length comments) False) isAdmin'
+    return (post, blogcommentsWidget comments)
+
+getPostPreview :: Entity Blogpost -> Widget
+getPostPreview (Entity key val) = do
+    comments <- lift $ runDB $ count [BlogcommentPost ==. key]
+    blogpostWidget val comments True =<< lift isAdmin'
+
+-- | Home redirects to the newest blog post.
+getBlogHomeR :: Handler RepHtml
+getBlogHomeR = do
+    mpost <- runDB $ selectFirst [] [Asc BlogpostTime]
+    maybe noPosts (redirect . BlogViewR . blogpostUrlpath . entityVal) mpost
   where
-    genFilter x = [BlogcommentPost ==. entityKey x]
+    noPosts = defaultLayout $ do
+        setTitle "Blog: No posts."
+        navigation "Blog"
+        renderBlog "" $ [whamlet|<i>No posts!|]
 
--- ** View
-
+-- | View a post specified in the url.
 getBlogViewR :: Text -> Handler RepHtml
 getBlogViewR path = do
-    ent <- runDB $ getBy404 $ UniqueBlogpost path
-    form <- runFormPost $ commentForm (entityKey ent) Nothing
-    view form ent
+    e                 <- runDB . getBy404 $ UniqueBlogpost path
+    (widget, encType) <- generateFormPost $ commentForm (entityKey e) Nothing
+    (post, comments)  <- getWidgets e
+    renderView (entityVal e) $(widgetFile "blog-view")
+  where
+    result = FormMissing
 
+-- | Post action in a view is for posting comments.
 postBlogViewR :: Text -> Handler RepHtml
 postBlogViewR path = do
-    ent <- runDB $ getBy404 $ UniqueBlogpost path
-    form <- runFormPost (commentForm (entityKey ent) Nothing)
-    case fst $ fst form of
+    e <- runDB $ getBy404 $ UniqueBlogpost path
+    ((result, widget), encType) <- runFormPost (commentForm (entityKey e) Nothing)
+    case result of
         FormSuccess comment -> do
             _ <- runDB $ insert comment
             setMessage "Comment sent."
             redirect $ BlogViewR path
-        _  -> view form ent
+        _  -> do
+            (post, comments) <- getWidgets e
+            renderView (entityVal e) $(widgetFile "blog-view")
 
-view :: ((FormResult a, Widget), Enctype) -- ^ commentForm widget
-     -> Entity Blogpost                   -- ^ post to view
-     -> Handler RepHtml
-view ((result, formWidget), encType) (Entity key val) = do
-    (mprev, mnext) <- runDB $ do
-        a <- selectFirst [BlogpostId <. key] [Desc BlogpostId]
-        b <- selectFirst [BlogpostId >. key] [Desc BlogpostId]
-        return (a, b)
-    comments <- runDB $ selectList [BlogcommentPost ==. key] [Desc BlogcommentTime]
-    post <- liftM (blogpostWidget val (length comments) False) isAdmin'
-    let commentsWidget = blogcommentsWidget Nothing comments
-        route          = BlogViewR $ blogpostUrlpath val
+-- | 
+getBlogTagR :: Text -> Handler RepHtml
+getBlogTagR tag = do
+    posts <- runDB $ rawSql query [toPersistValue $ "%\"s" `mappend` tag `mappend` "\"%"]
     defaultLayout $ do
-        setTitle $ toHtml (blogpostTitle val) `mappend` " - SS Blog"
-        navigation "Blog"
-        renderBlog $ $(widgetFile "blog-view")
+        setTitle $ toHtml $ "Posts under " `mappend` tag
+        renderBlog "" $ [whamlet|
+\<i>Found #{length posts} posts under</i> #{tag}.
+|] >> mapM_ getPostPreview posts
+  where
+    query = "SELECT ?? FROM \"blogpost\" WHERE \"tags\" SIMILAR TO ? ORDER BY \"time\""
+
+-- * Publishing
+
+renderPublish :: Widget -> Handler RepHtml
+renderPublish x = defaultLayout $ do
+    setTitle "Blog - Publishing"
+    renderBlog "" x
+
+getBlogAddR :: Handler RepHtml
+getBlogAddR = do
+    Entity _ user <- requireAuth
+    (widget, encType) <- generateFormPost (blogpostForm user Nothing) -- new post form
+    renderPublish $ renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR FormMissing widget encType
+
+postBlogAddR :: Handler RepHtml
+postBlogAddR = do
+    Entity _ user <- requireAuth
+    ((result, widget), encType) <- runFormPost (blogpostForm user Nothing) -- new post form
+    case result of
+        FormSuccess post -> do
+            _ <- runDB $ insert post
+            setMessage $ toHtml $ "Post " `mappend` blogpostTitle post `mappend` " published."
+            redirect $ BlogViewR $ blogpostUrlpath post
+        _ -> renderPublish $
+            renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR result widget encType
 
 
--- ** Edit
+-- * Edit
+
+renderEdit :: Blogpost -> Widget -> Handler RepHtml
+renderEdit post x = defaultLayout $ do
+    setTitle $ "[Edit] " `mappend` toHtml (blogpostTitle post) `mappend` " - SS Blog"
+    renderBlog (blogpostTitle post) x
 
 getBlogEditR :: Text -> Handler RepHtml
 getBlogEditR path = do
-    _ <- requireAuth
-    Entity _ val <- runDB $ getBy404 $ UniqueBlogpost path
-    flip edit path =<< runFormPost (blogpostForm (Just val))
+    Entity _ user     <- requireAuth
+    Entity _ val      <- runDB $ getBy404 $ UniqueBlogpost path
+    (widget, encType) <- generateFormPost (blogpostForm user (Just val))
+    renderEdit val $ do
+        [whamlet|<h1>Editing #{path}|]
+        renderFormH (submitButton "Publish")
+                    MsgBlogPublish
+                    (BlogEditR path)
+                    result widget encType
+    where result = FormMissing
 
 postBlogEditR :: Text -> Handler RepHtml
 postBlogEditR path = do
-    form <- runFormPost (blogpostForm Nothing)
-    case fst $ fst form of
-      FormSuccess post -> do
-          runDB $ do
-              Entity key _ <- getBy404 $ UniqueBlogpost path
-              update key [ BlogpostMarkdown =. blogpostMarkdown post
-                         , BlogpostRendered =. markdownToHtml (blogpostMarkdown post)
-                         ]
-          setMessage "Succesfully edited"
-          redirect $ BlogViewR path
-      _ -> edit form path
+    Entity _ user <- requireAuth
+    ((result, widget), encType) <- runFormPost $ blogpostForm user Nothing
+    case result of
+        FormSuccess post -> if blogpostUrlpath post /= path
+            then invalidUrl
+            else do
+                updatePost post
+                setMessage "Succesfully edited."
+                redirect $ BlogViewR path
+        FormFailure _ -> do
+            Entity _ val <- runDB $ getBy404 $ UniqueBlogpost path
+            renderEdit val $ renderFormH
+                (submitButton "Publish")
+                MsgBlogPublish
+                (BlogEditR path)
+                result widget encType
+        FormMissing -> redirect $ BlogEditR path
+  where
+    invalidUrl = do
+        setMessage "The url part should not be changed."
+        redirect $ BlogEditR path
+    updatePost post = runDB $ do
+        Entity key _ <- getBy404 $ UniqueBlogpost path
+        replace key post
 
-edit :: ((FormResult a, Widget), Enctype) -> Text -> Handler RepHtml
-edit ((result, widget), encType) path = defaultLayout $ do
-    setTitle $ "editing: " `mappend` toHtml path `mappend` " - SS Blog"
-    renderBlog $ $(widgetFile "blog-edit")
 
 -- * Helpers
 
 getParam :: Text -> Text -> Handler Text
 getParam which fallback = fromGet
-  where fromGet = lookupGetParam which >>= maybe (fromCookie) return
-        fromCookie = lookupCookie which >>= return . maybe fallback id
+  where fromGet = lookupGetParam which >>= maybe fromCookie return
+        fromCookie = liftM (fromMaybe fallback) $ lookupCookie which
 
+-- | Render a preview of the most recent post.
 newestPost :: Widget
 newestPost = do
     mpost <- lift $ runDB $ selectFirst [] [Desc BlogpostTime]
     maybe mempty constructPost mpost
-    where
+  where
     constructPost (Entity key val) = do
+        editing <- lift isAdmin'
         commentCount <- lift $ runDB $ count [BlogcommentPost ==. key]
-        blogpostWidget val commentCount True False
+        blogpostWidget val commentCount True editing
 
 pageNav :: [Int]     -- ^ Available pages.
         -> Int       -- ^ Current page.
@@ -166,16 +207,19 @@ $if length pages > 1
                     <a href=@{route}?per_page=#{limit}&page=#{n}> #{n}
 |]
 
+getPreview :: Markdown -> Markdown
+getPreview = Markdown . fst . T.breakOn "\n\n" . unMarkdown
 
--- ** Widgets
+
+-- * Widgets
 
 -- | Wrap blog content with chat and tags.
-renderBlog :: Widget -> Widget
-renderBlog content = do
+renderBlog :: Text -> Widget -> Widget
+renderBlog current content = do
+    navigation "Blog"
     $(widgetFile "blog-wrapper")
 
 -- | A single post.
--- TODO; Get the first paragraph or so from the posts in preview mode.
 -- TODO: 3 formatTime's really needed?
 blogpostWidget :: Blogpost -- ^ Post to render.
                -> Int      -- ^ Number of comments.
@@ -189,39 +233,58 @@ blogpostWidget post commentCount preview editing = $(widgetFile "blog-post")
             month    = formatTime defaultTimeLocale "%b" (blogpostTime post)
             day      = formatTime defaultTimeLocale "%d" (blogpostTime post)
             year     = formatTime defaultTimeLocale "%Y" (blogpostTime post)
-            rendered = blogpostRendered post
 
-blogcommentsWidget :: Maybe BlogcommentId -> [Entity Blogcomment] -> Widget
-blogcommentsWidget parent comments = $(widgetFile "blog-comments")
-  where (parents, children) = L.partition ((==) parent . blogcommentParent . entityVal) comments
+blogcommentsWidget :: [Entity Blogcomment] -> Widget
+blogcommentsWidget comments =
+    let (roots', children)  = part Nothing comments
+    in case roots' of
+        []      -> [whamlet|<i>No comments.|]
+        parents -> $(widgetFile "blog-comments")
+  where
+    part                mpid           = L.partition ((==) mpid . blogcommentParent . entityVal)
+    blogcommentsWidget' mpid children' =
+      let (parents, children)          = part mpid children'
+      in $(widgetFile "blog-comments")
 
-tags :: Widget
-tags = do
-    [whamlet|
-<h5>Selaa
-<h6>Päivämäärä
-<ul>
-    <li>
-        <i>Tag
+tags :: Text -> Widget
+tags current = do
+    (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [] [Desc BlogpostTime]
+        C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
+    $(widgetFile "blog-navigation")
+  where
+    addTags [] = blogpostTags
+    addTags xs = L.union xs . blogpostTags
+    getMonth   = formatTime defaultTimeLocale "%B %Y" . blogpostTime . entityVal
 
-<h6>Tageittain
-    |]
+    sortMonth ys@((month, xs) : ys') x = let
+        month' = getMonth x
+        in if month == month'
+            then (month , x : xs) : ys'
+            else (month',    [x]) : ys
+    sortMonth                     [] x = [(getMonth x, [x])]
 
 
--- ** Forms
+-- * Forms
 
-blogpostForm :: Maybe Blogpost -> Html -> MForm App App (FormResult Blogpost, Widget)
-blogpostForm mp extra = do
+-- | XXX: Track editing?
+-- XXX: utilize renderBootstrap somehow?
+blogpostForm :: User -> Maybe Blogpost -> Html -> MForm App App (FormResult Blogpost, Widget)
+blogpostForm poster mp extra = do
     time <- lift timeNow
     (resTitle, viewTitle) <- mreq textField "Title" (blogpostTitle <$> mp)
     (resURL,   viewURL  ) <- mreq urlpathField "Unique URL part" (blogpostUrlpath <$> mp) -- remove?
+    (resTags,  viewTags ) <- mreq tagField "Tags" (blogpostTags <$> mp)
     (resMD,    viewMD   ) <- mreq markdownField "Content :: Markdown" (blogpostMarkdown <$> mp)
     let res = Blogpost <$> pure time
-                       <*> pure "bps" -- XXX: ...
+                       <*> pure (maybe (userUsername poster) blogpostPoster mp) -- pure poster
                        <*> resTitle
                        <*> resURL
                        <*> resMD
-                       <*> (markdownToHtml <$> resMD)
+                       <*> resTags
+                       <*> (markdownToHtml              <$> resMD)
+                       <*> (markdownToHtml . getPreview <$> resMD)
+                       <*> ((\x -> x == getPreview x)   <$> resMD)
+        normal_views = [viewTitle, viewURL, viewTags]
         widget = $(widgetFile "blog-form-newpost")
         in return (res, widget)
   where
@@ -237,10 +300,15 @@ blogpostForm mp extra = do
         toCheck = T.toLower u
         isLegal = isNothing $ T.find (\x -> not ( C.isAsciiLower x || C.isDigit x || x == '-' || x == '_')) toCheck
 
+tagField :: Field App App [Text]
+tagField = checkMMap f T.unwords textField
+  where f :: Text -> GHandler App App (Either Text [Text])
+        f = return . Right . T.words
+
 commentForm :: BlogpostId          -- ^ main post
             -> Maybe BlogcommentId -- ^ Maybe parent comment
-            -> Form Blogcomment
-commentForm pid mcid = renderYaml $ Blogcomment
+            -> Form  Blogcomment
+commentForm pid mcid = renderBootstrap $ Blogcomment
     <$> pure pid
     <*> pure mcid
     <*> aformM timeNow

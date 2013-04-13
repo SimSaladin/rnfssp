@@ -1,0 +1,12 @@
+<h6>Tagit
+$forall tag <- tagcloud
+   <a href=@{BlogTagR tag}>#{tag}
+$forall (month, posts') <- posts
+   <h6>#{month}
+   <ul .list-clean>
+      $forall Entity _ post <- posts'
+         <li>
+            $with title <- blogpostTitle post
+              $if current == title
+              <a href=@{BlogViewR $ blogpostUrlpath post}>#{blogpostTitle post}
+

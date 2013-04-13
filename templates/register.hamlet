@@ -1,12 +1,9 @@
 <div .standout .center-box .small-box>
-  <form.ym-form .ym-full method=post enctype=#{encType}>
-    <fieldset>
+   <div .pull-right ..align-right style="padding:0.7em">
+      <span.label.label-important>_{MsgLabelImportant}
+      _{MsgRegisterNote}
+   <form .form-horizontal method=post enctype=#{encType}>
       <legend .clearfix>_{MsgRegister}
-        <small>
-          <span.label.label-important>_{MsgLabelImportant}
-          _{MsgRegisterNote}
-      $forall fail <- fails
-        <div.alert>#{fail}
       ^{widget}
-      <div .ym-fbox-button>
-        <input type="submit" value="_{MsgGo}">
+      <div .form-actions>
+        <input type="submit" value="_{MsgRegisterAction}">

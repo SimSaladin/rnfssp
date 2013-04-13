@@ -1,19 +1,42 @@
 Hello: Welcome to ssdesk
 HelloDescription: [insert description here]
-Go: Go!
+
+Login:      Login
+
+Logout:     Logout
+LoggedOut:  You are now logged out
+
+Register:         Registration
+RegisterAction:   Register
+RegisterNote:     Only those linked to PVL can have their account verified.
+
 NavAll: View all
-Logout: Logout
-Login: Login
-Register: Register
+
+AdminSpace: Admin tools
+
 Search: Search
-RegisterNote: New accounts must be approved by an admin. Identify yourself in the comment box!
+
+BoardCreate:      Create
 BoardStartThread: Start new thread
 BoardReplyThread: Replying to thread
+
 MediaDescription: anime & music
 MediaType: Type
 MediaFilename: Filename
 MediaSize: Size
 MediaModified: Modified
-LabelImportant: Important!
-BlogPublishPost: Publish
-BlogNewEntry: New entry
+
+LabelImportant: Note
+
+BlogPublish:   Publish a new post
+BlogEdit:      Edit post
+BlogComment:   Leave a comment
+BlogActionPublish:   Publish
+BlogActionComment:   Comment
+BlogCommentsNone: No comments
+BlogCommentsOne:  One comment
+BlogCommentsN:    Comments
+
+FormOneError: An error was encountered. Please, fix it.
+FormNErrors: errors were encountered. Please, fix them.
+FormSuccess: Form was succesfully submitted.

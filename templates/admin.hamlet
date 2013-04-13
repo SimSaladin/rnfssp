@@ -1,10 +1,8 @@
-<h1>Ylläpito
-<div.row-fluid>
+<h1>_{MsgAdminSpace}
+<div .row-fluid>
   <div.span6.page-element>
     <h3>Board
-    <form method=post enctype=#{encType}>
-      ^{formWidget}
-      <input.btn.btn-primary type="submit" value="_{MsgGo}">
+    ^{form}
 
   <div.span6.page-element>
     <h2>Media

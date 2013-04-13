@@ -1,32 +1,42 @@
-<article .blog-post>
+<article .blog-post-wrapper :preview:.preview>
    <header>
       <div .date-wrapper>
          <div .date-box>
             <div .year>#{year}
             <div .month>#{month}
             <div .day>#{day}
-      <div>
+      <h1>
          $if preview
-            <h3>
-               <a href=@{link}>#{title}
+            <a href=@{link}>#{title}
          $else
-            <h1>#{title}
-         <div .poster>by #
-            <a href="#">#{poster}
+            #{title}
    <div .content-align>
       $if preview
-         <p>^{toWidget rendered}
-      $else
-         <p>^{toWidget rendered}
-   <footer :preview:.content-align>
-      $if preview
-         $if (==) commentCount 0
-            <a href="@{link}#comments">
-               <i>No comments. #
-               Write one.
-         $elseif (==) commentCount 1
-            <a href="@{link}#comments">Read the 1 comment.
+         ^{toWidget $ blogpostRenderedPreview post}
+         $if blogpostPreviewSame post
          $else
-            <a href="@{link}#comments">Read the #{show commentCount} comments.
+            <a href="@{link}">
+               <i>Read more...
+      $else
+         ^{toWidget $ blogpostRendered post}
+   <footer .clearfix>
+      <span .poster>
+         <i>Written by #
+            <a href="#">#{poster} #
+      <span .balloon .tags> Tags: #
+         $forall tag <- blogpostTags post
+            <a href=@{BlogTagR tag}>#{tag} #
+      $if preview
+         <span .balloon>
+         <a href="@{link}#comments">
+            $case commentCount
+               $of 0
+                  <i>_{MsgBlogCommentsNone}
+               $of 1
+                  _{MsgBlogCommentsOne}
+               $of _
+                  #{show commentCount} _{MsgBlogCommentsN}
       $if editing
-         <a href=@{BlogEditR $ blogpostUrlpath post}>Edit
+         <span .balloon>
+         <a .btn href=@{BlogEditR $ blogpostUrlpath post}>_{MsgBlogEdit}
+         <a .btn href=@{BlogAddR}>_{MsgBlogPublish}

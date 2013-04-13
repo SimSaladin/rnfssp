@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Apr 03 2013 [10:37:02]
+-- Last Modified: Apr 13 2013 [00:05:24]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -132,3 +132,60 @@ guessFiletype fp
     | ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"]) = "audio"
     | otherwise = "unknown"
     where ext = takeExtension fp
+
+-- XXX: i18n the names
+
+submitButton :: Text -> Widget
+submitButton x = [whamlet|<input type=submit value=#{x}>|]
+
+submitButtonI :: RenderMessage App msg => msg -> Widget
+submitButtonI x = [whamlet|<input type=submit value=_{x}>|]
+
+replyButton :: Widget
+replyButton = [whamlet|<input type=submit value=Reply>|]
+
+renderForm :: RenderMessage App msg
+           => GWidget sub App ()  -- ^ Widget in the submit area.
+           -> msg                 -- ^ Form title
+           -> Route App           -- ^ Form action.
+           -> FormResult a
+           -> GWidget sub App ()  -- ^ Fields.
+           -> Enctype
+           -> GWidget sub App ()
+renderForm = renderForm' ""
+
+renderFormH :: RenderMessage App msg
+            => GWidget sub App () -- ^ Widget in the submit area.
+            -> msg                -- ^ Form title
+            -> Route App          -- ^ Form action.
+            -> FormResult a
+            -> GWidget sub App () -- ^ Fields.
+            -> Enctype
+            -> GWidget sub App ()
+renderFormH = renderForm' "form-horizontal"
+
+-- | Render a POST form.
+renderForm' :: RenderMessage App msg
+           => Text                -- ^ Extra class for <form>.
+           -> GWidget sub App ()  -- ^ Widget in the submit area.
+           -> msg                 -- ^ Form title
+           -> Route App           -- ^ Form action.
+           -> FormResult a
+           -> GWidget sub App ()  -- ^ Fields.
+           -> Enctype
+           -> GWidget sub App ()
+renderForm' extra buttons title route res widget encType = [whamlet|
+<form .#{extra} method=post action=@{route} enctype=#{encType}>
+  <legend>_{title}
+  $case res
+      $of FormFailure [_]
+        <div .alert .alert-error>_{MsgFormOneError}
+      $of FormFailure xs
+          <div .alert .alert-error>#{length xs} _{MsgFormNErrors}
+      $of FormSuccess _
+          <div .alert .alert-success>_{MsgFormSuccess}
+      $of _
+  ^{widget}
+  <div .form-actions>
+    ^{buttons}
+|]

@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Mar 25 2013 [22:51:43]
+-- Last Modified: Apr 13 2013 [01:04:00]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -77,23 +77,22 @@ chatWidget :: YesodChat master
            => (Route Chat -> Route master)
            -> GWidget sub master ()
 chatWidget toMaster = do
-    chat <- lift newIdent     -- the containing div
-    output <- lift newIdent   -- the box containing the messages
-    input <- lift newIdent    -- input field from the user
-    recent <- lift getRecent
-    ili <- lift isLoggedIn    -- check if we're already logged in
+    chat    <- lift newIdent   -- the containing div
+    output  <- lift newIdent   -- the box containing the messages
+    input   <- lift newIdent   -- input field from the user
+    recent  <- lift getRecent
+    ili     <- lift isLoggedIn -- check if we're already logged in
     if ili
         then do
             -- Logged in: show the widget
             [whamlet|
+<h6>Chat
 <div.clearfix ##{chat}>
     <div ##{output} .chat-output>
       $forall (poster, msg) <- recent
         <p>#{poster}: #{msg}
-      <hr>
     <input ##{input} type=text placeholder="Enter Message">
 |]
-            -- Just some CSS
             toWidget [lucius|
  ##{output} {
     width: 100%;
@@ -140,6 +139,7 @@ input.onkeyup = function(event) {
             -- User isn't logged in, give a not-logged-in message.
             master <- lift getYesod
             [whamlet|
+<h6>Chat
 <p>
     You must be #
     $maybe ar <- authRoute master

@@ -1,21 +1,21 @@
 #{extra}
-<div.control-group>
-  <label.control-label for=#{fvId viewTitle}>
-    ^{fvLabel viewTitle}
-  <div.controls>
-    ^{fvInput viewTitle}
+$forall view <- normal_views
+   <div.control-group .clearfix :fvRequired view:.required>
+     <label.control-label for=#{fvId view}>
+       ^{fvLabel view}
+     <div.controls>
+       ^{fvInput view}
+       $maybe tt <- fvTooltip view
+         <span .help-block>#{tt}
+      $maybe err <- fvErrors view
+         <span .help-block>#{err}
 
-<div.control-group>
-  <label.control-label for=#{fvId viewURL}>
-    ^{fvLabel viewURL}
-  <div.controls>
-    ^{fvInput viewURL}
-
-<div.control-group>
-  <label.control-label for=#{fvId viewMD}>
+<div.control-group .clearfix :fvRequired viewMD:.required>
+  <label.control-label style="float:none" for=#{fvId viewMD}>
     ^{fvLabel viewMD}
   <div.controls>
     ^{fvInput viewMD}
-
-<div.form-actions>
-  <input.btn.btn-primary type=submit value="_{MsgBlogPublishPost}">
+    $maybe tt <- fvTooltip viewMD
+      <span .help-block>#{tt}
+   $maybe err <- fvErrors viewMD
+      <span .help-block>#{err}

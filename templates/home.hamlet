@@ -6,11 +6,8 @@
       <div .ym-gbox>
          <div .blog-wrapper>
             ^{newestPost}
-         <a href=@{BlogOverviewR}>
-            <i>More posts...
    <div .ym-g38 .ym-gr>
       <div .ym-gbox>
-         <h6>Chat
          ^{chatWidget ChatR}
       <div .ym-gbox>
          <h2>

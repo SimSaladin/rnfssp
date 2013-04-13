@@ -4,17 +4,17 @@ import Import
 import qualified Data.Text as T
 import Yesod.Auth.HashDB (setPassword, validateUser)
 
-setTitle' :: User -> Widget
-setTitle' = setTitle . toHtml . T.append "Profile of" . userUsername
+renderProfile :: User -> Widget -> Handler RepHtml
+renderProfile user w = defaultLayout $ do
+    navigation "Profile"
+    setTitle . toHtml . T.append "Profile of" . userUsername $ user
+    w
 
 getProfileR :: Handler RepHtml
 getProfileR = do
   Entity uid uval <- requireAuth
   (passwdW, encType) <- generateFormPost passwordChangeForm
-  defaultLayout $ do
-    setTitle' uval
-    navigation "Profile"
-    $(widgetFile "profile")
+  renderProfile uval $(widgetFile "profile")
   where own = True
 
 postProfileR :: Handler RepHtml
@@ -29,10 +29,7 @@ postProfileR = do
              >> return "Password changed"
         else return "Old password didn't match"
       redirect ProfileR
-    _ -> defaultLayout $ do
-      setTitle' uval
-      navigation "Profile"
-      $(widgetFile "profile")
+    _ -> renderProfile uval $(widgetFile "profile")
   where own = True
 
 passwordChangeForm :: Form (Text, Text)

@@ -11,9 +11,11 @@
 /admin/media   MediaAdminR        POST
 
 /                                      HomePageR      GET
-/blog                                  BlogOverviewR  GET POST
-/blog/view/#Text                       BlogViewR      GET POST
-/blog/edit/#Text                       BlogEditR      GET POST
+/blog                                  BlogHomeR      GET
+/blog/#Text                            BlogViewR      GET POST
+/blog-edit/#Text                       BlogEditR      GET POST
+/blog-add                              BlogAddR       GET POST
+/blog-by-tag/#Text                     BlogTagR       GET
 /board                                 BoardHomeR     GET
 /board/#Text                           BoardR         GET POST
 /board/#Text/#BoardpostId              ThreadR        GET POST
