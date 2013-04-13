@@ -2,13 +2,15 @@
 ------------------------------------------------------------------------------
 -- File:          Sections.hs
 -- Creation Date: Dec 23 2012 [23:10:22]
--- Last Modified: Apr 06 2013 [21:57:57]
+-- Last Modified: Apr 13 2013 [18:18:03]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
-module Sections (MSection(..)) where
+module Sections (MSection(..), Section) where
 
 import Import
+
+type Section = Text
 
 class MSection a where
 
@@ -26,3 +28,7 @@ class MSection a where
 
   -- | Action which updates index of the section.
   sUpdateIndex :: a -> Handler ()
+
+  -- | Get path to a large icon for the section.
+  sLargeIcon :: a -> FilePath
+  sLargeIcon _ = ""

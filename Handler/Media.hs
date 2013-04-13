@@ -24,21 +24,22 @@ getMediaHomeR = do
     defaultLayout $ do
         setTitle "Media"
         navigation "Media"
-        $(widgetFile "media-home")
-  where nav = renderBrowsable ""
+        renderBrowsable ""
+        layoutSplitH mempty (userPlaylistWidget ent)
 
 getMediaContentR :: Text -> [Text] -> Handler RepHtml
 getMediaContentR section fps = do
     ent <- requireAuth
     bare <- lookupGetParam "bare"
     case bare of
-        Just  _ -> widgetToRepHtml contents
+        Just  _ -> widgetBodyToRepHtml contents
         Nothing -> defaultLayout $ do
             setTitle "Media"
             navigation "Media"
-            $(widgetFile "media-content")
-  where nav      = renderBrowsable section
-        contents = sectionWidget section fps
+            renderBrowsable section
+            layoutSplitH (browser contents)
+                         (userPlaylistWidget ent)
+  where contents = sectionWidget section fps
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
@@ -95,20 +96,10 @@ getMediaServeR stype section path = case stype of
 adminWidget :: Widget
 adminWidget = do
     ((result, widget), encType) <- lift $ runFormPost adminForm
-    [whamlet|
-<h1>Media
-<div>
-  <form.form-horizontal method=post action=@{MediaAdminR} enctype=#{encType}>
-    <fieldset>
-      <legend>Media actions
-      $case result
-        $of FormFailure reasons
-          $forall reason <- reasons
-            <div .alert .alert-error>#{reason}
-        $of _
-      ^{widget}
-      <div .form-actions>
-        <input .btn .primary type=submit value="Execute actions">|]
+    renderFormH (submitButton "Execute actions")
+                MsgMediaActions
+                MediaAdminR
+                result widget encType
 
 -- | Admin operations in Media.
 postMediaAdminR :: Handler RepHtml

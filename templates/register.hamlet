@@ -1,5 +1,5 @@
 <div .standout .center-box .small-box>
-   <div .pull-right ..align-right style="padding:0.7em">
+   <div .pull-right ..align-right style="padding:0.7em; margin-top:1.3em">
       <span.label.label-important>_{MsgLabelImportant}
       _{MsgRegisterNote}
    <form .form-horizontal method=post enctype=#{encType}>

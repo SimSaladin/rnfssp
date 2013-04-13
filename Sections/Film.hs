@@ -1,11 +1,11 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Apr 06 2013 [23:19:55]
+-- Last Modified: Apr 13 2013 [18:20:29]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
-module Sections.Film (FilmSec(..)) where
+module Sections.Film (FilmSec, mkFilmSec) where
 
 import           Sections
 import           Import
@@ -28,10 +28,14 @@ data FilmSec = FilmSec { sName  :: Text
                        , sRoute :: [Text] -> Route App
                        }
 
+-- TODO: create sections from MediaConf
+mkFilmSec :: Section -> MediaConf -> FilmSec
+mkFilmSec section mc = FilmSec section (mcPath mc) (MediaContentR section)
+
 instance MSection FilmSec where
-  sFind = findFiles
-  sWContent = getContent
-  sFilePath = getFile
+  sFind        = findFiles
+  sWContent    = getContent
+  sFilePath    = getFile
   sUpdateIndex = updateListing
 
 -- | GET params:

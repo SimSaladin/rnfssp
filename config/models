@@ -1,37 +1,40 @@
+-- vim:foldmethod=indent:foldlevel=0:
+
+-- Authentication
 User
    username Text Eq
+   email    Text Eq default='' Update
    password Text
-   salt Text
-   admin Bool default=false Update
-   valid Bool default=false Update
+   salt     Text
+   admin    Bool default=false Update
+   valid    Bool default=false Update
    currentplaylist Text Maybe
-   comment Textarea
+   comment  Textarea
    UniqueUser username
 
+-- Blog
 Blogpost
-   time              UTCTime
-   poster            Text
-   title             Text
-   urlpath           Text
-   markdown          Markdown
-   tags              [Text] default='[]' Update
-   rendered          Html
+   time     UTCTime
+   poster   Text
+   title    Text
+   urlpath  Text
+   markdown Markdown
+   tags     [Text] default='[]' Update
+   rendered Html
    renderedPreview   Html default='preview_not_available' Update
    previewSame       Bool default=true Update
    UniqueBlogpost urlpath
 
 Blogcomment
-   post BlogpostId
-   parent BlogcommentId Maybe
-   time UTCTime
-   user UserId Maybe
-   author Text
-   website Text Maybe
-   content Textarea
+   post     BlogpostId
+   parent   BlogcommentId Maybe
+   time     UTCTime
+   user     UserId Maybe
+   author   Text
+   website  Text Maybe
+   content  Textarea
 
-BlogTag
-   tag String
-
+-- Board
 Board
    name Text
    description Text
@@ -49,6 +52,7 @@ Boardpost
    filepath String Maybe
    fileinfo Text Maybe
 
+-- Media/Sections
 Playlist
    title Text
    owner UserId
@@ -67,11 +71,7 @@ Filenode
    details Text Maybe
    UniqueFilenode area path
 
-Anime
-   nameIdent Text
-   nameJapan Text Maybe
-   nameOther Text Maybe
-
+-- Media/temp/log
 LogDownload
    user UserId
    time UTCTime
@@ -83,6 +83,7 @@ DlTemp
    target Text
    UniqueDlTemp ident
 
+-- Other
 Bettarget
    date UTCTime
    running Bool

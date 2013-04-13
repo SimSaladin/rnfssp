@@ -25,7 +25,7 @@ getAdminR = do
                   AdminR
                   FormMissing formWidget encType
 
-            users <- liftM (map usert) $ runDB $ selectList ([] :: [Filter User]) []
+            users <- runDB $ selectList ([] :: [Filter User]) []
             defaultLayout $ do
                 navigation "Admin"
                 setTitle "Adminstration"
@@ -34,6 +34,10 @@ getAdminR = do
     usert ent = (userUsername val, userComment val, act) where
         val = entityVal ent
         act = if userValid val then "disapprove_user" else "approve_user" :: Text
+
+    disapprove, approve :: Text
+    disapprove = "disapprove_user"
+    approve = "approve_user"
 
     setApprove name value = runDB $ do
         Entity key _ <- getBy404 $ UniqueUser name
@@ -50,6 +54,6 @@ postAdminR = do
     redirect AdminR
 
 newboardForm :: Form Board
-newboardForm = renderDivs $ Board
+newboardForm = renderBootstrap $ Board
     <$> areq textField "Name" Nothing
     <*> areq textField "Description" Nothing

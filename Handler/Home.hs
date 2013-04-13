@@ -36,13 +36,12 @@ postRegisterR = do
         _ -> renderRegister $(widgetFile "register")
 
 registerForm :: Form User
-registerForm = renderBootstrap $ User
+registerForm = renderBootstrap $
+    ( \name email pass comment ->
+        User name pass email "" False False Nothing comment)
     <$> areq (checkM uniqueUsername textField) "Username" Nothing
+    <*> areq (checkM uniqueEmail emailField) "Email" Nothing
     <*> areq passwordConfirmField "" Nothing
-    <*> pure ""
-    <*> pure False
-    <*> pure False
-    <*> pure Nothing
     <*> areq textareaField "Comment" Nothing
   where
     uniqueUsername name = do
@@ -50,3 +49,9 @@ registerForm = renderBootstrap $ User
         return $ if isJust muid
            then Left $ "The username \"" `mappend` name `mappend` "\"is already in use!"
            else Right name
+
+    uniqueEmail email = do
+        muid <- runDB $ selectList [ UserEmail ==. email ] []
+        return $ case muid of
+            [] -> Right email
+            _  -> Left $ ("There is already an account registered with this email." :: Text)

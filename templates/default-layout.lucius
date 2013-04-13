@@ -12,9 +12,6 @@ body > footer {
    margin: 1em 0 0 0;
    min-width: 380px;
 }
-.ym-wrapper {
-   max-width: 80em;
-}
 .ym-wbox {
    padding: 10px
 }
@@ -46,7 +43,7 @@ body > footer {
 /* {{{ Elements */
 /* {{{ Boxes */
 .standout {
-   padding:2em;
+   padding:1.5em;
 }
 .center-box {
    margin: 0 auto;
@@ -94,6 +91,11 @@ blockquote:before {
 ul.list-clean {
    list-style:none;
    margin:1em 0 0 0;
+}
+/*}}}*/
+/* {{{ Tables */
+table {
+   td { padding:0.4em 0.3em; }
 }
 /*}}}*/
 hr { border:0; padding:0; }
@@ -249,17 +251,11 @@ hr { border:0; padding:0; }
    li:last-child { max-width:100%; }
 }
 /*}}}*/
-/*{{{ Buttons*/
-.btn-group {
-   padding: 0.5em 0;
-}
-.btn, input[type="submit"] {
-   display:inline-block;
-   padding: 0.5em 1em;
-   cursor:pointer;
-}
-/*}}}*/
 /*{{{ Forms & Inputs */
+/* {{{ Layout */
+form {
+   margin:1.3em 0 0 0;
+}
 form .control-group {
    padding:0.5em;
    box-sizing:border-box;
@@ -267,6 +263,21 @@ form .control-group {
    -webkit-box-sizing:border-box;
 
    .control-group { padding:0.5em 0 }
+}
+/* NOTE: :not(:empty) is for nested fields nested in control-group with
+ * outermost label empty.
+ */
+form > .control-group > .control-label:not(:empty) {
+   margin:0 0 1em 0;
+}
+.form-horizontal {
+   .control-group { width:100%; }
+   .control-label {
+      float:left;
+      width:10em;
+      text-align:right;
+      padding-right:1em;
+   }
 }
 form legend {
    margin:0 1em;
@@ -277,6 +288,12 @@ form legend {
    padding:1.7em 2em;
    width:auto;
    display:block;
+   text-align:center;
+}
+/* }}} */
+/* {{{ Text fields */
+textarea {
+   max-width:100%;
 }
 input, textarea {
    padding:0.2em 0.5em;
@@ -284,17 +301,32 @@ input, textarea {
    -moz-box-sizing:border-box;
    -webkit-box-sizing:border-box;
 }
-
-.form-horizontal {
-   .control-group { width:100%; }
-   .control-label {
-      float:left;
-      width:10em;
-      text-align:right;
-      padding-right:1em;
-   }
+/* }}} */
+/* {{{ Buttons */
+input[type="submit"], .btn {
+   display:inline-block;
+   padding: 0.5em 1em;
+   cursor:pointer;
+}
+.btn-small {
+   padding: 0.3em 0.5em;
+}
+.btn-group {
+   padding: 0.5em 0;
 }
 /*}}}*/
+/* {{{ Checkboxes */
+input[type="checkbox"], input[type="radio"] {
+   opacity:0;
+}
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+   padding: 0.2em 0.7em;
+   cursor:pointer;
+   border-radius:5px;
+}
+/* }}} */
+/* }}} */
 /* {{{ Hacks */
 /* {{{ clearfix */
 .clearfix:after {

@@ -1,11 +1,11 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Apr 06 2013 [23:19:43]
+-- Last Modified: Apr 13 2013 [18:26:17]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
-module Sections.Music (MPDSec(..)) where
+module Sections.Music (MPDSec, mkMPDSec) where
 
 import           Sections
 import           Import
@@ -21,6 +21,9 @@ data MPDSec = MPDSec { sName  :: Text
                      , sRoot  :: FilePath
                      , sRoute :: [Text] -> Route App
                      }
+
+mkMPDSec :: Section -> MediaConf -> MPDSec
+mkMPDSec section mc = MPDSec section (mcPath mc) (MediaContentR section)
 
 instance MSection MPDSec where
   sFind _         = MPD.songPaths

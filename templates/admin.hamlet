@@ -1,29 +1,31 @@
 <h1>_{MsgAdminSpace}
-<div .row-fluid>
-  <div.span6.page-element>
-    <h3>Board
-    ^{form}
+<div .ym-grid .ym-equalize .linearize-level-1>
+   <div .ym-g50 .ym-gl>
+      <div .ym-gbox .standout>
+         <h3>Board
+         ^{form}
+   <div .ym-g50>
+      <div .ym-gbox .standout>
+         <h3>Media
+         ^{Media.adminWidget}
 
-  <div.span6.page-element>
-    <h2>Media
-    <h6>Does not work
-    <button.btn id=media_update type="button" value="media_update" onclick="media_update()">
-      update media database
+<div .standout>
+   <h3>Users
+   <table>
+      <thead>
+         <tr>
+           <th>Username
+           <th>Comment
+           <th>Actions
+      <tbody>
+         $forall Entity _ user <- users
+           <tr>
+             <td>#{userUsername user}
+             <td>#{userComment user}
+             <td>
+               <a .btn.btn-small href=@{AdminR}?action=#{if' (userValid user) disapprove approve}&target=#{userUsername user}>
+                  $if userValid user
+                     Approve
+                  $else
+                     Disapprove
 
-<div.row-fluid>
-  <div .span12 .page-element>
-    <h3>Users
-    <table border="1">
-      <tr>
-        <th>Username
-        <th>Comment
-        <th>Action
-      $forall (name, comment, action) <- users
-        <tr>
-          <td>#{name}
-          <td>#{comment}
-          <td>
-            <a href=@{AdminR}?action=#{action}&target=#{name}>#{action}
-<div.row-fluid>
-  <div .span6 .page-element>
-    ^{Media.adminWidget}

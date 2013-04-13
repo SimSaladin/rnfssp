@@ -1,25 +1,24 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Apr 13 2013 [00:05:24]
+-- Last Modified: Apr 13 2013 [14:57:12]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
 
-import           Import
 import           Control.Monad.Random
 import           Data.Char
+import           Data.List (tail)
+import qualified Data.Text as T
 import           Data.Time (getCurrentTime)
 import           Data.Time.Clock (UTCTime)
-import qualified Data.Text as T
-import           Data.List (tail)
-import           System.FilePath
-import qualified System.FilePath as F
+import           Data.Time.Format (formatTime, FormatTime)
+import           Import
+import           System.FilePath as F
+import           System.Locale (defaultTimeLocale)
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
 import           Yesod.Default.Config (appExtra)
-import           Data.Time.Format (formatTime, FormatTime)
-import           System.Locale (defaultTimeLocale)
 
 -- * Combinators
 
@@ -32,54 +31,29 @@ if' cond th el = if cond then th else el
 removeByIndex :: Int -> [a] -> [a]
 removeByIndex i xs = let (ys,zs) = splitAt i xs in ys ++ tail zs
 
--- * Handler utils
 
-isAdmin' :: Handler Bool
-isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
+-- * Time utils
 
 -- | convienience
 timeNow :: Handler UTCTime
 timeNow = liftIO getCurrentTime
 
-denyIf :: Bool -> Text -> Handler ()
+printfTime :: FormatTime t => String -> t -> String
+printfTime = formatTime defaultTimeLocale
+
+
+-- * Auth
+
+isAdmin' :: Handler Bool
+isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
+
+denyIf :: Yesod master => Bool -> Text -> GHandler sub master ()
 denyIf True  = permissionDenied
 denyIf False = const (return ())
 
 gServeroot :: Handler Text
 gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
 
--- * 
-
-titleRender :: [Text] -> Widget
-titleRender = setTitle . toHtml . T.concat
-
-widgetOnly :: Widget -> Handler RepHtml
-widgetOnly w = widgetToPageContent w >>= \pc -> hamletToRepHtml [hamlet|^{pageBody pc}|]
-
--- | Convert a widget to a whole page.
-widgetToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
-widgetToRepHtml w = do pc <- widgetToPageContent w
-                       hamletToRepHtml [hamlet|^{pageBody pc}|]
-
-renderYaml :: FormRender sub master a
-renderYaml aform fragment = do
-    (res, views') <- aFormToForm aform
-    let views = views' []
-        has (Just _) = True
-        has Nothing  = False
-    let widget = [whamlet|
-$newline never
-\#{fragment}
-$forall view <- views
-    <div .ym-fbox-text :fvRequired view:.required :not $ fvRequired view:.optional :has $ fvErrors view:.error>
-        <label for=#{fvId view}>#{fvLabel view}
-        ^{fvInput view}
-        $maybe tt <- fvTooltip view
-            <span .help-block>#{tt}
-        $maybe err <- fvErrors view
-            <span .help-block>#{err}
-|]
-    return (res, widget)
 
 -- * Filepath utils
 
@@ -107,10 +81,8 @@ splitPath' = map T.pack . splitPath . T.unpack
 takeDirectory' :: Text -> Text
 takeDirectory' = T.dropWhileEnd (=='/') . fst . T.breakOnEnd "/"
 
--- * Text rendering
 
-printfTime :: FormatTime t => String -> t -> String
-printfTime = formatTime defaultTimeLocale
+-- * Text rendering
 
 -- | File size prettified
 prettyFilesize :: FileOffset -> Text
@@ -132,6 +104,44 @@ guessFiletype fp
     | ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"]) = "audio"
     | otherwise = "unknown"
     where ext = takeExtension fp
+
+
+-- * Widgets
+
+-- | Convert a widget to a whole page.
+widgetBodyToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
+widgetBodyToRepHtml w = do
+    pc <- widgetToPageContent w
+    hamletToRepHtml [hamlet|^{pageBody pc}|]
+
+layoutSplitH :: GWidget sub master () -> GWidget sub master () -> GWidget sub master ()
+layoutSplitH w1 w2 = [whamlet|
+<div .ym-grid .ym-equalize .linearize-level-1>
+   <div .ym-g62 .ym-gl>^{w1}
+   <div .ym-g38 .ym-gl>^{w2}
+   |]
+
+-- * Forms
+
+renderYaml :: FormRender sub master a
+renderYaml aform fragment = do
+    (res, views') <- aFormToForm aform
+    let views = views' []
+        has (Just _) = True
+        has Nothing  = False
+    let widget = [whamlet|
+$newline never
+\#{fragment}
+$forall view <- views
+    <div .ym-fbox-text :fvRequired view:.required :not $ fvRequired view:.optional :has $ fvErrors view:.error>
+        <label for=#{fvId view}>#{fvLabel view}
+        ^{fvInput view}
+        $maybe tt <- fvTooltip view
+            <span .help-block>#{tt}
+        $maybe err <- fvErrors view
+            <span .help-block>#{err}
+|]
+    return (res, widget)
 
 -- XXX: i18n the names
 
@@ -189,3 +199,4 @@ renderForm' extra buttons title route res widget encType = [whamlet|
   <div .form-actions>
     ^{buttons}
 |]
+

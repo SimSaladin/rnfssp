@@ -61,19 +61,37 @@ hr {
    background:#{light};
    color:#{light_text};
 } 
+
+table {
+   background:#{dark_half};
+   box-shadow:1px 1px 0px 3px #{dark};
+   > thead th {
+      background:#{dark_half};
+      border-top:solid 1px #{dark};
+   }
+
+   > tbody td {
+      border-top: 1px solid #{main_alt};
+   }
+}
 /*}}}*/
-/*{{{ Forms & inputs */
+/* {{{ Forms & inputs */
+/* {{{ Layout */
 form {
    background:#{dark_half};
+   box-shadow:-1px 0px 0px 3px #{dark};
 }
 .form-actions {
    background:#{dark_half};
    border-top: 1px solid #{main_alt};
 
 }
-textarea { max-width:100% }
+/* }}} */
+/* {{{ State: normal */
 .control-group.required {
-   input, textarea { border-color:#{highlight_error}; }
+   input, textarea {
+      border-color:#{highlight_error};
+   }
 }
 button, .btn, input[type="submit"], textarea {
    background: #{main};
@@ -81,20 +99,42 @@ button, .btn, input[type="submit"], textarea {
    border:     1px solid #{main_alt_lighter};
 }
 input, textarea, form .btn {
-   background:#{main_alt};
-   color:#{main_text};
-   border:1px solid #{main_alt_lighter};
+   background: #{main_alt};
+   color:      #{main_text};
+   border:     1px solid #{main_alt_lighter};
    box-shadow: inset 1px 1px 10px 0px #{main};
 }
-button:hover, .btn:hover, input[type="submit"]:hover {
-   background: #{dark_three_quarters};
+input[type="checkbox"] + label,
+input[type="radio"] + label {
+   background: #{main_alt_lighter};
+   color:      #{main_text};
+   border:     1px solid #{main_alt_lighter};
+   box-shadow: inset 1px 1px 10px 0px #{main_alt};
+}
+/* }}} */
+/* {{{ State: hover */
+button:hover, .btn:hover, input[type="submit"]:hover,
+input[type="checkbox"] + label:hover,
+input[type="radio"] + label:hover {
+   background: #{main};
    color:      #{light_text_l};
+}
+/* }}} */
+/* {{{ State: active/checked */
+
+/* NOTE: overrides the above hover */
+input[type="checkbox"]:checked + label,
+input[type="radio"]:checked + label {
+   background: #{main_alt};
+   color:      #{dark_text};
+   cursor:     default;
 }
 .btn:active, input[type="submit"]:active {
   position:relative;
   top:1px;
 }
-/*}}}*/
+/* }}} */
+/* }}} */
 /*{{{ Text */
 h1, h2, h3, h4, h5, h6  { color: #{main_text} }
 h1 { color:#{light_text_l}; }
@@ -109,7 +149,7 @@ a:hover {
    color:#{light_text}; 
 }
 
-::selection { background:#{light} }
+::selection { background:#{light_text_dd} }
 /*}}}*/
 /*{{{ Navigation */
 #main-header, #main-header nav {
@@ -169,9 +209,13 @@ a:hover {
    .entry:nth-child(even)  { background:#333333 }
    .entry:nth-child(odd)   { background:#444444 }
 }
+.browser:empty       { box-shadow:none }
+.browser:empty:after { content:"No items."; font-style:italic}
 
 .media-playlist {
    .playlist-items         { box-shadow: 0 0 5px 2px rgba(0,0,0,0.2); }
+   .playlist-items:empty   { box-shadow:none;}
+   .playlist-items:empty:after   { content:"No items."; font-style:italic}
    .misc                   { color:#{dark}; }
    .entry:nth-child(even)  { background:#333333 }
    .entry:nth-child(odd)   { background:#444444 }

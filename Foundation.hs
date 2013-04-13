@@ -126,8 +126,8 @@ instance Yesod App where
     -- Blog
     isAuthorized BlogHomeR True  = isAdmin
     -- Media
-    isAuthorized MediaHomeR          _ = isValidLoggedIn
-    isAuthorized (MediaContentR _ _) _ = isValidLoggedIn
+    isAuthorized MediaHomeR          _ = isValidLoggedIn'
+    isAuthorized (MediaContentR _ _) _ = isValidLoggedIn'
     isAuthorized MediaAdminR         _ = isAdmin
     -- Misc
     isAuthorized AdminR        _     = isAdmin
@@ -155,29 +155,6 @@ instance Yesod App where
         development || level == LevelWarn || level == LevelError
 
     getLogger = return . appLogger
-
-isAdmin :: GHandler s App AuthResult
-isAdmin = do
-    mu <- maybeAuth
-    return $ case mu of
-        Nothing -> AuthenticationRequired
-        Just admin -> if userAdmin $ entityVal admin
-            then Authorized
-            else Unauthorized "You must be an admin!"
---            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
---            | otherwise -> Unauthorized "You must be an admin"
-
---isValidLoggedIn :: (PersistStore (YesodPersistBackend m) (GHandler s m),
---        YesodPersist m, YesodAuth m, AuthId m ~ Key (YesodPersistBackend m)
---        (UserGeneric (YesodPersistBackend m))) => GHandler s m AuthResult
-isValidLoggedIn :: GHandler s App AuthResult
-isValidLoggedIn = do
-    mu <- maybeAuth
-    return $ case mu of
-        Nothing -> AuthenticationRequired
-        Just (Entity _ uval) 
-            | userValid uval -> Authorized
-            | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
 
 -- How to run database actions.
 instance YesodPersist App where
@@ -210,14 +187,6 @@ instance YesodAuth App where
             master <- lift getYesod
             mapM_ (flip apLogin tm) (authPlugins master)
 
-hashLogin :: (Route Auth -> Route App) -> GWidget sub App ()
-hashLogin tm  = $(widgetFile "login")
-  where route = tm $ PluginR "hashdb" ["login"]
-
-homeIfLoggedIn :: GHandler sub App ()
-homeIfLoggedIn = maybeAuth >>= maybe (return ())
-    (const $ setMessageI Msg.NowLoggedIn >> redirect HomePageR)
-
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
 instance RenderMessage App FormMessage where
@@ -249,6 +218,43 @@ instance YesodMpd App where
   mpdPort = return 6600
   mpdHost = return "localhost"
   mpdPass = return ""
+
+
+-- * Utils
+
+isAdmin :: GHandler s App AuthResult
+isAdmin = do
+    mu <- maybeAuth
+    return $ case mu of
+        Nothing -> AuthenticationRequired
+        Just admin -> if userAdmin $ entityVal admin
+            then Authorized
+            else Unauthorized "You must be an admin!"
+--            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
+--            | otherwise -> Unauthorized "You must be an admin"
+
+isValidLoggedIn :: GHandler s App AuthResult
+isValidLoggedIn = do
+    mu <- maybeAuth
+    return $ case mu of
+        Nothing -> AuthenticationRequired
+        Just (Entity _ uval) 
+            | userValid uval -> Authorized
+            | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
+
+isValidLoggedIn' :: GHandler s App AuthResult
+isValidLoggedIn' = isValidLoggedIn >>= \x -> case x of
+    AuthenticationRequired -> setMessage "That section requires authentication. Please login."
+    _                      -> return ()
+    >> return x
+
+hashLogin :: (Route Auth -> Route App) -> GWidget sub App ()
+hashLogin tm  = $(widgetFile "login")
+  where route = tm $ PluginR "hashdb" ["login"]
+
+homeIfLoggedIn :: GHandler sub App ()
+homeIfLoggedIn = maybeAuth >>= maybe (return ())
+    (const $ setMessageI Msg.NowLoggedIn >> redirect HomePageR)
 
 last' :: Int -> [a] -> [a]
 last' n xs

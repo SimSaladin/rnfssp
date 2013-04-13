@@ -21,6 +21,7 @@ BoardStartThread: Start new thread
 BoardReplyThread: Replying to thread
 
 MediaDescription: anime & music
+MediaActions:     Media section actions
 MediaType: Type
 MediaFilename: Filename
 MediaSize: Size

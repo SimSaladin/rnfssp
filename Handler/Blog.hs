@@ -173,13 +173,20 @@ getParam which fallback = fromGet
 -- | Render a preview of the most recent post.
 newestPost :: Widget
 newestPost = do
-    mpost <- lift $ runDB $ selectFirst [] [Desc BlogpostTime]
-    maybe mempty constructPost mpost
-  where
-    constructPost (Entity key val) = do
-        editing <- lift isAdmin'
-        commentCount <- lift $ runDB $ count [BlogcommentPost ==. key]
-        blogpostWidget val commentCount True editing
+    posts <- lift $ runDB $ selectList [] [Desc BlogpostTime, LimitTo 3]
+    case posts of
+        []                    -> mempty
+        (Entity key val : xs) -> do
+            editing       <- lift isAdmin'
+            commentCount  <- lift $ runDB $ count [BlogcommentPost ==. key]
+            blogpostWidget val commentCount True editing
+            [whamlet|
+<h6>Previous posts:
+<ul .list-clean>
+$forall Entity _ post <- xs
+  <li>
+    <a href=@{BlogViewR $ blogpostUrlpath post}>#{blogpostTitle post}
+|]
 
 pageNav :: [Int]     -- ^ Available pages.
         -> Int       -- ^ Current page.
