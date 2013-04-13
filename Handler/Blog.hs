@@ -45,7 +45,7 @@ getPostPreview (Entity key val) = do
 -- | Home redirects to the newest blog post.
 getBlogHomeR :: Handler RepHtml
 getBlogHomeR = do
-    mpost <- runDB $ selectFirst [] [Asc BlogpostTime]
+    mpost <- runDB $ selectFirst [] [Desc BlogpostTime]
     maybe noPosts (redirect . BlogViewR . blogpostUrlpath . entityVal) mpost
   where
     noPosts = defaultLayout $ do
@@ -248,7 +248,7 @@ blogcommentsWidget comments =
 
 tags :: Text -> Widget
 tags current = do
-    (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [] [Desc BlogpostTime]
+    (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [] [Asc BlogpostTime]
         C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
     $(widgetFile "blog-navigation")
   where
