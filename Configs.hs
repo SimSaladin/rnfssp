@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Apr 14 2013 [06:23:17]
+-- Last Modified: Apr 14 2013 [15:12:32]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 --
@@ -23,8 +23,8 @@ import Sections
 import Sections.Music
 import Sections.Film
 import qualified Data.Map as Map
-import Data.Maybe (fromJust)
 
+invalid :: Text -> GHandler sub master a
 invalid how = invalidArgs $
   [how, "If you reached this page through a link on the website, please contact the webmaster."]
 

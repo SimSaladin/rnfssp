@@ -105,6 +105,12 @@ hr { border:0; padding:0; }
 /*}}}*/
 /*{{{ Text elements */
 h3 { margin-bottom:0.5em; }
+h1, h2, h3, h4, h5, h6 {
+   .icon-pin { opacity:0; }
+}
+h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
+   .icon-pin { opacity:0.5; }
+}
 .text-right {
    text-align:right;
    display:inline-block;
@@ -430,7 +436,13 @@ html[xmlns] .clearfix {
 }
 .blog-post-wrapper > footer {
    margin: 2em 0 0 0;
-   width:100%
+   width:100%;
+
+   > * {
+      padding:0 0 0 1em;
+      display:inline-block;
+   }
+   > *:first-child { padding:0; }
 }
 .blog-post-wrapper > header {
    min-height:7em;

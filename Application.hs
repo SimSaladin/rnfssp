@@ -65,13 +65,13 @@ makeFoundation :: AppConfig DefaultEnv Extra -> IO App
 makeFoundation conf = do
     chan <- newChan
     manager <- newManager def
-    s <- staticSite
+    static <- liftM setStaticSettings staticSite
     dbconf <- withYamlEnvironment "config/postgresql.yml" (appEnv conf)
               Database.Persist.Store.loadConfig >>=
               Database.Persist.Store.applyEnv
     p <- Database.Persist.Store.createPoolConfig (dbconf :: Settings.PersistConfig)
     logger <- mkLogger True stdout
-    let foundation = App conf s p manager dbconf logger (Chat chan) Mpd
+    let foundation = App conf static p manager dbconf logger (Chat chan) Mpd
 
     -- Perform database migration using our application's logging settings.
     runLoggingT

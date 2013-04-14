@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Apr 14 2013 [06:01:03]
+-- Last Modified: Apr 14 2013 [13:53:28]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -46,47 +46,52 @@ browser content extra = do
 |]
     toWidget [coffee|
 $ ->
-    dom = $ "#%{rawJS browserId}"
+  
+  ## The browser dom. ###
+  dom = $ "#%{rawJS browserId}"
 
+  ### Bind a search form to be loaded by the browser. ###
+  bind_form = (selector) ->
+      $(selector).siblings("input").on "change", -> $(selector).attr("disabled", null)
+      $(selector).siblings("input").on "keydown", -> $(selector).attr("disabled", null)
 
-    bind_form = (selector) ->
-        $(selector).siblings("input").on "change", -> $(selector).attr("disabled", null)
-        $(selector).siblings("input").on "keydown", -> $(selector).attr("disabled", null)
+      form = $(selector).closest("form")
+      form.submit ->
+          $(selector).attr("disabled", "")
+          loadpage this.action + "?" + $(this).serialize(), true
+          return false
 
-        form = $(selector).closest("form")
-        form.submit ->
-            $(selector).attr("disabled", "")
-            loadpage this.action + "?" + $(this).serialize(), true
-            return false
-    bind_form s for s in %{rawJS $ show extra}
+  ### Bind all extra items with assumption they are search forms :) ###
+  bind_form s for s in %{rawJS $ show extra}
 
-    ### Bind the function loadpage() to the browser links ###
-    register_links = ->
-        dom.find("a.browser-link").on "click", ->
-            loadpage $(this).attr("href"), true
-            this.firstChild.focus()
-            return false
+  ### Bind the function loadpage() to the browser links ###
+  register_links = ->
+      dom.find("a.browser-link").on "click", ->
+          loadpage $(this).attr("href"), true
+          this.firstChild.focus()
+          return false
 
-    ### Load page href. Push the new page to history, unless it was popped. ###
-    loadpage = (href, forward) ->
-        $.get href, {bare: 1}, (data) ->
-            window.history.pushState('', '', href) if forward and href != document.URL
-            dom.animate { opacity: 0 }, 200, "ease", ->
-                dom.html(data)
-                register_links()
-                dom.animate { opacity:1.0 }, 200
+  ### Load page href. Push the new page to history, unless it was popped. ###
+  loadpage = (href, forward) ->
+      $.get href, {bare: 1}, (data) ->
+          window.history.pushState('', '', href) if forward and href != document.URL
+          dom.animate { opacity: 0 }, 200, "ease", ->
+              dom.html(data)
+              register_links()
+              dom.animate { opacity:1.0 }, 200
 
-    ###
-    window.onpopstate is called on page load at least in chromium but not in
-    firefox. This is undesired, but on page load e.state is null. Then we also
-    replace the current state to be non-null.
-    ###
-    window.history.replaceState {}, '', location.href
-    window.onpopstate = (e) ->
-        loadpage(location.href, false) if e.state isnt null
+  ###
+  window.onpopstate is called on page load at least in chromium but not in
+  firefox. This is undesired. Fortunately on the page load event e.state is null
+  in all browsers(?). So, we replace the current state to be non-null *before*
+  binding the onpopstate event.
+  ###
+  window.history.replaceState {}, '', location.href
+  window.onpopstate = (e) ->
+      loadpage(location.href, false) if e.state isnt null
 
-    ### Register links in the initial content ###
-    register_links()
+  ### Register links in the initial content. ###
+  register_links()
 |]
 
 data SimpleListingSettings = SimpleListingSettings

@@ -1,34 +1,36 @@
 module Foundation where
 
 import Prelude hiding (appendFile, readFile)
-import Yesod
-import Yesod.Static
-import Yesod.Auth
-import Yesod.Auth.HashDB (authHashDB, getAuthIdHashDB)
-import qualified Yesod.Auth.Message as Msg
-import Yesod.Default.Config
-import Yesod.Default.Util (addStaticContentExternal)
-import Network.HTTP.Conduit (Manager)
-import qualified Settings
-import Settings.Development (development)
+
+import           Control.Monad  (liftM)
+import           Data.Maybe
+import           Data.Monoid    (mappend)
+import           Data.Text      (Text)
+import qualified Data.Text  as T
+import           Data.Text.IO   (appendFile, readFile)
+import           Database.Persist.GenericSql
 import qualified Database.Persist.Store
-import Settings.StaticFiles
-import Database.Persist.GenericSql
-import Settings (widgetFile, Extra (..))
-import Model
-import Text.Jasmine (minifym)
-import Web.ClientSession (getKey)
-import Text.Hamlet (hamletFile)
-import System.Log.FastLogger (Logger)
+import           Network.HTTP.Conduit   (Manager)
+import           System.Log.FastLogger  (Logger)
+import           Text.Hamlet            (hamletFile)
+import           Text.Jasmine           (minifym)
+import           WaiAppStatic.Types     (StaticSettings(..), File(..), fromPiece)
+import           Web.ClientSession      (getKey)
+import           Yesod                  hiding (fileName)
+import           Yesod.Auth
+import           Yesod.Auth.HashDB      (authHashDB, getAuthIdHashDB)
+import qualified Yesod.Auth.Message     as Msg
+import           Yesod.Default.Config
+import           Yesod.Default.Util     (addStaticContentExternal)
+import           Yesod.Static
 
-import Control.Monad (liftM)
-import Data.Text (Text)
-import qualified Data.Text as T
-import Data.Text.IO (appendFile, readFile)
-import Data.Monoid (mappend)
-
-import Chat
-import Mpd
+import           Settings.Development (development)
+import           Settings.StaticFiles
+import           Settings (widgetFile, Extra (..))
+import           Model
+import qualified Settings
+import           Chat
+import           Mpd
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -106,6 +108,7 @@ instance Yesod App where
                 then yaml_core_base_css
                 else yaml_core_base_min_css
             addStylesheet $ StaticR yaml_screen_typography_css
+            addStylesheet $ StaticR css_fontello_css
 
             -- TODO: theme changer
             $(widgetFile "theme_senjougahara")
@@ -218,6 +221,18 @@ instance YesodMpd App where
   mpdPort = return 6600
   mpdHost = return "localhost"
   mpdPass = return ""
+
+setStaticSettings :: Static -> Static
+setStaticSettings (Static ss) = Static $ ss {
+    ssGetMimeType = \x -> fromMaybe (ssGetMimeType ss $ x) (getMT x)
+  } where
+  getMT file
+      | endsWith ".eot"  = Just $ return "application/vnd.ms-fontobject"
+      | endsWith ".woff" = Just $ return "application/x-font-woff"
+      | endsWith ".ttf"  = Just $ return "application/x-font-ttf"
+      | endsWith ".svg"  = Just $ return "image/svg+xml"
+      | otherwise        = Nothing
+    where endsWith x = x `T.isSuffixOf` (fromPiece $ fileName file)
 
 
 -- * Utils

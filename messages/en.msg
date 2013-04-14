@@ -1,6 +1,9 @@
 Hello: Welcome to ssdesk
 HelloDescription: [insert description here]
 
+ByTags: Tags
+ByDate: Archives
+
 Login:      Login
 
 Logout:     Logout

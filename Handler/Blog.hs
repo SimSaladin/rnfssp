@@ -148,9 +148,7 @@ postBlogEditR path = do
                 updatePost post
                 setMessage "Succesfully edited."
                 redirect $ BlogViewR path
-        FormFailure _ -> do
-            Entity _ val <- runDB $ getBy404 $ UniqueBlogpost path
-            renderEdit val $ renderFormH
+        FormFailure _ -> renderEdit val $ renderFormH
                 (submitButton "Publish")
                 MsgBlogPublish
                 (BlogEditR path)

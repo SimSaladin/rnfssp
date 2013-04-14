@@ -1,6 +1,6 @@
 $forall Entity key val <- parents
    <div .blog-comment>
-      <div .avatar>&nbsp;
+      <div .avatar .icon-comment>&nbsp;
       <div .content>
          <div .info-block>
             #{blogcommentAuthor val}

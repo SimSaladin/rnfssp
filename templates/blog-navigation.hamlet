@@ -1,6 +1,9 @@
-<h6>Tagit
-$forall tag <- tagcloud
-   <a href=@{BlogTagR tag}>#{tag}
+<h5 .icon-tags> _{MsgByTags}
+<p>
+   $forall tag <- tagcloud
+      <a href=@{BlogTagR tag}>#{tag}
+
+<h5 .icon-calendar> _{MsgByDate}
 $forall (month, posts') <- posts
    <h6>#{month}
    <ul .list-clean>

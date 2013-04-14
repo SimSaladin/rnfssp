@@ -114,6 +114,8 @@ library
                  , process
                  , blaze-builder
                  , wai
+                 -- Export to alter static settings.
+                 , wai-app-static
                  , libmpd
                  , aeson
                  , conduit                       >= 1.0

@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Apr 13 2013 [01:04:00]
+-- Last Modified: Apr 14 2013 [15:57:09]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -86,7 +86,7 @@ chatWidget toMaster = do
         then do
             -- Logged in: show the widget
             [whamlet|
-<h6>Chat
+<h6 .icon-chat> Chat
 <div.clearfix ##{chat}>
     <div ##{output} .chat-output>
       $forall (poster, msg) <- recent
@@ -139,7 +139,7 @@ input.onkeyup = function(event) {
             -- User isn't logged in, give a not-logged-in message.
             master <- lift getYesod
             [whamlet|
-<h6>Chat
+<h6 .icon-chat> Chat
 <p>
     You must be #
     $maybe ar <- authRoute master
