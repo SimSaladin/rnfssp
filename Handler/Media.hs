@@ -2,6 +2,8 @@ module Handler.Media
     ( getMediaHomeR
     , getMediaContentR
     , getMediaServeR
+    , getMediaSearchAllR
+    , getMediaSearchR
     , postMediaAdminR
     , adminWidget
     ) where
@@ -11,8 +13,10 @@ import           Import
 import           Configs
 import           JSBrowser (browser)
 import           Handler.Playlists (userPlaylistWidget)
+import qualified Data.Text as T
 import           Data.List (head, tail)
 import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
+import qualified Data.Map as Map
 
 -- | Maximum time a file can be accessed via a temporary url.
 maxTempUrlAlive :: NominalDiffTime
@@ -25,38 +29,93 @@ getMediaHomeR = do
         setTitle "Media"
         navigation "Media"
         renderBrowsable ""
-        layoutSplitH mempty (userPlaylistWidget ent)
+        layoutSplitH renderSearchAll $ userPlaylistWidget ent
+
+renderMaybeBare :: Widget -> Widget -> Handler RepHtml
+renderMaybeBare bareContents nonBareContents = do
+    mq <- lookupGetParam "bare"
+    case mq of
+        Just _  -> widgetBodyToRepHtml bareContents
+        Nothing -> defaultLayout $ do
+            navigation "Media"
+            nonBareContents
 
 getMediaContentR :: Text -> [Text] -> Handler RepHtml
 getMediaContentR section fps = do
     ent <- requireAuth
-    bare <- lookupGetParam "bare"
-    case bare of
-        Just  _ -> widgetBodyToRepHtml contents
-        Nothing -> defaultLayout $ do
-            setTitle "Media"
-            navigation "Media"
-            renderBrowsable section
-            layoutSplitH (browser contents)
-                         (userPlaylistWidget ent)
-  where contents = sectionWidget section fps
+    renderMaybeBare content $ do
+        setTitle "Media"
+        renderBrowsable section
+        renderSearch section
+        layoutSplitH (browser content [".input-search + button"])
+                     (userPlaylistWidget ent)
+  where content = sectionWidget section fps
+
+getMediaSearchAllR :: Handler RepHtml
+getMediaSearchAllR = do
+    ent <- requireAuth
+    mq  <- lookupGetParam "q"
+    let f section hres = hres >>= \res -> return [whamlet|
+<h3>#{section}
+^{res}
+|] 
+    let doSearch q
+          | T.null q  = do
+            let msg = "Search must be at least one character!" :: Html
+            renderMaybeBare [whamlet|<i>#{msg}|] $ lift $ do
+                setMessage msg
+                redirect MediaHomeR
+
+          | otherwise = do
+            results' <- onSecs' $ flip sWSearch q
+            results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
+            renderMaybeBare results $ do
+                setTitle $ toHtml $ "Results for: " `mappend` q
+                renderBrowsable ""
+                renderSearchAll
+                layoutSplitH (browser results [".input-search + button"])
+                             (userPlaylistWidget ent)
+        in maybe (redirect $ MediaHomeR) doSearch mq
+
+-- | search in section @section@ using query string from the @q@ get parameter.
+getMediaSearchR :: Section -> Handler RepHtml
+getMediaSearchR section = do
+    ent <- requireAuth
+    mq  <- lookupGetParam "q"
+    let doSearch q
+          | T.null q  = do
+            let msg = "Search must be at least one character!" :: Html
+            renderMaybeBare [whamlet|<i>#{msg}|] $ lift $ do
+                setMessage msg
+                redirect $ MediaContentR section []
+
+          | otherwise = do
+            results <- onSec' section $ flip sWSearch q
+            renderMaybeBare results $ do
+                setTitle $ toHtml $ "Results for: " `mappend` q
+                renderBrowsable section
+                renderSearch section
+                layoutSplitH (browser results [".input-search + button"])
+                             (userPlaylistWidget ent)
+    maybe (redirect $ MediaContentR section []) doSearch mq
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
 sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
 
-restrictedWidget :: Widget
-restrictedWidget = [whamlet|
-<div .center-box .small-box .text-center>
-  <h1>Access restricted
-  <p>
-    You must be explicitly granted access to this part.<br/>
-    Please, #
-    <a.btn.btn-primary href="@{routeToLogin}">Login
-    &nbsp;or #
-    <a.btn.btn-info href="@{RegisterR}">Register
-    .|]
+renderSearch :: Section -> Widget
+renderSearch section = [whamlet|$newline never
+<form .bare .text-center .standout action=@{MediaSearchR section} type=get>
+  <input .input-search type="search" name="q" placeholder="In #{section}" autofocus pattern="..*" required>
+  <button>Go
+|]
 
+renderSearchAll :: Widget
+renderSearchAll = [whamlet|$newline never
+<form .bare .text-center .standout action=@{MediaSearchAllR} type=get>
+  <input .input-search type="search" name="q" placeholder="Search Media" autofocus pattern="..*" required>
+  <button>Go
+|]
 
 -- * Playing & Downloading
 

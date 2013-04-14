@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File: Mpd.hs
 -- Creation Date: Jul 16 2012 [23:01:24]
--- Last Modified: Apr 06 2013 [22:00:58]
+-- Last Modified: Apr 14 2013 [04:27:28]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ module Mpd
 
    , pathContents
    , songPaths
+   , execMpd
 
    , module Network.MPD
    ) where

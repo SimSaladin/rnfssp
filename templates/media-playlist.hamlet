@@ -1,10 +1,10 @@
+$newline never
 <div ##{mainI} .media-playlist>
-  <h3 ##{headI}>
-  <div ##{actionsI} .btn-toolbar>
-    <div .btn-group>
+   <h3 ##{headI}>
+   <div ##{actionsI} .btn-group>
       <a .btn onclick="playlist.clear_playlist(); return false">Clear
       <a .btn onclick="alert('TODO: not yet implemented'); return false">Rename
       <a .btn href="@{PlaylistR "play"}" target="_blank">Play
       <a .btn href=@{PlaylistR "download"} download type="audio/x-mpegurl">Download
-  <div ##{contI} .playlist-items>
-    <i>Loading playlist...
+   <div ##{contI} .playlist-items>
+      <i>Loading playlist...

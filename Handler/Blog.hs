@@ -12,6 +12,7 @@ import           Import
 import qualified Data.List as L
 import qualified Data.Char as C
 import           Data.Maybe
+import Data.Time (getCurrentTime)
 import qualified Data.Conduit         as C
 import qualified Data.Conduit.List    as CL
 import qualified Data.Text as T
@@ -253,8 +254,8 @@ blogcommentsWidget comments =
       let (parents, children)          = part mpid children'
       in $(widgetFile "blog-comments")
 
-tags :: Text -> Widget
-tags current = do
+renderTagcloud :: Text -> Widget
+renderTagcloud current = do
     (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [] [Asc BlogpostTime]
         C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
     $(widgetFile "blog-navigation")
@@ -272,40 +273,33 @@ tags current = do
 
 
 -- * Forms
-
--- | XXX: Track editing?
--- XXX: utilize renderBootstrap somehow?
-blogpostForm :: User -> Maybe Blogpost -> Html -> MForm App App (FormResult Blogpost, Widget)
-blogpostForm poster mp extra = do
-    time <- lift timeNow
-    (resTitle, viewTitle) <- mreq textField "Title" (blogpostTitle <$> mp)
-    (resURL,   viewURL  ) <- mreq urlpathField "Unique URL part" (blogpostUrlpath <$> mp) -- remove?
-    (resTags,  viewTags ) <- mreq tagField "Tags" (blogpostTags <$> mp)
-    (resMD,    viewMD   ) <- mreq markdownField "Content :: Markdown" (blogpostMarkdown <$> mp)
-    let res = Blogpost <$> pure time
-                       <*> pure (maybe (userUsername poster) blogpostPoster mp) -- pure poster
-                       <*> resTitle
-                       <*> resURL
-                       <*> resMD
-                       <*> resTags
-                       <*> (markdownToHtml              <$> resMD)
-                       <*> (markdownToHtml . getPreview <$> resMD)
-                       <*> ((\x -> x == getPreview x)   <$> resMD)
-        normal_views = [viewTitle, viewURL, viewTags]
-        widget = $(widgetFile "blog-form-newpost")
-        in return (res, widget)
+blogpostForm :: User -> Maybe Blogpost -> Form Blogpost
+blogpostForm poster mp = renderBootstrap $ mkBlogpost
+    <$> aformM (liftIO getCurrentTime)
+    <*> areq textField     "Title"              (blogpostTitle    <$> mp)
+    <*> areq urlpathField  "Unique URL part"    (blogpostUrlpath  <$> mp)
+    <*> areq tagField      "Tags"               (blogpostTags     <$> mp)
+    <*> areq markdownField "Content (Markdown)" (blogpostMarkdown <$> mp)
   where
-    urlpathField = checkM validUrlpart textField
-    validUrlpart u = do
-        dbentry <- runDB $ selectFirst [BlogpostPoster ==. toCheck] []
-        let ret
-                | isJust dbentry = Left ("Post with url `` already exists"::Text)
-                | not isLegal = Left ("URL part contains illegal characters"::Text)
-                | otherwise = Right toCheck
-            in return ret
-      where
+    mkBlogpost time title url tags md = Blogpost
+        (maybe                  time blogpostTime   mp)
+        (maybe (userUsername poster) blogpostPoster mp)
+        title url md tags
+        (markdownToHtml md)
+        (markdownToHtml $ getPreview md)
+        (md == getPreview md)
+
+    urlpathField   = checkM validUrlpart textField
+    validUrlpart u = let
         toCheck = T.toLower u
         isLegal = isNothing $ T.find (\x -> not ( C.isAsciiLower x || C.isDigit x || x == '-' || x == '_')) toCheck
+        in do
+            dbentry <- runDB $ selectFirst [BlogpostPoster ==. toCheck] []
+            let ret | isJust dbentry = Left ("Post with url already exists"::Text)
+                    | not isLegal    = Left "URL part contains illegal characters"
+                    | otherwise      = Right toCheck
+                in return ret
+
 
 tagField :: Field App App [Text]
 tagField = checkMMap f T.unwords textField

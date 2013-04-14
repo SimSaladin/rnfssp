@@ -1,4 +1,4 @@
-/* vim:foldmethod=marker */
+/* vim: set foldmethod=marker: */
 
 /* {{{ Colors */
 @main:      #303030;
@@ -47,7 +47,7 @@ blockquote:before {
 pre {
    background:#{dark_half};
 }
-code {
+pre, code {
    color:#{dark_text};
 }
 hr {
@@ -70,16 +70,44 @@ table {
       border-top:solid 1px #{dark};
    }
 
-   > tbody td {
+   > tbody th {
+      background:#{dark_half};
+      border:none;
+      border-left:  1px solid #{dark};
+      border-right: 1px solid #{main_alt};
+   }
+   > tbody td, > tbody th {
       border-top: 1px solid #{main_alt};
    }
 }
+table.side-headers {
+   box-shadow:-1px 1px 0px 3px #{dark};
+}
+/*}}}*/
+/*{{{ Text */
+h1, h2, h3, h4, h5, h6  { color: #{main_text} }
+h1 { color:#{light_text_l}; }
+h2          { border-bottom:1px solid #{light_text_d}; }
+h3 a:active, h3 a:hover  { color: #DDD; background:transparent }
+
+a {
+   color:#{light_text_dd}
+} 
+a:hover {
+   background:transparent; /* ???? */
+   color:#{light_text}; 
+}
+::selection { background:#{light_text_dd} }
 /*}}}*/
 /* {{{ Forms & inputs */
 /* {{{ Layout */
 form {
    background:#{dark_half};
    box-shadow:-1px 0px 0px 3px #{dark};
+}
+form.bare {
+   background:none;
+   box-shadow:none;
 }
 .form-actions {
    background:#{dark_half};
@@ -98,11 +126,29 @@ button, .btn, input[type="submit"], textarea {
    color:      #{main_text};
    border:     1px solid #{main_alt_lighter};
 }
+.btn-hl {
+   background: #{main_alt};
+}
+button, .btn, input[type="submit"] {
+   box-shadow:-1px -1px 0 1px #{dark};
+}
 input, textarea, form .btn {
    background: #{main_alt};
    color:      #{main_text};
    border:     1px solid #{main_alt_lighter};
-   box-shadow: inset 1px 1px 10px 0px #{main};
+}
+input, textarea { box-shadow: inset 1px 1px 10px 0px #{main}, -1px -1px 0 1px #{dark}; }
+form .btn       { box-shadow: inset 1px 1px 10px 0px #{main}; }
+.btn-toolbar {
+   box-shadow:-1px -1px 0 1px #{dark};
+   border-left: 1px solid #{main_alt_lighter};
+   .btn, button {
+      border:none;
+      box-shadow:none;
+      border-right: 1px solid #{main_alt_lighter};
+      border-top:    1px solid #{main_alt_lighter};
+      border-bottom: 1px solid #{main_alt_lighter};
+   }
 }
 input[type="checkbox"] + label,
 input[type="radio"] + label {
@@ -110,6 +156,10 @@ input[type="radio"] + label {
    color:      #{main_text};
    border:     1px solid #{main_alt_lighter};
    box-shadow: inset 1px 1px 10px 0px #{main_alt};
+}
+.input-search + button {
+   box-shadow: 0 -2px 0 0px #{dark};
+   border-left:none;
 }
 /* }}} */
 /* {{{ State: hover */
@@ -134,23 +184,14 @@ input[type="radio"]:checked + label {
   top:1px;
 }
 /* }}} */
-/* }}} */
-/*{{{ Text */
-h1, h2, h3, h4, h5, h6  { color: #{main_text} }
-h1 { color:#{light_text_l}; }
-h2          { border-bottom:1px solid #{light_text_d}; }
-h3 a:active, h3 a:hover  { color: #DDD; background:transparent }
-
-a {
-   color:#{light_text_dd}
-} 
-a:hover {
-   background:transparent; /* ???? */
-   color:#{light_text}; 
+/*{{{ State: disabled */
+button:disabled, .btn.disabled, input[type="submit"]:disabled {
+   background: #{main_alt};
+   color:      #{dark_text};
+   cursor:     default;
 }
-
-::selection { background:#{light_text_dd} }
 /*}}}*/
+/* }}} */
 /*{{{ Navigation */
 #main-header, #main-header nav {
    background: #{dark};
@@ -211,6 +252,16 @@ a:hover {
 }
 .browser:empty       { box-shadow:none }
 .browser:empty:after { content:"No items."; font-style:italic}
+.browser-pagenav .btn-toolbar {
+   background:#{main_alt};
+   border-bottom:1px solid #444444;
+   box-shadow: -2px -2px  0 0px #{dark};
+}
+.browser + .browser-pagenav .btn-toolbar {
+   border:none
+   border-top:1px solid #444444;
+   box-shadow: 2px 2px 0 0px #{dark};
+}
 
 .media-playlist {
    .playlist-items         { box-shadow: 0 0 5px 2px rgba(0,0,0,0.2); }

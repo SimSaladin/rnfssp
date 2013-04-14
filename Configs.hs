@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Apr 13 2013 [18:26:47]
+-- Last Modified: Apr 14 2013 [06:23:17]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 --
@@ -14,6 +14,7 @@ module Configs
   , sectionsBlockNav
   , onSec
   , onSec'
+  , onSecs'
   , updateIndeces
   ) where
 
@@ -24,24 +25,32 @@ import Sections.Film
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 
+invalid how = invalidArgs $
+  [how, "If you reached this page through a link on the website, please contact the webmaster."]
+
 -- | Execute an action on a section.
 onSec :: Section -> (forall a. MSection a => a -> Handler b) -> Handler b
 onSec section f = do
     mmc <- liftM (Map.lookup section) getSections
-#define g(mk) (f $ mk section $ fromJust mmc)
-    case mcType <$> mmc of
-        Just "mpd"  -> g( mkMPDSec  )
-        Just "film" -> g( mkFilmSec )
-        Just x      -> invalid $ "Requested section type not supported: " `mappend` x
-        Nothing     -> invalid $ "Requested content not found: "          `mappend` section
+    maybe failed (\mc -> runMediaConf section mc f) mmc
+  where failed = invalid $ "Requested content not found: " `mappend` section
+
+runMediaConf :: Section -> MediaConf -> (forall a. MSection a => a -> Handler b) -> Handler b
+runMediaConf section mc f = case mcType mc of
+#define g(mk) (f $ mk section mc)
+        "mpd"  -> g( mkMPDSec  )
+        "film" -> g( mkFilmSec )
+        x      -> invalid $ "Requested section type not supported: " `mappend` x
 #undef g
-  where
-    invalid how = invalidArgs $
-      [how, "If you reached this page through a link on the website, please contact the webmaster."]
 
 -- | Execute a non-Handler action on a section.
 onSec' :: Section -> (forall a. MSection a => a -> b) -> Handler b
 onSec' section f = onSec section (return . f)
+
+onSecs' :: (forall s. MSection s => s -> a) -> Handler (Map.Map Section (Handler a))
+onSecs' f = do
+    secs <- getSections
+    return $ Map.mapWithKey (\s mc -> runMediaConf s mc (return . f)) secs
 
 updateIndeces :: Handler ()
 updateIndeces = liftM (Map.keys . extraSections) getExtra

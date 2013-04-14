@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Apr 13 2013 [18:26:17]
+-- Last Modified: Apr 14 2013 [05:11:18]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -11,10 +11,10 @@ import           Sections
 import           Import
 import           Utils
 import           JSBrowser
-import qualified Mpd as MPD
-import           Data.List (last)
+import qualified Mpd as M
+import           Data.List (last, union)
 import qualified Data.Text as T
-import           Data.Text.Encoding (decodeUtf8)
+import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           System.FilePath ((</>))
 
 data MPDSec = MPDSec { sName  :: Text
@@ -26,38 +26,56 @@ mkMPDSec :: Section -> MediaConf -> MPDSec
 mkMPDSec section mc = MPDSec section (mcPath mc) (MediaContentR section)
 
 instance MSection MPDSec where
-  sFind _         = MPD.songPaths
+  sFind _         = M.songPaths
   sWContent       = musicContent
-  sWSearch        = undefined -- TODO
+  sWSearch        = searchMPD
   sFilePath MPDSec{sRoot = root} = return . (</>) root . T.unpack
   sUpdateIndex _  = return () -- TODO: mpd update?
 
 musicContent :: MPDSec -> [Text] -> Widget
 musicContent sec@MPDSec{sRoute = route} fps = do
-  contents <- lift $ MPD.pathContents fps
-  case contents of
-    [MPD.LsSong song] -> songSingle sec fps song
-    [MPD.LsPlaylist (MPD.PlaylistName bs)] -> undefined
-    _ -> let sl = SimpleListingSettings
-                 { slSect       = sName sec
-                 , slCurrent    = fps
-                 , slCount      = 0
-                 , slLimit      = 0
-                 , slPage       = 0
-                 , slContent    = map buildElem contents
-                 }
-        in simpleListing sl route (flip MediaServeR "music") ("Filename", "TODO", "TODO")
-    where
-  buildElem res = case res of
-    MPD.LsDirectory (MPD.Path bs)                       -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", T.splitOn "/" p, "", "")
-    MPD.LsSong (MPD.Song{MPD.sgFilePath = MPD.Path bs}) -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
-    MPD.LsPlaylist (MPD.PlaylistName bs)                -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
+    contents <- lift $ M.pathContents fps
+    case contents of
+        [M.LsSong song] -> songSingle sec fps song
+        [M.LsPlaylist (M.PlaylistName bs)] -> undefined
+        _ -> let sl = SimpleListingSettings
+                     { slSect       = sName sec
+                     , slCurrent    = fps
+                     , slCount      = 0
+                     , slLimit      = 0
+                     , slPage       = 0
+                     , slContent    = map buildElem contents
+                     }
+            in simpleListing sl route (flip MediaServeR $ sName sec) ("Filename", "TODO", "TODO")
+  where
+    buildElem res = case res of
+      M.LsDirectory (M.Path bs)                   -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", T.splitOn "/" p, "", "")
+      M.LsSong (M.Song{M.sgFilePath = M.Path bs}) -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
+      M.LsPlaylist (M.PlaylistName bs)            -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
+
+searchMPD :: MPDSec -> Text -> Widget
+searchMPD s q = do
+    let dosearch val = M.search $ val M.=? (M.Value $ encodeUtf8 q)
+    contents <- liftM (take 100 . foldl union []) . lift . M.execMpd $ mapM dosearch [M.Artist, M.Album, M.Title]
+    let sl = SimpleListingSettings
+             { slSect       = sName s
+             , slCurrent    = ["Results for " `mappend` q]
+             , slCount      = 0
+             , slLimit      = 0
+             , slPage       = 0
+             , slContent    = map buildElem' contents
+             }
+        in simpleListing sl (sRoute s) (flip MediaServeR $ sName s) ("Filename", "TODO", "TODO")
+  where
+    buildElem' M.Song{M.sgFilePath = M.Path bs} = let
+        p = decodeUtf8 bs
+        in (last $ T.splitOn "/" p, "file", T.splitOn "/" p, "", "")
 
 -- | Single Song item Widget.
-songSingle :: MPDSec -> [Text] -> MPD.Song -> Widget
-songSingle MPDSec{sName = name, sRoute = route} fps MPD.Song
-  { MPD.sgFilePath = MPD.Path bs
-  , MPD.sgLength = seconds
+songSingle :: MPDSec -> [Text] -> M.Song -> Widget
+songSingle MPDSec{sName = name, sRoute = route} fps M.Song
+  { M.sgFilePath = M.Path bs
+  , M.sgLength = seconds
   } = do
   let path = decodeUtf8 bs
   simpleNav name fps route

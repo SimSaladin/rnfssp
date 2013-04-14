@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Apr 13 2013 [18:20:29]
+-- Last Modified: Apr 14 2013 [04:16:22]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -22,6 +22,7 @@ import           System.Posix.Files   (FileStatus, fileSize, modificationTime, i
 import           System.FilePath ((</>), normalise)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
+import           Database.Persist.GenericSql (rawSql)
 
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
@@ -37,14 +38,20 @@ instance MSection FilmSec where
   sWContent    = getContent
   sFilePath    = getFile
   sUpdateIndex = updateListing
+  sWSearch     = searchDB
+
+getPages :: Handler (Int, Int)
+getPages = do
+    limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
+    page  <- liftM (maybe 0 (read . T.unpack)) $ lookupGetParam "page"
+    return (limit, page)
 
 -- | GET params:
 --  * limit_to  - how many results per page
 --  * page      - the page to show
 getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
-    limit <- liftM (maybe 50 (read . T.unpack)) $ lift $ lookupGetParam "limit_to"
-    page  <- liftM (maybe 0 (read . T.unpack)) $ lift $ lookupGetParam "page"
+    (limit, page) <- lift getPages
     let opts = [Desc FilenodeIsdir, Asc FilenodePath, LimitTo limit, OffsetBy $ limit * page]
 
     -- Left children, Right node
@@ -76,20 +83,21 @@ getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
                     }
                 in simpleListing sl route (flip MediaServeR sect) ("Filename", "File size", "Modified")
         Right node -> animeSingle fsec fps node
-    where
-  buildElem val = ( last $ T.splitOn "/" $ filenodePath val
-                  , if' (filenodeIsdir val) "directory" "file"
-                  , T.splitOn "/" $ filenodePath val
-                  , filenodeSize val
-                  , T.pack $ printfTime "%d.%m -%y" $ filenodeModTime val
-                  )
+
+buildElem val = ( last $ T.splitOn "/" $ filenodePath val
+                , if' (filenodeIsdir val) "directory" "file"
+                , T.splitOn "/" $ filenodePath val
+                , filenodeSize val
+                , T.pack $ printfTime "%d.%m -%y" $ filenodeModTime val
+                )
 
 -- | Single file.
 animeSingle :: FilmSec -> [Text] -> Entity Filenode -> Widget
 animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
   simpleNav name fps route
   [whamlet|
-<div .details>
+<div .ym-gbox .details>
+  <div .text-center>
     <div .btn-toolbar>
       <a.btn .btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
         <i.icon-white.icon-play> #
@@ -99,21 +107,47 @@ animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
         Download
       <a.btn onclick="window.playlist.to_playlist('#{name}', ['#{toPath fps}']); return false">
         Add to playlist
-    <table>
-        <tr>
-          <th>Filename
-          <td><i>#{filenodePath val}
-        <tr>
-          <th>Size
-          <td>#{filenodeSize val}
-        <tr>
-          <th>Modified
-          <td>#{T.pack $ printfTime "%d.%m -%y" $ filenodeModTime val}
+  <table .side-headers>
+    <tr>
+      <th>Filename
+      <td>
+        <code>#{filenodePath val}
+    <tr>
+      <th>Size
+      <td>#{filenodeSize val}
+    <tr>
+      <th>Modified
+      <td>#{T.pack $ printfTime "%H:%M %d.%m.%Y" $ filenodeModTime val}
 $maybe s <- filenodeDetails val
   <div .page-element>
     <h4>Mediainfo
     <pre>#{s}
-  |]
+|]
+
+searchDB :: FilmSec -> Text -> Widget
+searchDB s q = do
+    (limit, page) <- lift getPages
+    nodes <- lift $ runDB $ rawSql query
+        [ toPersistValue $ sName s
+        , toPersistValue $ ".*" `mappend` q `mappend` ".*"
+        , toPersistValue limit
+        , toPersistValue page
+        ]
+    let sl = simpleListingSettings
+            { slSect    = sName s
+            , slCurrent = ["Results for " `mappend` q]
+            , slCount   = -1
+            , slPage    = page
+            , slLimit   = limit
+            , slContent = map (buildElem . entityVal) nodes
+            }
+    simpleListing sl (sRoute s) (flip MediaServeR $ sName s) ("Filename", "File size", "Modified")
+  where query = T.pack $ unlines 
+          [ "SELECT ?? FROM \"filenode\" "
+          , "WHERE \"area\" = ? AND \"path\" ~* ? "
+          , "ORDER BY \"path\" "
+          , "LIMIT ? OFFSET ? "
+          ]
 
 -- -- | Recursively find all child files (and only files) of a node.
 -- FIXME use a custom query instead?
@@ -221,4 +255,3 @@ getDetails :: FilePath -> IO Text
 getDetails fp = do
   (_, out, _) <- readProcessWithExitCode "mediainfo" [fp] ""
   return $ T.pack out
-
