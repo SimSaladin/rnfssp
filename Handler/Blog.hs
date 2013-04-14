@@ -139,7 +139,8 @@ getBlogEditR path = do
 postBlogEditR :: Text -> Handler RepHtml
 postBlogEditR path = do
     Entity _ user <- requireAuth
-    ((result, widget), encType) <- runFormPost $ blogpostForm user Nothing
+    Entity _ val  <- runDB $ getBy404 $ UniqueBlogpost path
+    ((result, widget), encType) <- runFormPost $ blogpostForm user (Just val)
     case result of
         FormSuccess post -> if blogpostUrlpath post /= path
             then invalidUrl
