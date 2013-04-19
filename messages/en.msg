@@ -25,9 +25,9 @@ BoardReplyThread: Replying to thread
 
 MediaDescription: anime & music
 MediaActions:     Media section actions
-MediaType: Type
+MediaType:     Type
 MediaFilename: Filename
-MediaSize: Size
+MediaSize:     Size
 MediaModified: Modified
 
 LabelImportant: Note
@@ -42,5 +42,5 @@ BlogCommentsOne:  One comment
 BlogCommentsN:    Comments
 
 FormOneError: An error was encountered. Please, fix it.
-FormNErrors: errors were encountered. Please, fix them.
-FormSuccess: Form was succesfully submitted.
+FormNErrors:  Errors were encountered. Please, fix them.
+FormSuccess:  Form was succesfully submitted.

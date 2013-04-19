@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Apr 14 2013 [15:12:32]
+-- Last Modified: Apr 19 2013 [11:06:10]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 --
@@ -22,6 +22,7 @@ import Import
 import Sections
 import Sections.Music
 import Sections.Film
+import Sections.Types
 import qualified Data.Map as Map
 
 invalid :: Text -> GHandler sub master a

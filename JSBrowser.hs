@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Apr 14 2013 [13:53:28]
+-- Last Modified: Apr 15 2013 [22:39:36]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -14,12 +14,15 @@ import           Foundation
 import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
+import           Data.String
 import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
 import           Text.Coffee
 import qualified System.FilePath as F (joinPath)
 import           Utils
+
+import Sections.Types
 
 -- | Assumptions this widget makes:
 --
@@ -115,8 +118,8 @@ simpleListingSettings = SimpleListingSettings
 
 -- | Simple listing of content.
 simpleListing :: SimpleListingSettings
-              -> ([Text] -> Route master)                -- ^ url to content
-              -> (ServeType -> [Text] -> Route master)   -- ^ url to direct file
+              -> ([Text] -> Route master)                -- ^ Route to content.
+              -> (ServeType -> [Text] -> Route master)   -- ^ Route to file serving.
               -> (Text, Text, Text)                      -- ^ (msgFilename, msgFileize, msgModified)
               -> GWidget sub master ()
 simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
@@ -139,12 +142,10 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
       <div .entry .type-#{filetype}>
         <div .data-field style="display:none">#{toPath fps}
         <div .browser-controls>
-          <div ..btn-toolbar>
-            $if (/=) filetype directory
-              <a .btn .btn-small href=@{toFile ServeForceDownload fps} onclick="">DL
-              <a .btn .btn-small href=@{toFile ServeAuto fps}          onclick="" target="_blank">PLAY
-            <a .btn .btn-small .action href="" onclick="playlist.to_playlist('#{slSect sl}', [$(this).closest('.entry').children()[0].innerText]); return false">
-                ADD
+          $if (/=) filetype directory
+            <a .icon-download href=@{toFile ServeForceDownload fps} onclick="">
+            <a .icon-play     href=@{toFile ServeAuto fps}          onclick="" target="_blank">
+          <a .icon-plus .action href="" onclick="playlist.to_playlist('#{slSect sl}', [$(this).closest('.entry').children()[0].innerText]); return false">
         <a .browser-link .#{filetype} href="@{routeToContent fps}">
             <span .filename>#{filename}
             <span .misc>
@@ -177,10 +178,11 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
 |]
 
 -- | Construct breadcrumbs into a widget.
-simpleNav :: Text -> [Text]
+simpleNav :: Text
+          -> [Text]
           -> ([Text] -> Route master)
           -> GWidget sub master ()
-simpleNav _    []  _ = mempty -- [whamlet|<ul.breadcrumb>&nbsp;|]
+simpleNav _    []  _ = mempty
 simpleNav home fps f = [whamlet|
 <ul.breadcrumb>
     <li>

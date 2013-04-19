@@ -54,6 +54,7 @@ library
                      Utils
                      Configs
                      Sections
+                     Sections.Types
                      Sections.Music
                      Sections.Film
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Apr 14 2013 [05:11:18]
+-- Last Modified: Apr 19 2013 [11:05:46]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -16,6 +16,8 @@ import           Data.List (last, union)
 import qualified Data.Text as T
 import           Data.Text.Encoding (decodeUtf8, encodeUtf8)
 import           System.FilePath ((</>))
+
+import Sections.Types
 
 data MPDSec = MPDSec { sName  :: Text
                      , sRoot  :: FilePath

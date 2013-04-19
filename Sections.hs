@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections.hs
 -- Creation Date: Dec 23 2012 [23:10:22]
--- Last Modified: Apr 13 2013 [18:18:03]
+-- Last Modified: Apr 17 2013 [12:03:32]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -10,7 +10,10 @@ module Sections (MSection(..), Section) where
 
 import Import
 
-type Section = Text
+import Sections.Types
+
+
+type Section = SectionId
 
 class MSection a where
 

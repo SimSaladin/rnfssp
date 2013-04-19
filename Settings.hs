@@ -21,6 +21,8 @@ import Text.Hamlet
 import Text.Coffee
 import Data.Map (Map)
 
+import Sections.Types
+
 -- | Which Persistent backend this site is using.
 type PersistConfig = PostgresConf
 
@@ -65,30 +67,13 @@ widgetFile = (if development then widgetFileReload
                              else widgetFileNoReload)
               widgetFileSettings
 
--- | Defines settings for a section. Section implementations are constructed
--- from these.
-data MediaConf = MediaConf
-    { mcType :: Text      -- ^ Type determines the section implemntation.
-    , mcView :: Text      -- ^ Screen name for the section.
-    , mcIcon :: Text      -- ^ Icon to use: static/img/<mcIcon a>.
-    , mcPath :: FilePath  -- ^ Path for the section implementation.
-    } deriving Show
-
-instance FromJSON MediaConf where
-    parseJSON (Object o) = MediaConf
-      <$> o .: "type"
-      <*> o .: "view"
-      <*> o .: "icon"
-      <*> o .: "path"
-    parseJSON _ = mzero
-
 data Extra = Extra
     { extraCopyright :: Text
     , extraApproot   :: Text
     , extraServeroot :: Text
     , extraAnalytics :: Maybe Text -- ^ Google Analytics
     , extraDirDyn    :: FilePath
-    , extraSections  :: Map Text MediaConf
+    , extraSections  :: Map SectionId MediaConf
     } deriving Show
 
 parseExtra :: DefaultEnv -> Object -> Parser Extra

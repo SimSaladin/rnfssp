@@ -147,6 +147,9 @@ getMediaServeR stype section path = case stype of
         _   <- runDB $ insert $ LogDownload uid t fp -- TODO: use a log file
         return fp
 
+-- * Sections
+
+
 
 -- * Adminspace
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Apr 14 2013 [04:16:22]
+-- Last Modified: Apr 17 2013 [12:04:23]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -23,6 +23,8 @@ import           System.FilePath ((</>), normalise)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
 import           Database.Persist.GenericSql (rawSql)
+
+import Sections.Types
 
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
