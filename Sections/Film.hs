@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Apr 17 2013 [12:04:23]
+-- Last Modified: May 28 2013 [14:11:35]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -22,7 +22,7 @@ import           System.Posix.Files   (FileStatus, fileSize, modificationTime, i
 import           System.FilePath ((</>), normalise)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
-import           Database.Persist.GenericSql (rawSql)
+import           Database.Persist.Sql (rawSql)
 
 import Sections.Types
 
@@ -53,11 +53,11 @@ getPages = do
 --  * page      - the page to show
 getContent :: FilmSec -> [Text] -> Widget
 getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
-    (limit, page) <- lift getPages
+    (limit, page) <- liftHandlerT getPages
     let opts = [Desc FilenodeIsdir, Asc FilenodePath, LimitTo limit, OffsetBy $ limit * page]
 
     -- Left children, Right node
-    res <- lift . runDB $ case fps of
+    res <- liftHandlerT . runDB $ case fps of
         []   -> let filters = [FilenodeArea ==. sect, FilenodeParent ==. Nothing]
                     in liftM Left $ do
                         a <- selectList filters opts
@@ -128,8 +128,8 @@ $maybe s <- filenodeDetails val
 
 searchDB :: FilmSec -> Text -> Widget
 searchDB s q = do
-    (limit, page) <- lift getPages
-    nodes <- lift $ runDB $ rawSql query
+    (limit, page) <- liftHandlerT getPages
+    nodes <- liftHandlerT $ runDB $ rawSql query
         [ toPersistValue $ sName s
         , toPersistValue $ ".*" `mappend` q `mappend` ".*"
         , toPersistValue limit

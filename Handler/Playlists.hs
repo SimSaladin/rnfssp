@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Apr 07 2013 [21:17:39]
+-- Last Modified: May 28 2013 [14:14:29]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -32,7 +32,7 @@ getPlaylistR action = do
     case action of
         "play"     -> sendFile "audio/x-mpegurl" x
         "download" -> do
-            setHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\""
+            addHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\""
             sendFile "application/force-download" x
         _ -> invalidArgs ["Invalid or unsupported action: " `T.append` action]
 
@@ -46,7 +46,7 @@ getPlaylistR action = do
 --    clear:  remove all elements from the playlist. TODO
 --    delete: Delete selected elements. TODO
 --
-postPlaylistR :: Text -> Handler RepJson
+postPlaylistR :: Text -> Handler Value
 postPlaylistR action = do
     Entity plk pl <- solvePlaylist =<< requireAuth
     case action of
@@ -59,9 +59,9 @@ postPlaylistR action = do
       "delete"  -> parseJsonBody_ >>= plUpdate plk . plDelete pl >>= rsucc
       _ -> rfail "Unknown playlist action."
   where
-    rfail :: Text -> Handler RepJson
-    rfail msg = jsonToRepJson (1 :: Int, msg)
-    rsucc msg = jsonToRepJson (0 :: Int, msg)
+    rfail :: Text -> Handler Value
+    rfail msg = returnJson (1 :: Int, msg)
+    rsucc msg = returnJson (0 :: Int, msg)
 
 getPlaylistListR :: Handler RepHtml
 getPlaylistListR = undefined
@@ -69,7 +69,7 @@ getPlaylistListR = undefined
 -- | Playlist widget customized for a user.
 userPlaylistWidget :: Entity User -> Widget
 userPlaylistWidget (Entity _ uval) = do
-    [mainI, actionsI, contI, headI] <- replicateM 4 (lift newIdent)
+    [mainI, actionsI, contI, headI] <- replicateM 4 (liftHandlerT newIdent)
     $(widgetFile "media-playlist")
 
 -- | Retrieve user's playlist using various methods. If all else fails, create

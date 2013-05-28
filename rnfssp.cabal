@@ -76,22 +76,22 @@ library
                 FlexibleContexts
                 EmptyDataDecls
                 NoMonomorphismRestriction
+                DeriveDataTypeable
 
     build-depends: base                          >= 4          && < 5
                  -- , yesod-platform                >= 1.1        && < 1.2
-                 , yesod                         >= 1.1.5      && < 1.2
-                 , yesod-core                    >= 1.1.7      && < 1.2
-                 , yesod-auth                    >= 1.1        && < 1.2
-                 , yesod-static                  >= 1.1        && < 1.2
-                 , yesod-default                 >= 1.1        && < 1.2
-                 , yesod-form                    >= 1.1        && < 1.3
+                 , yesod                         >= 1.2        && < 1.3
+                 , yesod-core                    >= 1.2        && < 1.3
+                 , yesod-auth                    >= 1.2        && < 1.3
+                 , yesod-static                  >= 1.2        && < 1.3
+                 , yesod-form                    >= 1.3        && < 1.4
                  , yesod-extrafields             >= 0.0.0
-                 , clientsession                 >= 0.8        && < 0.9
+                 , clientsession                 >= 0.8        && < 0.10
                  , bytestring                    >= 0.9        && < 0.11
                  , text                          >= 0.11       && < 0.12
-                 , persistent                    >= 1.1        && < 1.2
-                 , persistent-postgresql         >= 1.1        && < 1.2
-                 , persistent-template           >= 1.1.1      && < 1.2
+                 , persistent                    >= 1.2        && < 1.3
+                 , persistent-postgresql         >= 1.2        && < 1.3
+                 , persistent-template           >= 1.2        && < 1.3
                  , template-haskell
                  , hamlet                        >= 1.1        && < 1.2
                  , shakespeare-css               >= 1.0        && < 1.1
@@ -102,7 +102,7 @@ library
                  , wai-extra                     >= 1.3        && < 1.4
                  , wai-eventsource               >= 1.3        && < 1.4
                  , yaml                          >= 0.8        && < 0.9
-                 , http-conduit                  >= 1.8        && < 1.10
+                 , http-conduit                  >= 1.9        && < 1.10
                  , directory                     >= 1.1        && < 1.3
                  , warp                          >= 1.3        && < 1.4
                  , data-default
@@ -136,7 +136,7 @@ executable         rnfssp
     hs-source-dirs:    app
     build-depends:     base
                      , rnfssp
-                     , yesod-default
+                     , yesod
 
     ghc-options:       -threaded -O2
 
@@ -148,8 +148,12 @@ test-suite test
 
     build-depends: base
                  , rnfssp
-                 , yesod-test >= 0.3 && < 0.4
-                 , yesod-default
+                 , yesod-test >= 1.2 && < 1.3
                  , yesod-core
+                 , yesod
                  , persistent
                  , persistent-postgresql
+                 , resourcet
+                 , monad-logger
+                 , transformers
+                 , hspec

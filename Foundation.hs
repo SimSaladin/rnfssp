@@ -1,6 +1,15 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Foundation where
 
 import Prelude hiding (appendFile, readFile)
+import Yesod hiding (fileName)
+import Yesod.Static
+import Yesod.Auth
+import Yesod.Auth.HashDB      (authHashDB, getAuthIdHashDB)
+import Yesod.Auth.Message     as Msg
+import Yesod.Default.Config
+import Yesod.Default.Util (addStaticContentExternal)
+import Network.HTTP.Conduit   (Manager)
 
 import           Control.Monad  (liftM)
 import           Data.Maybe
@@ -8,29 +17,27 @@ import           Data.Monoid    (mappend)
 import           Data.Text      (Text)
 import qualified Data.Text  as T
 import           Data.Text.IO   (appendFile, readFile)
-import           Database.Persist.GenericSql
-import qualified Database.Persist.Store
-import           Network.HTTP.Conduit   (Manager)
+import qualified Database.Persist
 import           System.Log.FastLogger  (Logger)
 import           Text.Hamlet            (hamletFile)
 import           Text.Jasmine           (minifym)
 import           WaiAppStatic.Types     (StaticSettings(..), File(..), fromPiece)
-import           Web.ClientSession      (getKey)
-import           Yesod                  hiding (fileName)
-import           Yesod.Auth
-import           Yesod.Auth.HashDB      (authHashDB, getAuthIdHashDB)
-import qualified Yesod.Auth.Message     as Msg
-import           Yesod.Default.Config
-import           Yesod.Default.Util     (addStaticContentExternal)
-import           Yesod.Static
 
-import           Settings.Development (development)
 import           Settings.StaticFiles
 import           Settings (widgetFile, Extra (..))
 import           Model
 import qualified Settings
+import Settings.Development (development)
+import Database.Persist.Sql (SqlPersistT)
+
 import           Chat
 import           Mpd
+
+instance YesodMpd master => YesodSubDispatch Mpd (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesMpd)
+
+instance YesodChat master => YesodSubDispatch Chat (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesChat)
 
 -- | The site argument for your application. This can be a good place to
 -- keep settings and values requiring initialization before your application
@@ -39,9 +46,9 @@ import           Mpd
 data App = App
     { settings      :: AppConfig DefaultEnv Extra
     , getStatic     :: Static -- ^ Settings for static file serving.
-    , connPool      :: Database.Persist.Store.PersistConfigPool Settings.PersistConfig -- ^ Database connection pool.
+    , connPool      :: Database.Persist.PersistConfigPool Settings.PersistConf -- ^ Database connection pool.
     , httpManager   :: Manager
-    , persistConfig :: Settings.PersistConfig
+    , persistConfig :: Settings.PersistConf
     , appLogger     :: Logger
     , getChat       :: Chat
     , getMpd        :: Mpd
@@ -71,7 +78,7 @@ mkMessage "App" "messages" "en"
 -- split these actions into two functions and place them in separate files.
 mkYesodData "App" $(parseRoutesFile "config/routes")
 
-type Form x = Html -> MForm App App (FormResult x, Widget)
+type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 
 data ServeType = ServeTemp
                | ServeAuto
@@ -95,11 +102,9 @@ instance Yesod App where
 
     -- Store session data on the client in encrypted cookies,
     -- default session idle timeout is 120 minutes
-    makeSessionBackend _ = do
-        key <- getKey "config/client_session_key.aes"
-        let timeout = 120 * 60 -- 120 minutes
-        (getCachedDate, _closeDateCache) <- clientSessionDateCacher timeout
-        return . Just $ clientSessionBackend2 key getCachedDate
+    makeSessionBackend _ = fmap Just $ defaultClientSessionBackend
+        (120 * 60) -- 120 minutes
+        "config/client_session_key.aes"
 
     defaultLayout widget = do
         master <- getYesod
@@ -157,17 +162,14 @@ instance Yesod App where
     shouldLog _ _source level =
         development || level == LevelWarn || level == LevelError
 
-    getLogger = return . appLogger
+    makeLogger = return . appLogger
 
 -- How to run database actions.
 instance YesodPersist App where
-    type YesodPersistBackend App = SqlPersist
-    runDB f = do
-        master <- getYesod
-        Database.Persist.Store.runPool
-            (persistConfig master)
-            f
-            (connPool master)
+    type YesodPersistBackend App = SqlPersistT
+    runDB = defaultRunDB persistConfig connPool
+instance YesodPersistRunner App where
+    getDBRunner = defaultGetDBRunner connPool
 
 instance YesodAuth App where
     type AuthId App = UserId
@@ -182,12 +184,13 @@ instance YesodAuth App where
     authHttpManager = httpManager
 
     loginHandler = do
-        homeIfLoggedIn
-        defaultLayout $ do
+        lift homeIfLoggedIn
+        tm <- getRouteToParent
+        lift $ defaultLayout $ do
             setTitleI Msg.LoginTitle
             navigation "Login"
-            tm <- lift getRouteToMaster
-            master <- lift getYesod
+            -- tm <- liftHandlerT $ lift getRouteToParent
+            master <- liftHandlerT getYesod
             mapM_ (flip apLogin tm) (authPlugins master)
 
 -- This instance is required to use forms. You can modify renderMessage to
@@ -237,7 +240,7 @@ setStaticSettings (Static ss) = Static $ ss {
 
 -- * Utils
 
-isAdmin :: GHandler s App AuthResult
+isAdmin :: Handler AuthResult
 isAdmin = do
     mu <- maybeAuth
     return $ case mu of
@@ -248,7 +251,7 @@ isAdmin = do
 --            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
 --            | otherwise -> Unauthorized "You must be an admin"
 
-isValidLoggedIn :: GHandler s App AuthResult
+isValidLoggedIn :: Handler AuthResult
 isValidLoggedIn = do
     mu <- maybeAuth
     return $ case mu of
@@ -257,17 +260,17 @@ isValidLoggedIn = do
             | userValid uval -> Authorized
             | otherwise -> Unauthorized "Your user is not (yet) validated. You must be approved by an admin first"
 
-isValidLoggedIn' :: GHandler s App AuthResult
+isValidLoggedIn' :: Handler AuthResult
 isValidLoggedIn' = isValidLoggedIn >>= \x -> case x of
     AuthenticationRequired -> setMessage "That section requires authentication. Please login."
     _                      -> return ()
     >> return x
 
-hashLogin :: (Route Auth -> Route App) -> GWidget sub App ()
+hashLogin :: (Route Auth -> Route App) -> Widget
 hashLogin tm  = $(widgetFile "login")
   where route = tm $ PluginR "hashdb" ["login"]
 
-homeIfLoggedIn :: GHandler sub App ()
+homeIfLoggedIn :: Handler ()
 homeIfLoggedIn = maybeAuth >>= maybe (return ())
     (const $ setMessageI Msg.NowLoggedIn >> redirect HomePageR)
 
@@ -280,11 +283,11 @@ last' n xs
 routeToLogin :: Route App
 routeToLogin = AuthR LoginR
 
-navigation :: Text -> GWidget sub App ()
+navigation :: Text -> Widget
 navigation active = do
-    ma <- lift maybeAuth
-    boards <- liftM boards2widget $ lift $ runDB $ selectList [] []
-    mmsg <- lift getMessage
+    ma <- liftHandlerT maybeAuth
+    boards <- liftM boards2widget $ liftHandlerT $ runDB $ selectList [] []
+    mmsg <- liftHandlerT getMessage
     let es =
           [ ("SS", Right HomePageR)
           , ("Blog" :: Text, Right BlogHomeR)

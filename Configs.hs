@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Apr 19 2013 [11:06:10]
+-- Last Modified: May 28 2013 [14:12:37]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 --
@@ -25,7 +25,7 @@ import Sections.Film
 import Sections.Types
 import qualified Data.Map as Map
 
-invalid :: Text -> GHandler sub master a
+invalid :: Text -> HandlerT master IO a
 invalid how = invalidArgs $
   [how, "If you reached this page through a link on the website, please contact the webmaster."]
 
@@ -68,7 +68,7 @@ browsable' = liftM (Map.elems . Map.mapWithKey f . extraSections) getExtra
 
 renderBrowsable :: Section -> Widget
 renderBrowsable current = do
-    elements <- lift browsable'
+    elements <- liftHandlerT browsable'
     [whamlet|$newline never
 <nav .subnavbar>
   <ul>
@@ -81,7 +81,7 @@ renderBrowsable current = do
 
 sectionsBlockNav :: Widget
 sectionsBlockNav = do
-    sections <- lift getSections
+    sections <- liftHandlerT getSections
     [whamlet|
 $forall x <- sections
   #{show x}

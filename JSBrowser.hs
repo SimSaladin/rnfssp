@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Apr 15 2013 [22:39:36]
+-- Last Modified: May 28 2013 [14:08:47]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -38,11 +38,11 @@ import Sections.Types
 --  injects it to the browser.
 --
 --  NOTE: Only one browser instance may be safely based on a single page.
-browser :: GWidget sub master () -- ^ Initial content of the browser.
-        -> [Text]                -- ^ Optional doms that can bind browser content. (DomId, )
-        -> GWidget sub master ()
+browser :: WidgetT master IO () -- ^ Initial content of the browser.
+        -> [Text]               -- ^ Optional doms that can bind browser content. (DomId, )
+        -> WidgetT master IO ()
 browser content extra = do
-    browserId <- lift newIdent
+    browserId <- liftHandlerT newIdent
     [whamlet|$newline never
 <div##{browserId}>
     ^{content}
@@ -121,7 +121,7 @@ simpleListing :: SimpleListingSettings
               -> ([Text] -> Route master)                -- ^ Route to content.
               -> (ServeType -> [Text] -> Route master)   -- ^ Route to file serving.
               -> (Text, Text, Text)                      -- ^ (msgFilename, msgFileize, msgModified)
-              -> GWidget sub master ()
+              -> WidgetT master IO ()
 simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
     let options = [25, 50, 100, 200] :: [Int]
     -- Pages
@@ -181,7 +181,7 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
 simpleNav :: Text
           -> [Text]
           -> ([Text] -> Route master)
-          -> GWidget sub master ()
+          -> WidgetT master IO ()
 simpleNav _    []  _ = mempty
 simpleNav home fps f = [whamlet|
 <ul.breadcrumb>

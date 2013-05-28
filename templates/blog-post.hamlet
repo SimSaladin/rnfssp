@@ -12,13 +12,13 @@
             #{title}
    <div .content-align>
       $if preview
-         ^{toWidget $ blogpostRenderedPreview post}
+         #{blogpostRenderedPreview post}
          $if blogpostPreviewSame post
          $else
             <a href="@{link}">
                <i>Read more...
       $else
-         ^{toWidget $ blogpostRendered post}
+         #{blogpostRendered post}
    <footer .clearfix .text-center>
       <a .icon-user href="#">&nbsp;#{poster}
       $if preview

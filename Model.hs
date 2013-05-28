@@ -11,6 +11,7 @@ import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.Map (Map)
 import Database.Persist.Quasi
+import Data.Typeable (Typeable)
 
 type TupleText = (Text, Text)
 

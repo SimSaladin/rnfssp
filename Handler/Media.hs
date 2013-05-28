@@ -62,7 +62,7 @@ getMediaSearchAllR = do
     let doSearch q
           | T.null q  = do
             let msg = "Search must be at least one character!" :: Html
-            renderMaybeBare [whamlet|<i>#{msg}|] $ lift $ do
+            renderMaybeBare [whamlet|<i>#{msg}|] $ liftHandlerT $ do
                 setMessage msg
                 redirect MediaHomeR
 
@@ -85,7 +85,7 @@ getMediaSearchR section = do
     let doSearch q
           | T.null q  = do
             let msg = "Search must be at least one character!" :: Html
-            renderMaybeBare [whamlet|<i>#{msg}|] $ lift $ do
+            renderMaybeBare [whamlet|<i>#{msg}|] $ liftHandlerT $ do
                 setMessage msg
                 redirect $ MediaContentR section []
 
@@ -101,7 +101,7 @@ getMediaSearchR section = do
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
-sectionWidget s fps = join $ lift $ onSec' s (`sWContent` fps)
+sectionWidget s fps = join $ liftHandlerT $ onSec' s (`sWContent` fps)
 
 renderSearch :: Section -> Widget
 renderSearch section = [whamlet|$newline never
@@ -131,7 +131,7 @@ getMediaServeR stype section path = case stype of
     ServeAuto           -> solvePathWithAuth >>= send ""
     ServeForceDownload  -> solvePathWithAuth >>= send "application/force-download"
   where
-    send ct fp = setHeader "Accept-Ranges" "bytes" >> sendFile ct fp
+    send ct fp = addHeader "Accept-Ranges" "bytes" >> sendFile ct fp
 
     solveTemp  = do
         Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp $ head path
@@ -157,7 +157,7 @@ getMediaServeR stype section path = case stype of
 --   centralised admin page.
 adminWidget :: Widget
 adminWidget = do
-    ((result, widget), encType) <- lift $ runFormPost adminForm
+    ((result, widget), encType) <- liftHandlerT $ runFormPost adminForm
     renderFormH (submitButton "Execute actions")
                 MsgMediaActions
                 MediaAdminR

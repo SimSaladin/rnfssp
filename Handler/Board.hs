@@ -152,7 +152,7 @@ postForm :: BoardId -> Maybe BoardpostId -> Form D1
 postForm bid mpid = renderBootstrap $ D1
     <$> pure bid
     <*> pure mpid
-    <*> aformM (liftIO getCurrentTime)
+    <*> lift (liftIO getCurrentTime)
     <*> fileAFormOpt "Liite"
     <*> aopt textField "Nimimerkki" Nothing
     <*> aopt emailField "Sähköposti" Nothing

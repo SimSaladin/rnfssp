@@ -24,7 +24,7 @@ import Data.Map (Map)
 import Sections.Types
 
 -- | Which Persistent backend this site is using.
-type PersistConfig = PostgresConf
+type PersistConf = PostgresConf
 
 -- Static setting below. Changing these requires a recompile
 

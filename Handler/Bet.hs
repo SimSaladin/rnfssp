@@ -25,7 +25,7 @@ postBetViewR _ = error "Not yet implemented: postBetR"
 
 newBetForm :: UserId -> Form Bettarget
 newBetForm owner = renderBootstrap $ Bettarget
-  <$> aformM (liftIO getCurrentTime)
+  <$> lift (liftIO getCurrentTime)
   <*> pure True
   <*> pure owner
   <*> areq textField "Description" Nothing

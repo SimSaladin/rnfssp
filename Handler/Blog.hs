@@ -19,7 +19,7 @@ import qualified Data.Text as T
 import           Data.Time (formatTime)
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Markdown (Markdown(..), markdownField, markdownToHtml)
-import           Database.Persist.GenericSql (rawSql)
+import           Database.Persist.Sql (rawSql)
 import Chat
 
 
@@ -40,8 +40,8 @@ getWidgets (Entity key val) = do
 
 getPostPreview :: Entity Blogpost -> Widget
 getPostPreview (Entity key val) = do
-    comments <- lift $ runDB $ count [BlogcommentPost ==. key]
-    blogpostWidget val comments True =<< lift isAdmin'
+    comments <- liftHandlerT $ runDB $ count [BlogcommentPost ==. key]
+    blogpostWidget val comments True =<< liftHandlerT isAdmin'
 
 -- | Home redirects to the newest blog post.
 getBlogHomeR :: Handler RepHtml
@@ -173,12 +173,12 @@ getParam which fallback = fromGet
 -- | Render a preview of the most recent post.
 newestPost :: Widget
 newestPost = do
-    posts <- lift $ runDB $ selectList [] [Desc BlogpostTime, LimitTo 3]
+    posts <- liftHandlerT $ runDB $ selectList [] [Desc BlogpostTime, LimitTo 3]
     case posts of
         []                    -> mempty
         (Entity key val : xs) -> do
-            editing       <- lift isAdmin'
-            commentCount  <- lift $ runDB $ count [BlogcommentPost ==. key]
+            editing       <- liftHandlerT isAdmin'
+            commentCount  <- liftHandlerT $ runDB $ count [BlogcommentPost ==. key]
             blogpostWidget val commentCount True editing
             [whamlet|
 <h6>Previous posts:
@@ -255,7 +255,7 @@ blogcommentsWidget comments =
 
 renderTagcloud :: Text -> Widget
 renderTagcloud current = do
-    (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [] [Asc BlogpostTime]
+    (posts, tagcloud) <- liftHandlerT $ runDB $ C.runResourceT $ selectSource [] [Asc BlogpostTime]
         C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
     $(widgetFile "blog-navigation")
   where
@@ -274,7 +274,7 @@ renderTagcloud current = do
 -- * Forms
 blogpostForm :: User -> Maybe Blogpost -> Form Blogpost
 blogpostForm poster mp = renderBootstrap $ mkBlogpost
-    <$> aformM (liftIO getCurrentTime)
+    <$> lift (liftIO getCurrentTime)
     <*> areq textField     "Title"              (blogpostTitle    <$> mp)
     <*> areq urlpathField  "Unique URL part"    (blogpostUrlpath  <$> mp)
     <*> areq tagField      "Tags"               (blogpostTags     <$> mp)
@@ -300,9 +300,9 @@ blogpostForm poster mp = renderBootstrap $ mkBlogpost
                 in return ret
 
 
-tagField :: Field App App [Text]
+tagField :: Field (HandlerT App IO) [Text]
 tagField = checkMMap f T.unwords textField
-  where f :: Text -> GHandler App App (Either Text [Text])
+  where f :: Text -> Handler (Either Text [Text])
         f = return . Right . T.words
 
 commentForm :: BlogpostId          -- ^ main post
@@ -311,7 +311,7 @@ commentForm :: BlogpostId          -- ^ main post
 commentForm pid mcid = renderBootstrap $ Blogcomment
     <$> pure pid
     <*> pure mcid
-    <*> aformM timeNow
+    <*> lift timeNow
     <*> pure Nothing --TODO user creds checking
     <*> areq textField "Name" Nothing
     <*> aopt urlField "Webpage" Nothing

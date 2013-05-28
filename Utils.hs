@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Apr 13 2013 [14:57:12]
+-- Last Modified: May 28 2013 [13:46:24]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -47,7 +47,7 @@ printfTime = formatTime defaultTimeLocale
 isAdmin' :: Handler Bool
 isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
 
-denyIf :: Yesod master => Bool -> Text -> GHandler sub master ()
+denyIf :: Yesod master => Bool -> Text -> HandlerT master IO ()
 denyIf True  = permissionDenied
 denyIf False = const (return ())
 
@@ -109,12 +109,12 @@ guessFiletype fp
 -- * Widgets
 
 -- | Convert a widget to a whole page.
-widgetBodyToRepHtml :: Yesod master => GWidget sub master () -> GHandler sub master RepHtml
+widgetBodyToRepHtml :: Yesod master => WidgetT master IO () -> HandlerT master IO RepHtml
 widgetBodyToRepHtml w = do
     pc <- widgetToPageContent w
     hamletToRepHtml [hamlet|^{pageBody pc}|]
 
-layoutSplitH :: GWidget sub master () -> GWidget sub master () -> GWidget sub master ()
+layoutSplitH :: WidgetT master IO () -> WidgetT master IO () -> WidgetT master IO ()
 layoutSplitH w1 w2 = [whamlet|
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>^{w1}
@@ -123,7 +123,7 @@ layoutSplitH w1 w2 = [whamlet|
 
 -- * Forms
 
-renderYaml :: FormRender sub master a
+renderYaml :: Monad master => FormRender master a
 renderYaml aform fragment = do
     (res, views') <- aFormToForm aform
     let views = views' []
@@ -155,35 +155,35 @@ replyButton :: Widget
 replyButton = [whamlet|<input type=submit value=Reply>|]
 
 renderForm :: RenderMessage App msg
-           => GWidget sub App ()  -- ^ Widget in the submit area.
+           => Widget  -- ^ Widget in the submit area.
            -> msg                 -- ^ Form title
            -> Route App           -- ^ Form action.
            -> FormResult a
-           -> GWidget sub App ()  -- ^ Fields.
+           -> Widget  -- ^ Fields.
            -> Enctype
-           -> GWidget sub App ()
+           -> Widget
 renderForm = renderForm' ""
 
 renderFormH :: RenderMessage App msg
-            => GWidget sub App () -- ^ Widget in the submit area.
+            => Widget -- ^ Widget in the submit area.
             -> msg                -- ^ Form title
             -> Route App          -- ^ Form action.
             -> FormResult a
-            -> GWidget sub App () -- ^ Fields.
+            -> Widget -- ^ Fields.
             -> Enctype
-            -> GWidget sub App ()
+            -> Widget
 renderFormH = renderForm' "form-horizontal"
 
 -- | Render a POST form.
 renderForm' :: RenderMessage App msg
            => Text                -- ^ Extra class for <form>.
-           -> GWidget sub App ()  -- ^ Widget in the submit area.
+           -> Widget  -- ^ Widget in the submit area.
            -> msg                 -- ^ Form title
            -> Route App           -- ^ Form action.
            -> FormResult a
-           -> GWidget sub App ()  -- ^ Fields.
+           -> Widget  -- ^ Fields.
            -> Enctype
-           -> GWidget sub App ()
+           -> Widget
 renderForm' extra buttons title route res widget encType = [whamlet|
 <form .#{extra} method=post action=@{route} enctype=#{encType}>
   <legend>_{title}

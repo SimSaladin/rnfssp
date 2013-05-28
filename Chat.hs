@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Apr 14 2013 [15:57:09]
+-- Last Modified: May 28 2013 [14:00:53]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -17,71 +17,70 @@
 module Chat where
 
 import Yesod
+import Prelude
 import Text.Julius (rawJS)
 import Prelude (Bool, ($), Maybe(..), (.))
-import Control.Monad (return)
 import Control.Concurrent.Chan (Chan, dupChan, writeChan)
 import Data.Text (Text)
 import Network.Wai (Response(ResponseSource), responseSource)
 import Network.Wai.EventSource (ServerEvent(..), eventSourceAppChan)
-import Language.Haskell.TH.Syntax (Type (VarT), Pred (ClassP), mkName)
 import Blaze.ByteString.Builder.Char.Utf8 (fromText)
 import Data.Monoid (mappend)
 
 data Chat = Chat (Chan ServerEvent)
 
 class (Yesod master, RenderMessage master FormMessage) => YesodChat master where
-    getUserName :: GHandler sub master Text
-    isLoggedIn  :: GHandler sub master Bool
-    saveMessage :: (Text, Text) -> GHandler sub master ()
-    getRecent   :: GHandler sub master [(Text, Text)]
+    getUserName :: HandlerT master IO Text
+    isLoggedIn  :: HandlerT master IO Bool
+    saveMessage :: (Text, Text) -> HandlerT master IO ()
+    getRecent   :: HandlerT master IO [(Text, Text)]
 
 
-mkYesodSub "Chat"
-    [ ClassP ''YesodChat [VarT $ mkName "master"]
-    ] [parseRoutes|
+mkYesodSubData "Chat"
+    --[ ClassP ''YesodChat [VarT $ mkName "master"] ]
+    [parseRoutes|
 /send SendR POST
 /recv ReceiveR GET
 |]
 
 -- | Get a message from the user and send it to all listeners.
-postSendR :: YesodChat master => GHandler Chat master ()
+postSendR :: YesodChat master => HandlerT Chat (HandlerT master IO) ()
 postSendR = do
-    from <- getUserName
-    body <- runInputGet $ ireq textField "message"
-    Chat chan <- getYesodSub
+    from <- lift getUserName
+    body <- lift $ runInputGet $ ireq textField "message"
+    Chat chan <- getYesod
 
     -- Set nginx-specific header for eventsource to work.
-    setHeader "X-Accel-Buffering" "no"
+    addHeader "X-Accel-Buffering" "no"
 
     -- Send an event to all listeners with the user's name and message.
     liftIO $ writeChan chan $ ServerEvent Nothing Nothing $ return $
         fromText from `mappend` fromText ": " `mappend` fromText body
 
-    saveMessage (from, body)
+    lift $ saveMessage (from, body)
 
 -- | Send an eventstream response with all messages streamed in.
-getReceiveR :: GHandler Chat master ()
+getReceiveR :: HandlerT Chat (HandlerT master IO) ()
 getReceiveR = do
-    Chat chan0 <- getYesodSub
+    Chat chan0 <- getYesod
     chan <- liftIO $ dupChan chan0
     req <- waiRequest
-    res <- lift $ eventSourceAppChan chan req
+    res <- liftResourceT $ eventSourceAppChan chan req
     let (stat, hs, src) = responseSource res
 
     -- for nginx reverse-proxying to work, we add the header X-Accel-Buffering
     sendWaiResponse $ ResponseSource stat (("X-Accel-Buffering", "no"):hs) src
 
 -- | Provide a widget that the master site can embed on any page.
-chatWidget :: YesodChat master
+chatWidget :: (YesodChat master)
            => (Route Chat -> Route master)
-           -> GWidget sub master ()
+           -> WidgetT master IO ()
 chatWidget toMaster = do
-    chat    <- lift newIdent   -- the containing div
-    output  <- lift newIdent   -- the box containing the messages
-    input   <- lift newIdent   -- input field from the user
-    recent  <- lift getRecent
-    ili     <- lift isLoggedIn -- check if we're already logged in
+    chat    <- liftHandlerT newIdent   -- the containing div
+    output  <- liftHandlerT newIdent   -- the box containing the messages
+    input   <- liftHandlerT newIdent   -- input field from the user
+    recent  <- liftHandlerT getRecent
+    ili     <- liftHandlerT isLoggedIn -- check if we're already logged in
     if ili
         then do
             -- Logged in: show the widget
@@ -137,7 +136,7 @@ input.onkeyup = function(event) {
 |]
         else do
             -- User isn't logged in, give a not-logged-in message.
-            master <- lift getYesod
+            master <- liftHandlerT getYesod
             [whamlet|
 <h6 .icon-chat> Chat
 <p>

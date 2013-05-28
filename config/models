@@ -11,6 +11,7 @@ User
    currentplaylist Text Maybe
    comment  Textarea
    UniqueUser username
+   deriving Typeable
 
 -- Blog
 Blogpost

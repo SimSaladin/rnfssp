@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Apr 19 2013 [11:05:46]
+-- Last Modified: May 28 2013 [14:30:43]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -9,6 +9,7 @@ module Sections.Music (MPDSec, mkMPDSec) where
 
 import           Sections
 import           Import
+import qualified Network.MPD as M
 import           Utils
 import           JSBrowser
 import qualified Mpd as M
@@ -36,7 +37,7 @@ instance MSection MPDSec where
 
 musicContent :: MPDSec -> [Text] -> Widget
 musicContent sec@MPDSec{sRoute = route} fps = do
-    contents <- lift $ M.pathContents fps
+    contents <- liftHandlerT $ M.pathContents fps
     case contents of
         [M.LsSong song] -> songSingle sec fps song
         [M.LsPlaylist (M.PlaylistName bs)] -> undefined
@@ -58,7 +59,7 @@ musicContent sec@MPDSec{sRoute = route} fps = do
 searchMPD :: MPDSec -> Text -> Widget
 searchMPD s q = do
     let dosearch val = M.search $ val M.=? (M.Value $ encodeUtf8 q)
-    contents <- liftM (take 100 . foldl union []) . lift . M.execMpd $ mapM dosearch [M.Artist, M.Album, M.Title]
+    contents <- liftM (take 100 . foldl union []) . liftHandlerT . M.execMpd $ mapM dosearch [M.Artist, M.Album, M.Title]
     let sl = SimpleListingSettings
              { slSect       = sName s
              , slCurrent    = ["Results for " `mappend` q]

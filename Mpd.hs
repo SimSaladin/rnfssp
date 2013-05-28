@@ -2,23 +2,10 @@
 ------------------------------------------------------------------------------
 -- File: Mpd.hs
 -- Creation Date: Jul 16 2012 [23:01:24]
--- Last Modified: Apr 14 2013 [04:27:28]
+-- Last Modified: May 28 2013 [14:27:55]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
-
-module Mpd
-   ( Mpd(..)
-   , YesodMpd(..)
-
-   , mpdFullWidget
-   , mpdStatusWidget
-
-   , pathContents
-   , songPaths
-   , execMpd
-
-   , module Network.MPD
-   ) where
+module Mpd where
 
 import Yesod
 import Prelude
@@ -31,37 +18,40 @@ import Data.Text.Encoding (encodeUtf8, decodeUtf8)
 data Mpd = Mpd
 
 class Yesod master => YesodMpd master where
-   mpdPort :: GHandler sub master Port
-   mpdHost :: GHandler sub master Host
-   mpdPass :: GHandler sub master Password
+   mpdPort :: HandlerT master IO Port
+   mpdHost :: HandlerT master IO Host
+   mpdPass :: HandlerT master IO Password
 
-mkYesodSub "Mpd" [] [parseRoutes|
+mkYesodSubData "Mpd" [parseRoutes|
 /status QueryR GET
 |]
 
 -- | 
-getQueryR :: Yesod master => GHandler Mpd master RepHtml
+getQueryR :: Yesod master => HandlerT Mpd (HandlerT master IO) RepHtml
 getQueryR = do
-    defaultLayout [whamlet|Coming soon!|]
+    lift $ defaultLayout [whamlet|Coming soon!|]
 
 -- | A small status widget.
-mpdStatusWidget :: Yesod master => GWidget Mpd master ()
+mpdStatusWidget :: WidgetT Mpd (HandlerT master IO) ()
 mpdStatusWidget = do
     [whamlet|(This is mpd status?)|]
 
 -- | Full widget with all features.
-mpdFullWidget :: Yesod master => GWidget Mpd master ()
+mpdFullWidget :: WidgetT Mpd (HandlerT master IO) ()
 mpdFullWidget = do
     [whamlet|Controlling coming soon|]
 
-pathContents :: YesodMpd master => [Text] -> GHandler sub master [LsResult]
+pathContents :: YesodMpd master
+             => [Text] -> HandlerT master IO [LsResult]
 pathContents = execMpd . lsInfo . Path . encodeUtf8 . T.intercalate "/"
 
-songPaths :: YesodMpd master =>[ Text] -> GHandler sub master [Text]
+songPaths :: YesodMpd master
+          => [Text] -> HandlerT master IO [Text]
 songPaths = liftM (f . concat) . mapM (execMpd . listAll . Path . encodeUtf8)
         where f = map $ \(Path x) -> decodeUtf8 x
 
-execMpd :: YesodMpd master => MPD a -> GHandler sub master a
+execMpd :: YesodMpd master
+        => MPD a -> HandlerT master IO a
 execMpd action = do
     port <- mpdPort
     host <- mpdHost

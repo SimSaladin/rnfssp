@@ -13,7 +13,7 @@ getHomePageR = defaultLayout $ do
     navigation "SS"
     $(widgetFile "home")
 
-renderRegister :: GWidget sub App () -> GHandler sub App RepHtml
+renderRegister :: Widget -> Handler RepHtml
 renderRegister w = defaultLayout $
     setTitle "Registration" >> navigation "Register" >> w
 
