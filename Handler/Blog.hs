@@ -46,7 +46,7 @@ getPostPreview (Entity key val) = do
 -- | Home redirects to the newest blog post.
 getBlogHomeR :: Handler RepHtml
 getBlogHomeR = do
-    mpost <- runDB $ selectFirst [] [Desc BlogpostTime]
+    mpost <- runDB $ selectFirst [BlogpostPublic ==. True] [Desc BlogpostTime]
     maybe noPosts (redirect . BlogViewR . blogpostUrlpath . entityVal) mpost
   where
     noPosts = defaultLayout $ do
@@ -57,10 +57,14 @@ getBlogHomeR = do
 -- | View a post specified in the url.
 getBlogViewR :: Text -> Handler RepHtml
 getBlogViewR path = do
+    showHidden <- isAdmin'
     e                 <- runDB . getBy404 $ UniqueBlogpost path
-    (widget, encType) <- generateFormPost $ commentForm (entityKey e) Nothing
-    (post, comments)  <- getWidgets e
-    renderView (entityVal e) $(widgetFile "blog-view")
+    if (blogpostPublic $ entityVal e) || showHidden 
+      then do
+          (widget, encType) <- generateFormPost $ commentForm (entityKey e) Nothing
+          (post, comments)  <- getWidgets e
+          renderView (entityVal e) $(widgetFile "blog-view")
+      else permissionDenied "Need admin access to show hidden blog posts."
   where
     result = FormMissing
 
@@ -88,7 +92,7 @@ getBlogTagR tag = do
 \<i>Found #{length posts} posts under</i> #{tag}.
 |] >> mapM_ getPostPreview posts
   where
-    query = "SELECT ?? FROM \"blogpost\" WHERE \"tags\" SIMILAR TO ? ORDER BY \"time\""
+    query = "SELECT ?? FROM \"blogpost\" WHERE \"public\" = true AND \"tags\" SIMILAR TO ? ORDER BY \"time\""
 
 -- * Publishing
 
@@ -173,7 +177,7 @@ getParam which fallback = fromGet
 -- | Render a preview of the most recent post.
 newestPost :: Widget
 newestPost = do
-    posts <- lift $ runDB $ selectList [] [Desc BlogpostTime, LimitTo 3]
+    posts <- lift $ runDB $ selectList [BlogpostPublic ==. True] [Desc BlogpostTime, LimitTo 3]
     case posts of
         []                    -> mempty
         (Entity key val : xs) -> do
@@ -255,7 +259,7 @@ blogcommentsWidget comments =
 
 renderTagcloud :: Text -> Widget
 renderTagcloud current = do
-    (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [] [Asc BlogpostTime]
+    (posts, tagcloud) <- lift $ runDB $ C.runResourceT $ selectSource [BlogpostPublic ==. True] [Asc BlogpostTime]
         C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
     $(widgetFile "blog-navigation")
   where
@@ -278,12 +282,13 @@ blogpostForm poster mp = renderBootstrap $ mkBlogpost
     <*> areq textField     "Title"              (blogpostTitle    <$> mp)
     <*> areq urlpathField  "Unique URL part"    (blogpostUrlpath  <$> mp)
     <*> areq tagField      "Tags"               (blogpostTags     <$> mp)
+    <*> areq boolField     "Public"             (blogpostPublic   <$> mp)
     <*> areq markdownField "Content (Markdown)" (blogpostMarkdown <$> mp)
   where
-    mkBlogpost time title url tags md = Blogpost
+    mkBlogpost time title url tags public md = Blogpost
         (maybe                  time blogpostTime   mp)
         (maybe (userUsername poster) blogpostPoster mp)
-        title url md tags
+        title url tags public md
         (markdownToHtml md)
         (markdownToHtml $ getPreview md)
         (md == getPreview md)
@@ -293,7 +298,7 @@ blogpostForm poster mp = renderBootstrap $ mkBlogpost
         toCheck = T.toLower u
         isLegal = isNothing $ T.find (\x -> not ( C.isAsciiLower x || C.isDigit x || x == '-' || x == '_')) toCheck
         in do
-            dbentry <- runDB $ selectFirst [BlogpostPoster ==. toCheck] []
+            dbentry <- runDB $ selectFirst [BlogpostUrlpath ==. toCheck] []
             let ret | isJust dbentry = Left ("Post with url already exists"::Text)
                     | not isLegal    = Left "URL part contains illegal characters"
                     | otherwise      = Right toCheck
