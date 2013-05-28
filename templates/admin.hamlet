@@ -25,7 +25,7 @@
              <td>
                <a .btn.btn-small href=@{AdminR}?action=#{if' (userValid user) disapprove approve}&target=#{userUsername user}>
                   $if userValid user
-                     Approve
-                  $else
                      Disapprove
+                  $else
+                     Approve
 

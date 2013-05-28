@@ -57,6 +57,9 @@ library
                      Sections.Types
                      Sections.Music
                      Sections.Film
+                     Sections.SingleSource
+                     Handler.Search
+                     MediaMPD
 
     if flag(dev) || flag(library-only)
         cpp-options:   -DDEVELOPMENT
