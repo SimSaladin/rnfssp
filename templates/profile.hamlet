@@ -4,8 +4,9 @@ $else
   <h1>Profile of #{userUsername uval}
 
 $if own
-  <h2>Change password
+  <h2>Profile info
   <div.page-element>
-    <form method=post>
+    <form .form-horizontal method=post>
       ^{passwdW}
-      <input.btn.btn-danger type=submit value="vaihda">
+      <div .form-actions>
+         <input.btn type=submit value="Tallenna">

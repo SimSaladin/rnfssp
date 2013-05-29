@@ -4,8 +4,7 @@
       No account? #
       <a.btn.btn-mini.btn-inverse href="@{RegisterR}">Register
    <form .form-horizontal method=post action=@{route}>
-      <legend>
-         Login
+     <legend>Login
      <div .control-group .clearfix .required>
        <label .control-label for="username">Username
        <div .controls>

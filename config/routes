@@ -27,5 +27,10 @@
 /files/board/#String                   BoardFileR     GET
 /files/media/#ServeType/#Text/*Texts   MediaServeR    GET
 
+/market              MarketHomeR          GET
+/market/buy-items    MarketNewBuyItemR        POST
+/market/sale-items   MarketNewSaleItemR       POST
+
+
 /bets          BetR     GET POST
 /bets/#BetId   BetViewR GET POST

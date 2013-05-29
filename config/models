@@ -3,7 +3,8 @@
 -- Authentication
 User
    username Text Eq
-   email    Text Eq default='' Update
+   email    Text Eq
+   ircnick  Text Eq Maybe default='' Update
    password Text
    salt     Text
    admin    Bool default=false Update
@@ -19,11 +20,11 @@ Blogpost
    poster   Text
    title    Text
    urlpath  Text
-   tags     [Text] default='[]' Update
+   tags     [Text]
    public   Bool   default=true Update
    markdown Markdown
    rendered          Html
-   renderedPreview   Html default='preview_not_available' Update
+   renderedPreview   Html
    previewSame       Bool default=true Update
    UniqueBlogpost urlpath
 
@@ -97,3 +98,28 @@ Bet
    owner UserId
    amount Int
    target Text
+
+SaleItem
+   name     Text
+   count    Int   default=1
+   price    Double
+   desc     Text  Maybe
+   -- contact
+   seller   Text
+   email    Text  Maybe
+   irc      Text  Maybe
+
+BuyItem
+   what     Text
+   count    Int   default=1
+   desc     Text Maybe
+   -- contact info
+   buyer    Text
+   email    Text Maybe
+   irc      Text Maybe
+
+SaleMessage
+   from Text
+   to   Text
+   msg  Text
+

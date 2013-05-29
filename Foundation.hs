@@ -10,13 +10,18 @@ import Yesod.Auth.Message     as Msg
 import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Network.HTTP.Conduit   (Manager)
+import Network.Wai (Request(..))
+import Network.Socket.Internal (SockAddr(..))
 
 import           Control.Monad  (liftM)
+import           Control.Applicative ((<$>))
 import           Data.Maybe
+import qualified Data.List as L
 import           Data.Monoid    (mappend)
 import           Data.Text      (Text)
 import qualified Data.Text  as T
 import           Data.Text.IO   (appendFile, readFile)
+import           Data.Text.Encoding  (decodeUtf8)
 import qualified Database.Persist
 import           System.Log.FastLogger  (Logger)
 import           Text.Hamlet            (hamletFile)
@@ -274,6 +279,20 @@ homeIfLoggedIn :: Handler ()
 homeIfLoggedIn = maybeAuth >>= maybe (return ())
     (const $ setMessageI Msg.NowLoggedIn >> redirect HomePageR)
 
+denyIfAnonUnPVL :: Handler ()
+denyIfAnonUnPVL = do
+    ma <- maybeAuth
+    req <- waiRequest
+    let proxyHeader = isAllowed . decodeUtf8 <$> L.lookup "X-Real-IP" (requestHeaders req)
+    if isJust ma || (fromMaybe False proxyHeader)
+      then return ()
+      else setMessage "Woops, no access here." >> redirect HomePageR
+  where
+      isAllowed x
+        | "127.0."       `T.isPrefixOf` x = True
+        | "194.197.235." `T.isPrefixOf` x = True
+        | otherwise = False
+
 last' :: Int -> [a] -> [a]
 last' n xs
   | l >= n    = drop (l - n) xs
@@ -293,6 +312,7 @@ navigation active = do
           , ("Blog" :: Text, Right BlogHomeR)
           , ("Lauta", Left (BoardHomeR, boards))
           , ("Media", Right MediaHomeR)
+          , ("Market", Right MarketHomeR)
           ]
 
     let es' = [ ("Kemia",    "http://kemia.ssdesk.paivola.fi")

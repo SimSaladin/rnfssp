@@ -98,6 +98,8 @@ a:hover {
    color:#{light_text}; 
 }
 ::selection { background:#{light_text_dd} }
+
+.market-description { color:#{light_shadow} }
 /*}}}*/
 /* {{{ Forms & inputs */
 /* {{{ Layout */

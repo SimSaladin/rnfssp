@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MediaMPD.hs
 -- Creation Date: Apr 15 2013 [22:44:04]
--- Last Modified: Apr 17 2013 [21:17:26]
+-- Last Modified: May 28 2013 [16:58:52]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -20,5 +20,5 @@ data MediaMPD master = MediaMPD master
     }
 
 mediaMPD :: SectionId -> ([Text] -> Route master) -> MediaConf -> MPDSec master
-mediaMPD sid mc = MediaMPD sid (MediaContentR sid) (mcPath mc)
+mediaMPD sid route mc = MediaMPD sid (route) (mcPath mc)
 

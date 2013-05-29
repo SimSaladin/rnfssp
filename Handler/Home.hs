@@ -37,21 +37,17 @@ postRegisterR = do
 
 registerForm :: Form User
 registerForm = renderBootstrap $
-    ( \name email pass comment ->
-        User name pass email "" False False Nothing comment)
+    ( \name email irc pass comment ->
+        User name email irc pass "" False False Nothing comment)
     <$> areq (checkM uniqueUsername textField) "Username" Nothing
     <*> areq (checkM uniqueEmail emailField) "Email" Nothing
+    <*> aopt (checkM uniqueIrcnick textField) "Irc-nick" Nothing
     <*> areq passwordConfirmField "" Nothing
     <*> areq textareaField "Comment" Nothing
   where
-    uniqueUsername name = do
-        muid <- runDB $ getBy $ UniqueUser name
-        return $ if isJust muid
-           then Left $ "The username \"" `mappend` name `mappend` "\"is already in use!"
-           else Right name
+    uniqueUsername name  = f name ("The username \"" <> name <> "\"is already in use!")      $ getBy $ UniqueUser name
+    uniqueEmail    email = f email "There is already an account registered with this email." $ selectFirst [UserEmail ==. email] []
+    uniqueIrcnick  nick  = f nick "Tämä nick on jo käytössä."                                $ selectFirst [UserIrcnick ==. Just nick] []
 
-    uniqueEmail email = do
-        muid <- runDB $ selectList [ UserEmail ==. email ] []
-        return $ case muid of
-            [] -> Right email
-            _  -> Left $ ("There is already an account registered with this email." :: Text)
+    f a msg = liftM (maybe (Right a) (const $ Left (msg::Text))) . runDB
+

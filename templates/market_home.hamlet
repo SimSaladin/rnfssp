@@ -1,0 +1,26 @@
+<div .ym-grid .ym-equalize .linearize-level-1>
+   <div .ym-g50 .ym-gl>
+      <div .ym-gbox>
+         <h3>Halutaan ostaa
+         ^{buy}
+         <form .form-horizontal method=post action=@{MarketNewBuyItemR} enctype=#{buyerEnctype}>
+            <legend>Lisää ostoilmoitus
+            ^{buyerForm}
+            <div .form-actions>
+               <input type="submit" value="Lisää ostoilmoitus">
+   <div .ym-g50 .ym-gr>
+      <div .ym-gbox>
+         <h3>Myydään
+         ^{sale}
+         <form .form-horizontal method=post action=@{MarketNewSaleItemR} enctype=#{sellerEnctype}>
+            <legend>Lisää myynti-ilmoitus
+            ^{sellerForm}
+            <div .form-actions>
+               <input type="submit" value="Lisää myynti-ilmoitus">
+<p>
+   <bold>Vinkki:
+   Voit #
+   <a href=@{RegisterR}>rekisteröityä
+   ja lisätä tietosi, jolloin säästyt yhteystietojesi uudelleentäyttämiseltä.
+<p>Tämä sivu on nähtävissä vain Päivölän verkosta ja ulkopuolelta vain #
+   kirjautuneille.
