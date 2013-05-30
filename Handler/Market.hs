@@ -1,14 +1,14 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: May 29 2013 [16:59:40]
+-- Last Modified: May 30 2013 [23:13:40]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
 
 import Import
 import Utils
-import Data.List (head, groupBy)
+import Data.List (head, groupBy, union)
 
 getMarketHomeR :: Handler RepHtml
 getMarketHomeR = do
@@ -16,6 +16,10 @@ getMarketHomeR = do
   muser <- maybeAuth
   (buyerForm, buyerEnctype) <- generateFormPost $ buyForm $ entityVal <$> muser
   (sellerForm, sellerEnctype) <- generateFormPost $ sellForm $ entityVal <$> muser
+  items <- runDB $ do
+    items'  <- liftM (map $ buyItemWhat . entityVal) $ selectList [] ([] :: [SelectOpt BuyItem])
+    items'' <- liftM (map $ saleItemName . entityVal) $ selectList [] ([] :: [SelectOpt SaleItem])
+    return $ items' `union` items''
   defaultLayout $ do
     navigation "Market"
     $(widgetFile "market_home")
@@ -56,24 +60,40 @@ postMarketNewSaleItemR = do
   ((res,_),_) <- runFormPost $ sellForm $ entityVal <$> muser
   handleItem $ Right res
 
+postMarketDeleteBuyR :: BuyItemId -> Handler RepHtml
+postMarketDeleteBuyR k = do
+  setUltDestReferer
+  val <- runDB $ get404 k >>= \x -> delete k >> return x
+  setMessage $ toHtml $ "Kohde " <> buyItemWhat val <> " poistettu."
+  redirectUltDest MarketHomeR
+
+postMarketDeleteSaleR :: SaleItemId -> Handler RepHtml
+postMarketDeleteSaleR k = do
+  setUltDestReferer
+  val <- runDB $ get404 k >>= \x -> delete k >> return x
+  setMessage $ toHtml $ "Kohde " <> saleItemName val <> " poistettu."
+  redirectUltDest MarketHomeR
+
 buyForm :: (Maybe User) -> Form BuyItem
 buyForm muser = renderBootstrap $ BuyItem
-  <$> areq textField  "Haluaisin ostaa:" Nothing
+  <$> areq textField  "Haluaisin ostaa:"{fsAttrs = [("list", "market-items")]} Nothing
   <*> areq intField   "Näin monta:"      (Just 1)
   <*> ((unTextarea <$>) <$> aopt textareaField "Lisätietoja:" Nothing)
   <*> areq textField  "Olen" (userUsername <$> muser)
-  <*> aopt emailField "Sähköpostiosoitteeni on" (Just . userEmail <$> muser)
-  <*> aopt textField  "IRC-nickini on"          (userIrcnick <$> muser)
+  <*> aopt emailField "Sähköpostiosoite" (Just . userEmail <$> muser)
+  <*> aopt textField  "Puhelinnumero"           (Nothing)
+  <*> aopt textField  "IRC-nick"          (userIrcnick <$> muser)
 
 sellForm :: (Maybe User) -> Form SaleItem
 sellForm muser = renderBootstrap $ SaleItem
-  <$> areq textField  "Myyn:"       Nothing
+  <$> areq textField  "Myyn:"{fsAttrs = [("list", "market-items")]} Nothing
   <*> areq intField   "Näin monta:" (Just 1)
-  <*> areq doubleField "Hinta"      Nothing
+  <*> areq doubleField "Hinta (€)"  Nothing
   <*> ((unTextarea <$>) <$> aopt textareaField  "Lisätietoja:" Nothing)
   <*> areq textField  "Olen"                    (userUsername <$> muser)
-  <*> aopt emailField "Sähköpostiosoitteeni on" (Just . userEmail <$> muser)
-  <*> aopt textField  "IRC-nickini on"          (userIrcnick <$> muser)
+  <*> aopt emailField "Sähköpostiosoite" (Just . userEmail <$> muser)
+  <*> aopt textField  "Puhelinnumero"           (Nothing)
+  <*> aopt textField  "IRC-nick"          (userIrcnick <$> muser)
 
 buy, sale :: Widget
 buy = do
@@ -83,28 +103,59 @@ buy = do
 <table>
   <thead>
     <tr>
-      <th>Kuka
+      <th>Poista
       <th>Mitä
-      <th>Hinta
-      <th>
+      <th>Yhteydenotto
   <tbody>
     $forall ys <- xs
       $forall Entity k x <- ys
         <tr>
-          $with person <- buyItemBuyer $ entityVal $ head ys
-            <th>#{person}
+          <td>
+            <form action=@{MarketDeleteBuyR k} method=post>
+              <input type="submit" value="X">
           <td>#{buyItemWhat x} #
             $if (/=) (buyItemCount x) 1
               (#{buyItemCount x} kpl) #
             $maybe desc <- buyItemDesc x
               <span .market-description>- #{desc}
+          $with person <- buyItemBuyer $ entityVal $ head ys
+            ^{contactWidget person (buyItemEmail x) (buyItemIrc x) (buyItemPhone x)}
   |]
 
+contactWidget :: Text -> Maybe Text -> Maybe Text -> Maybe Text -> Widget
+contactWidget person memail mirc mphone = [whamlet|
+<th>#{person}: #
+  <small>
+    $maybe email <- memail
+      <a href="mailto:#{email}">#{email}
+    $maybe irc <- mirc
+      , irkissä
+      <i>#{irc}
+    $maybe phone <- mphone
+      , Puh. #{phone}
+|]
+
 sale = do
-  xs <- liftHandlerT $ runDB $ selectList [] [Asc SaleItemName]
+  xs <- liftHandlerT $ runDB $ selectList [] [Asc SaleItemSeller, Asc SaleItemName]
   [whamlet|
-<ul>
-  $forall Entity k x <- xs
-    <li>
-      <a>#{saleItemName x}
+<table>
+  <thead>
+    <tr>
+      <th>Poista
+      <th>Mitä
+      <th>Hinta
+      <th>Yhteydenotto
+  <tbody>
+    $forall Entity k x <- xs
+      <tr>
+        <td>
+          <form action=@{MarketDeleteSaleR k} method=post>
+            <input type="submit" value="X">
+        <td>#{saleItemName x} #
+            $if (/=) (saleItemCount x) 1
+              (#{saleItemCount x} kpl) #
+            $maybe desc <- saleItemDesc x
+              <span .market-description>- #{desc}
+        <td>#{saleItemPrice x}€
+        ^{contactWidget (saleItemSeller x) (saleItemEmail x) (saleItemIrc x) (saleItemPhone x)}
   |]

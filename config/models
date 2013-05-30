@@ -107,6 +107,7 @@ SaleItem
    -- contact
    seller   Text
    email    Text  Maybe
+   phone    Text Maybe
    irc      Text  Maybe
 
 BuyItem
@@ -116,6 +117,7 @@ BuyItem
    -- contact info
    buyer    Text
    email    Text Maybe
+   phone    Text Maybe
    irc      Text Maybe
 
 SaleMessage

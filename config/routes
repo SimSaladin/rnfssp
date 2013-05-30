@@ -30,6 +30,8 @@
 /market              MarketHomeR          GET
 /market/buy-items    MarketNewBuyItemR        POST
 /market/sale-items   MarketNewSaleItemR       POST
+/market/buy-del/#BuyItemId MarketDeleteBuyR   POST
+/market/sale-del/#SaleItemId MarketDeleteSaleR   POST
 
 
 /bets          BetR     GET POST

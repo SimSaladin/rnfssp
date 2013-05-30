@@ -33,12 +33,16 @@ postProfileR = do
 
 userUpdateForm :: User -> Form (Handler User)
 userUpdateForm user = renderBootstrap $ f
-  <$> aopt emailField "Sähköposti" (Just $ Just $ userEmail user)
+  <$> aopt emailField "Sähköposti"  (Just $ Just $ userEmail user)
+  <*> aopt textField  "Irc-nick"    (Just $ userIrcnick user)
   <*> aopt passwordConfirmField "" Nothing
   <*> areq (checkM checkPassword passwordField) "Tämänhetkinen salasana" Nothing
     where
-  f email new_pw _ = (if isJust new_pw then setPassword (fromJust new_pw) else return)
-                     user{userEmail = fromMaybe "" email}
+  f :: Maybe Text -> Maybe Text -> Maybe Text -> Text -> Handler User
+  f email irc new_pw _ = (if isJust new_pw then setPassword (fromJust new_pw) else return)
+                     user{ userEmail   = fromMaybe "" email
+                         , userIrcnick = irc
+                         }
 
   checkPassword    = liftM checkHelper . validateUser (UniqueUser $ userUsername user)
   checkHelper True  = Right ""

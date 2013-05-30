@@ -1,26 +1,41 @@
+<h3>Kauppa
+
+<p>Täällä voit ilmoittaa myytäviä sekä ostettavia kohteita (kuten lukiokirjoja), #
+ päivöliiniltä päivöliinille -periaatteella.
+
+<p>Matematiikkakesällä 2013 tiedetysti tarvittavien kirjojen lista löytyy #
+   <a href="http://www.paivola.fi/fi/matematiikkakesa2013">täältä.
+
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g50 .ym-gl>
       <div .ym-gbox>
-         <h3>Halutaan ostaa
+         <h4>Halutaan ostaa
          ^{buy}
          <form .form-horizontal method=post action=@{MarketNewBuyItemR} enctype=#{buyerEnctype}>
-            <legend>Lisää ostoilmoitus
+            <legend>Uusi ostoilmoitus
             ^{buyerForm}
             <div .form-actions>
                <input type="submit" value="Lisää ostoilmoitus">
    <div .ym-g50 .ym-gr>
       <div .ym-gbox>
-         <h3>Myydään
+         <h4>Myydään
          ^{sale}
          <form .form-horizontal method=post action=@{MarketNewSaleItemR} enctype=#{sellerEnctype}>
-            <legend>Lisää myynti-ilmoitus
+            <legend>Uusi myynti-ilmoitus
             ^{sellerForm}
             <div .form-actions>
                <input type="submit" value="Lisää myynti-ilmoitus">
+<datalist #market-items>
+   $forall item <- items
+      <option value=#{item}>
 <p>
    <bold>Vinkki:
    Voit #
    <a href=@{RegisterR}>rekisteröityä
-   ja lisätä tietosi, jolloin säästyt yhteystietojesi uudelleentäyttämiseltä.
-<p>Tämä sivu on nähtävissä vain Päivölän verkosta ja ulkopuolelta vain #
-   kirjautuneille.
+   ja lisätä tietosi #
+   \<a href=@{ProfileR}>profiiliisi</a>, jolloin säästyt yhteystietojesi uudelleentäyttämiseltä.
+<p>Tämä sivu on nähtävissä vain Päivölän verkosta, ja ulkopuolelta vain #
+   sisäänkirjautuneena. Bugeja ja ehdotuksia otetaan vastaan irkissä #
+   (bps@PVLnet), sähköpostilla
+   <a href="mailto:simsaladin@paivola.fi">simsaladin@paivola.fi
+   sekä esimerkiksi etusivun yleisessä chatissa.
