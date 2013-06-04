@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: May 30 2013 [23:13:40]
+-- Last Modified: Jun 04 2013 [23:22:13]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
@@ -12,7 +12,8 @@ import Data.List (head, groupBy, union)
 
 getMarketHomeR :: Handler RepHtml
 getMarketHomeR = do
-  denyIfAnonUnPVL
+  -- XXX: not good
+  -- denyIfAnonUnPVL
   muser <- maybeAuth
   (buyerForm, buyerEnctype) <- generateFormPost $ buyForm $ entityVal <$> muser
   (sellerForm, sellerEnctype) <- generateFormPost $ sellForm $ entityVal <$> muser
@@ -22,6 +23,7 @@ getMarketHomeR = do
     return $ items' `union` items''
   defaultLayout $ do
     navigation "Market"
+    setTitle "Kauppa"
     $(widgetFile "market_home")
 
 postMarketNewBuyItemR :: Handler RepHtml
@@ -62,6 +64,7 @@ postMarketNewSaleItemR = do
 
 postMarketDeleteBuyR :: BuyItemId -> Handler RepHtml
 postMarketDeleteBuyR k = do
+  denyIfAnonUnPVL -- Not allowed to delete items from outside pvl as anon
   setUltDestReferer
   val <- runDB $ get404 k >>= \x -> delete k >> return x
   setMessage $ toHtml $ "Kohde " <> buyItemWhat val <> " poistettu."
@@ -69,6 +72,7 @@ postMarketDeleteBuyR k = do
 
 postMarketDeleteSaleR :: SaleItemId -> Handler RepHtml
 postMarketDeleteSaleR k = do
+  denyIfAnonUnPVL -- Not allowed to delete items from outside pvl as anon
   setUltDestReferer
   val <- runDB $ get404 k >>= \x -> delete k >> return x
   setMessage $ toHtml $ "Kohde " <> saleItemName val <> " poistettu."

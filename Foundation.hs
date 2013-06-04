@@ -286,7 +286,7 @@ denyIfAnonUnPVL = do
     let proxyHeader = isAllowed . decodeUtf8 <$> L.lookup "X-Real-IP" (requestHeaders req)
     if isJust ma || (fromMaybe False proxyHeader)
       then return ()
-      else setMessage "Woops, no access here." >> redirect HomePageR
+      else setMessage "Toiminto ei sallittu. Jotkin toiminnot (esim. poistotoiminnot) vaativat sisäänkirjautumisen." >> redirect HomePageR
   where
       isAllowed x
         | "127.0."       `T.isPrefixOf` x = True

@@ -29,13 +29,14 @@
    $forall item <- items
       <option value=#{item}>
 <p>
-   <bold>Vinkki:
+   <b>Vinkki: #
    Voit #
    <a href=@{RegisterR}>rekisteröityä
    ja lisätä tietosi #
    \<a href=@{ProfileR}>profiiliisi</a>, jolloin säästyt yhteystietojesi uudelleentäyttämiseltä.
-<p>Tämä sivu on nähtävissä vain Päivölän verkosta, ja ulkopuolelta vain #
-   sisäänkirjautuneena. Bugeja ja ehdotuksia otetaan vastaan irkissä #
-   (bps@PVLnet), sähköpostilla
-   <a href="mailto:simsaladin@paivola.fi">simsaladin@paivola.fi
+
+<p>Tämä sivu on nähtävissä kaikkialta. #
+   <b>Poistotoiminnot vain Päivölästä tai sisäänkirjautuneille. #
+   Bugeja ja ehdotuksia otetaan vastaan irkissä #
+   (bps@PVLnet), sähköpostilla <a href="mailto:simsaladin@paivola.fi">simsaladin@paivola.fi</a>,
    sekä esimerkiksi etusivun yleisessä chatissa.
