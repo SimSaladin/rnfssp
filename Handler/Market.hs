@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: Jun 04 2013 [23:22:13]
+-- Last Modified: Jun 21 2013 [14:25:48]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
@@ -53,8 +53,8 @@ handleItem sitem = do
           iid <- runDB $ insert item
           setMessage $ toHtml $ r <> m item <> l
           redirectUltDest MarketHomeR
-      FormMissing   -> setMessage "Tiedot olivat tyhjiä!" >> redirectUltDest MarketHomeR
-      FormFailure _ -> setMessage "Ilmoituksen lisääminen ei onnistunut." >> getMarketHomeR
+      FormMissing    -> setMessage "Tiedot olivat tyhjiä!" >> redirectUltDest MarketHomeR
+      FormFailure xs -> setMessage (toHtml $ "Ilmoituksen lisääminen ei onnistunut: " <> foldl (<>) "" xs) >> getMarketHomeR
 
 postMarketNewSaleItemR :: Handler RepHtml
 postMarketNewSaleItemR = do
