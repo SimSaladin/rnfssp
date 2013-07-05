@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections/Types.hs
 -- Creation Date: Apr 15 2013 [22:38:30]
--- Last Modified: May 28 2013 [12:50:56]
+-- Last Modified: Jul 05 2013 [22:02:45]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -13,7 +13,6 @@ import           Data.Text (Text)
 import           Control.Monad
 import           Control.Applicative
 import           Yesod
-import           Data.Aeson
 
 -- * Configuration types
 

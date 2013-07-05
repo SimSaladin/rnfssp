@@ -19,7 +19,7 @@
          <h2>
             <a href=@{MediaHomeR}>Media
          <div>
-            Recent media stuff.
+            ^{mediaRecent}
    <div .ym-g38 .ym-gl>
       <div .ym-gbox>
          <h2>TODOs

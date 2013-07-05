@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: May 28 2013 [14:08:47]
+-- Last Modified: Jul 06 2013 [01:06:24]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -14,15 +14,12 @@ import           Foundation
 import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
-import           Data.String
 import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
 import           Text.Coffee
 import qualified System.FilePath as F (joinPath)
 import           Utils
-
-import Sections.Types
 
 -- | Assumptions this widget makes:
 --
@@ -70,13 +67,14 @@ $ ->
   ### Bind the function loadpage() to the browser links ###
   register_links = ->
       dom.find("a.browser-link").on "click", ->
-          loadpage $(this).attr("href"), true
+          console.log encodeURI($(this).attr("href"))
+          loadpage $(this).attr("href").replace("&", "%26"), true
           this.firstChild.focus()
           return false
 
   ### Load page href. Push the new page to history, unless it was popped. ###
   loadpage = (href, forward) ->
-      $.get href, {bare: 1}, (data) ->
+      $.get href, { bare:1 }, (data) ->
           window.history.pushState('', '', href) if forward and href != document.URL
           dom.animate { opacity: 0 }, 200, "ease", ->
               dom.html(data)
@@ -146,7 +144,7 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
             <a .icon-download href=@{toFile ServeForceDownload fps} onclick="">
             <a .icon-play     href=@{toFile ServeAuto fps}          onclick="" target="_blank">
           <a .icon-plus .action href="" onclick="playlist.to_playlist('#{slSect sl}', [$(this).closest('.entry').children()[0].innerText]); return false">
-        <a .browser-link .#{filetype} href="@{routeToContent fps}">
+        <a .browser-link .#{filetype} href=@?{(routeToContent fps, [("asd", "ui")])}>
             <span .filename>#{filename}
             <span .misc>
                 <span><i>#{msgModified}:</i> #{modified}
@@ -155,9 +153,7 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
     |]
     pageNav
         where
-    toPath      = T.pack . F.joinPath . map T.unpack -- FIXME ...
     directory   = "directory"
-    file_other  = "file"
     pages       = [1 .. (ceiling $ (fromIntegral (slCount sl) :: Double) / fromIntegral (slLimit sl) :: Int)]
     pageNav     = flip (if' $ length pages > 1) mempty [whamlet|$newline never
 <div .text-center .browser-pagenav>

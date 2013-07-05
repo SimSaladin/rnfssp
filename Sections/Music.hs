@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: May 28 2013 [14:30:43]
+-- Last Modified: Jul 05 2013 [22:08:58]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -33,14 +33,14 @@ instance MSection MPDSec where
   sWContent       = musicContent
   sWSearch        = searchMPD
   sFilePath MPDSec{sRoot = root} = return . (</>) root . T.unpack
-  sUpdateIndex _  = return () -- TODO: mpd update?
+  sUpdateIndex _  = return [] -- TODO: mpd update?
 
 musicContent :: MPDSec -> [Text] -> Widget
 musicContent sec@MPDSec{sRoute = route} fps = do
     contents <- liftHandlerT $ M.pathContents fps
     case contents of
         [M.LsSong song] -> songSingle sec fps song
-        [M.LsPlaylist (M.PlaylistName bs)] -> undefined
+        [M.LsPlaylist (M.PlaylistName _)] -> undefined
         _ -> let sl = SimpleListingSettings
                      { slSect       = sName sec
                      , slCurrent    = fps

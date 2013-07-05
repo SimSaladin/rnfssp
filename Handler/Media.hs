@@ -6,6 +6,7 @@ module Handler.Media
     , getMediaSearchR
     , postMediaAdminR
     , adminWidget
+    , mediaRecent
     ) where
 
 import           Utils
@@ -168,10 +169,27 @@ postMediaAdminR :: Handler RepHtml
 postMediaAdminR = do
     ((result, _), _) <- runFormPost adminForm
     case result of
-        FormSuccess (True,_) -> updateIndeces
+        FormSuccess (True,_) -> mediaUpdateR
         FormSuccess _        -> setMessage "No actions."
         _                    -> setMessage "Form failed!"
     redirect AdminR
+
+mediaUpdateR :: Handler ()
+mediaUpdateR = do
+    ras <- updateIndeces
+    runDB $ mapM_ (mapM_ insert . snd) ras
+    setMessage $ toHtml $ "Added " <> show (sum $ map (length . snd) ras) <> " new items."
+
+mediaRecent :: Widget
+mediaRecent = do
+    recent <- liftHandlerT $ runDB $ selectList [] [Asc RecentlyAddedDate, LimitTo 10]
+    [whamlet|
+<ul>
+    $forall Entity _ ra <- recent
+      <li>
+        <a href=@{MediaContentR (recentlyAddedSection ra) (recentlyAddedParts ra)}>Go
+        #{recentlyAddedDesc ra}
+|]
 
 adminForm :: Form (Bool, Bool)
 adminForm = renderBootstrap $ (,)

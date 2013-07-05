@@ -16,15 +16,17 @@
 /blog-edit/#Text                       BlogEditR      GET POST
 /blog-add                              BlogAddR       GET POST
 /blog-by-tag/#Text                     BlogTagR       GET
+
 /board                                 BoardHomeR     GET
 /board/#Text                           BoardR         GET POST
 /board/#Text/#BoardpostId              ThreadR        GET POST
+/files/board/#String                   BoardFileR     GET
+
 /media                                 MediaHomeR     GET
 /media/#Text/*Texts                    MediaContentR  GET
 /search/media                          MediaSearchAllR GET
 /search/media/#Text                    MediaSearchR   GET
 /playlists/#Text                       PlaylistR      GET POST
-/files/board/#String                   BoardFileR     GET
 /files/media/#ServeType/#Text/*Texts   MediaServeR    GET
 
 /market              MarketHomeR          GET

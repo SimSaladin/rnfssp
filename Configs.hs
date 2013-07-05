@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: May 28 2013 [14:12:37]
+-- Last Modified: Jul 05 2013 [22:23:54]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 --
@@ -18,7 +18,7 @@ module Configs
   , updateIndeces
   ) where
 
-import Import
+import Import hiding (update)
 import Sections
 import Sections.Music
 import Sections.Film
@@ -53,9 +53,13 @@ onSecs' f = do
     secs <- getSections
     return $ Map.mapWithKey (\s mc -> runMediaConf s mc (return . f)) secs
 
-updateIndeces :: Handler ()
-updateIndeces = liftM (Map.keys . extraSections) getExtra
-    >>= mapM_ (\x -> onSec x sUpdateIndex)
+updateIndeces :: Handler [(SectionId, [RecentlyAdded])]
+updateIndeces = do
+    mcs <- getSections
+    sequence . Map.elems $ Map.mapWithKey update mcs
+  where
+      update sid mc = do added <- runMediaConf sid mc sUpdateIndex
+                         return (sid, added)
 
 getSections :: Handler (Map.Map Section MediaConf)
 getSections = liftM extraSections getExtra

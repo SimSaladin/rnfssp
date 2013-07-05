@@ -6,7 +6,6 @@
 module Settings where
 
 import Prelude
-import Control.Monad (mzero)
 import Text.Shakespeare.Text (st)
 import Language.Haskell.TH.Syntax
 import Database.Persist.Postgresql (PostgresConf)

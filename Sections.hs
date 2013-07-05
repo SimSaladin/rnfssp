@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections.hs
 -- Creation Date: Dec 23 2012 [23:10:22]
--- Last Modified: Apr 17 2013 [12:03:32]
+-- Last Modified: Jul 05 2013 [20:48:09]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -29,8 +29,9 @@ class MSection a where
   -- | Resolve to a real file in FS.
   sFilePath :: a -> Text -> Handler FilePath
 
-  -- | Action which updates index of the section.
-  sUpdateIndex :: a -> Handler ()
+  -- | Action which updates index of the section. May return the newest added
+  -- things as @RecentlyAdded@.
+  sUpdateIndex :: a -> Handler [RecentlyAdded]
 
   -- | Get path to a large icon for the section.
   sLargeIcon :: a -> FilePath

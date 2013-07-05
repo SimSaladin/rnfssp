@@ -1,13 +1,12 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: Jun 21 2013 [14:25:48]
+-- Last Modified: Jul 05 2013 [22:08:58]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
 
 import Import
-import Utils
 import Data.List (head, groupBy, union)
 
 getMarketHomeR :: Handler RepHtml

@@ -1,6 +1,5 @@
 -- vim:foldmethod=indent:foldlevel=0:
 
--- Authentication
 User
    username Text Eq
    email    Text Eq
@@ -14,7 +13,7 @@ User
    UniqueUser username
    deriving Typeable
 
--- Blog
+-- * Blog
 Blogpost
    time     UTCTime
    poster   Text
@@ -27,7 +26,6 @@ Blogpost
    renderedPreview   Html
    previewSame       Bool default=true Update
    UniqueBlogpost urlpath
-
 Blogcomment
    post     BlogpostId
    parent   BlogcommentId Maybe
@@ -37,12 +35,11 @@ Blogcomment
    website  Text Maybe
    content  Textarea
 
--- Board
+-- * Board
 Board
    name Text
    description Text
    UniqueBoard name
-
 Boardpost
    location BoardId
    parent BoardpostId Maybe
@@ -63,7 +60,6 @@ Playlist
    created UTCTime
    modified UTCTime
    UniquePlaylist owner title
-
 Filenode
    area Text
    parent FilenodeId Maybe
@@ -79,12 +75,17 @@ LogDownload
    user UserId
    time UTCTime
    node FilePath
-
 DlTemp
    date UTCTime
    ident Text
    target Text
    UniqueDlTemp ident
+
+RecentlyAdded
+   date     UTCTime
+   section  Text
+   parts    Texts
+   desc     Html
 
 -- Other
 Bettarget
@@ -93,12 +94,12 @@ Bettarget
    owner UserId
    title Text
    factors (Map Text Int)
-
 Bet
    owner UserId
    amount Int
    target Text
 
+-- * Market
 SaleItem
    name     Text
    count    Int   default=1
@@ -109,7 +110,6 @@ SaleItem
    email    Text  Maybe
    phone    Text Maybe
    irc      Text  Maybe
-
 BuyItem
    what     Text
    count    Int   default=1
@@ -119,7 +119,6 @@ BuyItem
    email    Text Maybe
    phone    Text Maybe
    irc      Text Maybe
-
 SaleMessage
    from Text
    to   Text

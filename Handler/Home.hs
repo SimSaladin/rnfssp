@@ -1,11 +1,11 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Home where
 
-import           Data.Maybe (isJust)
 import           Yesod.Auth.HashDB (setPassword)
 import Import hiding (fail)
 import Chat
 import Handler.Blog
+import Handler.Media
 
 getHomePageR :: Handler RepHtml
 getHomePageR = defaultLayout $ do

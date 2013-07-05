@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: May 28 2013 [14:11:35]
+-- Last Modified: Jul 06 2013 [01:05:44]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -18,8 +18,10 @@ import           JSBrowser
 import qualified System.FilePath.Find as F
 import           System.FilePath.Find ( (/=?) )
 import qualified Data.Set             as S
-import           System.Posix.Files   (FileStatus, fileSize, modificationTime, isDirectory, isSymbolicLink, readSymbolicLink, getFileStatus)
-import           System.FilePath ((</>), normalise)
+import           System.Posix.Files   (FileStatus, fileSize, modificationTime,
+                                      isDirectory, isSymbolicLink,
+                                      readSymbolicLink, getFileStatus)
+import           System.FilePath ((</>), normalise, splitDirectories)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           System.Process (readProcessWithExitCode)
 import           Database.Persist.Sql (rawSql)
@@ -86,6 +88,7 @@ getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
                 in simpleListing sl route (flip MediaServeR sect) ("Filename", "File size", "Modified")
         Right node -> animeSingle fsec fps node
 
+buildElem :: Filenode -> (Text, Text, [Text], Text, Text)
 buildElem val = ( last $ T.splitOn "/" $ filenodePath val
                 , if' (filenodeIsdir val) "directory" "file"
                 , T.splitOn "/" $ filenodePath val
@@ -97,11 +100,12 @@ buildElem val = ( last $ T.splitOn "/" $ filenodePath val
 animeSingle :: FilmSec -> [Text] -> Entity Filenode -> Widget
 animeSingle FilmSec{sRoute = route, sName = name} fps (Entity _ val) = do
   simpleNav name fps route
+  let href = (MediaServeR ServeAuto name fps, [("bar", "aoeu")])
   [whamlet|
 <div .ym-gbox .details>
   <div .text-center>
     <div .btn-toolbar>
-      <a.btn .btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
+      <a.btn .btn-primary href=@?{href} target="_blank">
         <i.icon-white.icon-play> #
         Auto-open
       <a.btn href="@{MediaServeR ServeForceDownload name fps}">
@@ -156,13 +160,13 @@ searchDB s q = do
 findFiles :: FilmSec -> [Text] -> Handler [Text]
 findFiles FilmSec{sName = sect} paths = runDB $ do
     entities <- selectList [ FilenodeArea ==. sect, FilenodePath <-. paths ] []
-    liftM concat $ mapM findFiles entities
+    liftM concat $ mapM f entities
   where
     findChildren parentId = do
       children <- selectList [FilenodeParent ==. Just parentId] [Asc FilenodePath]
       liftM ((++) (map (filenodePath . entityVal) $ filter (not . filenodeIsdir . entityVal) children) . concat) $ mapM (findChildren . entityKey) $ filter (filenodeIsdir . entityVal) children
 
-    findFiles (Entity k v) = if filenodeIsdir v
+    f (Entity k v) = if filenodeIsdir v
         then findChildren k
         else return [filenodePath v]
 
@@ -176,11 +180,17 @@ getFile FilmSec{sName = sect, sPath = root} file = do
 -- | Update files to DB from FS.
 -- recursively find files and directories in `dir` along with properties
 -- TODO: find and update modified (newer than db) entities?
-updateListing :: FilmSec -> Handler ()
+updateListing :: FilmSec -> Handler [RecentlyAdded]
 updateListing FilmSec{sPath = dir', sName = section} = do
-  dir <- liftIO $ getFileStatus dir' >>= \x -> if' (isSymbolicLink x) readSymbolicLink return $ dir'
-  liftIO $ print dir 
 
+  now <- timeNow
+
+  -- Get the dir. Follow symbolic link so everything else works.
+  dir <- liftIO $ getFileStatus dir' >>= \x -> if isSymbolicLink x
+    then readSymbolicLink dir'
+    else return dir'
+
+  -- Evil filtering
   let filterp = (F.filePath /=? dir)
       makeRel = dropWhile (== '/') . drop (length dir)
       f (list, set) fi = if F.evalClause filterp fi
@@ -194,30 +204,27 @@ updateListing FilmSec{sPath = dir', sName = section} = do
 
       insertNode (path,stat) = do
           parent <- getBy $ UniqueFilenode section (takeDirectory' path)
-          insert =<< liftIO (toFilenode (dir </> T.unpack path)
-                                        section
-                                        (entityKey <$> parent)
-                                        (T.pack $ normalise $ T.unpack path)
-                                        stat)
-
-  liftIO . print $ "==> # of elems in filesInFS: " ++ show (length filesInFS) -- DEBUG
+          val <- liftIO $ toFilenode
+              (dir </> T.unpack path)
+              section
+              (entityKey <$> parent)
+              (T.pack $ normalise $ T.unpack path)
+              stat
+          _key <- insert val
+          return $ RecentlyAdded now section (map T.pack $ splitDirectories $ T.unpack $ filenodePath val) (toHtml $ filenodePath val)
 
   -- delete files not found in the filesystem
   -- XXX: disable/hide only?
-  deleted <- runDB $ C.runResourceT $ selectSource [FilenodeArea ==. section] [Desc FilenodePath]
+  _deleted <- runDB $ C.runResourceT $ selectSource [FilenodeArea ==. section] [Desc FilenodePath]
       C.$= CL.filter fileNotInFS
       C.$= CL.map entityKey C.$= CL.mapM delete
       C.$$ CL.consume -- do something with results?
 
-  liftIO . print $ "==> Deleted entries: " ++ show (length deleted)
-
   -- find completely new entities and insert them and their info
   added <- runDB $ C.runResourceT $ CL.sourceList filesInFS
-    C.$= CL.mapMaybeM (\x -> liftM (`ifNothing` x) $ getBy $ UniqueFilenode section $ fst x)
-    C.$= CL.mapM insertNode
-    C.$$ CL.consume
-
-  liftIO . print $ "==> # of files added: " ++ show (length added)
+      C.$= CL.mapMaybeM (\x -> liftM (`ifNothing` x) $ getBy $ UniqueFilenode section $ fst x)
+      C.$= CL.mapM insertNode
+      C.$$ CL.consume
 
   -- Try to add parents to nodes. XXX: This is needed becouse..?
   fixed <- runDB $ C.runResourceT $ selectSource [FilenodeArea ==. section, FilenodeParent ==. Nothing] []
@@ -225,16 +232,17 @@ updateListing FilmSec{sPath = dir', sName = section} = do
       C.$$ CL.consume
 
   liftIO . print $ "==> # of files fixed: " ++ show (length fixed)
-  return ()
-    where
+  return added
 
+    where
   fixParent (Entity key val) = do
       parent <- getBy $ UniqueFilenode section (takeDirectory' $ filenodePath val)
       update key [FilenodeParent =. fmap entityKey parent]
 
-  ifNothing mx x = case mx of
-      Nothing -> Just x
-      Just _  -> Nothing
+ifNothing :: Maybe a -> b -> Maybe b
+ifNothing mx x = case mx of
+    Nothing -> Just x
+    Just _  -> Nothing
 
 -- | Generate a filenode from properties.
 toFilenode :: FilePath         -- ^ Real path to the file
@@ -243,7 +251,7 @@ toFilenode :: FilePath         -- ^ Real path to the file
            -> Text             -- ^ path of the node
            -> FileStatus       -- ^ status of the node
            -> IO Filenode
-toFilenode real section parent path stat = do
+toFilenode _real section parent path stat = do
     -- details <- if' isdir (return Nothing) $ Just <$> getDetails real
     let details = Nothing
     return $ Filenode section parent isdir path

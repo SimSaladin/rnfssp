@@ -11,7 +11,6 @@ import Yesod.Default.Config
 import Yesod.Default.Util (addStaticContentExternal)
 import Network.HTTP.Conduit   (Manager)
 import Network.Wai (Request(..))
-import Network.Socket.Internal (SockAddr(..))
 
 import           Control.Monad  (liftM)
 import           Control.Applicative ((<$>))
