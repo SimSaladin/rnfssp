@@ -1,4 +1,14 @@
 <div #main>
    ^{widget}
-<footer>
-   Webappi ja blogi &copy; 2011 - 2013 Samuli Thomasson.
+<footer style="min-height:5em;">
+   <p style="float:right">
+      <i>Lahjoitukset käytetään suoraan palvelun ylläpitoon ja laajentamiseen.
+
+   <p style="float:right; clear:right">Webappi ja blogi &copy; 2011 - 2013 Samuli Thomasson.
+
+   <form action="https://www.paypal.com/cgi-bin/webscr" method="post" target="_top" style="text-align:center;margin:0">
+      <input type="hidden" name="cmd" value="_s-xclick">
+      <input type="hidden" name="hosted_button_id" value="Q6UGE86U9ZJ8U">
+      <input type="image" src="https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif" border="0" name="submit" alt="PayPal - The safer, easier way to pay online!">
+      <img alt="" border="0" src="https://www.paypalobjects.com/en_US/i/scr/pixel.gif" width="1" height="1">
+

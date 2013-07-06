@@ -72,9 +72,10 @@ Filenode
 
 -- Media/temp/log
 LogDownload
-   user UserId
    time UTCTime
-   node FilePath
+   user UserId
+   section Text
+   fps Texts
 DlTemp
    date UTCTime
    ident Text

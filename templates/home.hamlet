@@ -1,6 +1,5 @@
 <blockquote>
-   This will be a random quote from the #haiku channel as soon as the developer
-   has the time to implement it.
+   #{haiku}
 <div .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
       <div .ym-gbox>
@@ -18,8 +17,13 @@
       <div .ym-gbox>
          <h2>
             <a href=@{MediaHomeR}>Media
-         <div>
-            ^{mediaRecent}
+         <div .ym-grid>
+            <div .ym-g50 .ym-gl>
+               <h3>Recently added
+               ^{mediaRecent 15}
+            <div .ym-g50 .ym-gr>
+               <h3>Recently downloaded
+               ^{mediaRecentDl 15}
    <div .ym-g38 .ym-gl>
       <div .ym-gbox>
          <h2>TODOs

@@ -6,7 +6,7 @@ module Handler.Media
     , getMediaSearchR
     , postMediaAdminR
     , adminWidget
-    , mediaRecent
+    , mediaRecent, mediaRecentDl
     ) where
 
 import           Utils
@@ -145,7 +145,7 @@ getMediaServeR stype section path = case stype of
         uid <- requireAuthId
         fp  <- onSec section (flip sFilePath $ toPath path)
         t   <- timeNow
-        _   <- runDB $ insert $ LogDownload uid t fp -- TODO: use a log file
+        _   <- runDB $ insert $ LogDownload t uid section path -- TODO: use a log file
         return fp
 
 -- * Sections
@@ -180,15 +180,31 @@ mediaUpdateR = do
     runDB $ mapM_ (mapM_ insert . snd) ras
     setMessage $ toHtml $ "Added " <> show (sum $ map (length . snd) ras) <> " new items."
 
-mediaRecent :: Widget
-mediaRecent = do
-    recent <- liftHandlerT $ runDB $ selectList [] [Asc RecentlyAddedDate, LimitTo 10]
+mediaRecent :: Int -> Widget
+mediaRecent n = do
+    recent <- liftHandlerT $ runDB $ do
+        selectList [] [Desc RecentlyAddedDate, LimitTo n]
     [whamlet|
 <ul>
     $forall Entity _ ra <- recent
       <li>
-        <a href=@{MediaContentR (recentlyAddedSection ra) (recentlyAddedParts ra)}>Go
-        #{recentlyAddedDesc ra}
+        <a href=@{MediaContentR (recentlyAddedSection ra) (recentlyAddedParts ra)}>
+            #{recentlyAddedDesc ra}
+        <small>
+            <i>Added #{printfTime "%d.%m" $ recentlyAddedDate ra}
+|]
+
+mediaRecentDl :: Int -> Widget
+mediaRecentDl n = do
+    recent <- liftHandlerT $ runDB $ selectList [] [Desc LogDownloadTime, LimitTo n]
+    [whamlet|
+<ul>
+    $forall Entity _ dl <- recent
+        <li>
+            <a href=@{MediaContentR (logDownloadSection dl) (logDownloadFps dl)}>
+                #{toPath $ logDownloadFps dl}
+            <small>
+                <i>Played #{printfTime "%h:%M %d.%m" $ logDownloadTime dl}
 |]
 
 adminForm :: Form (Bool, Bool)

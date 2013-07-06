@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: May 28 2013 [14:00:53]
+-- Last Modified: Jul 06 2013 [14:02:32]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -89,7 +89,9 @@ chatWidget toMaster = do
 <div.clearfix ##{chat}>
     <div ##{output} .chat-output>
       $forall (poster, msg) <- recent
-        <p>#{poster}: #{msg}
+        <p>
+            <span .poster>#{poster}: #
+            #{msg}
     <input ##{input} type=text placeholder="Enter Message">
 |]
             toWidget [lucius|

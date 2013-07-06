@@ -1,17 +1,24 @@
 {-# LANGUAGE TupleSections, OverloadedStrings #-}
 module Handler.Home where
 
+import Prelude (readFile)
 import           Yesod.Auth.HashDB (setPassword)
 import Import hiding (fail)
 import Chat
+import qualified Data.Text as T
 import Handler.Blog
 import Handler.Media
+import System.Random (randomIO)
+import System.Directory (doesFileExist)
+
 
 getHomePageR :: Handler RepHtml
-getHomePageR = defaultLayout $ do
-    setTitle "SS"
-    navigation "SS"
-    $(widgetFile "home")
+getHomePageR = do
+    haiku <- randomHaiku
+    defaultLayout $ do
+        setTitle "SS"
+        navigation "SS"
+        $(widgetFile "home")
 
 renderRegister :: Widget -> Handler RepHtml
 renderRegister w = defaultLayout $
@@ -50,4 +57,23 @@ registerForm = renderBootstrap $
     uniqueIrcnick  nick  = f nick "Tämä nick on jo käytössä."                                $ selectFirst [UserIrcnick ==. Just nick] []
 
     f a msg = liftM (maybe (Right a) (const $ Left (msg::Text))) . runDB
+
+
+getRandomHaiku :: FilePath -> IO (Either Text Text)
+getRandomHaiku fp = do
+    exists <- doesFileExist fp
+    if exists
+        then do
+            lns <- liftM lines (readFile fp)
+            if length lns >= 1
+                then randomIO >>= return . Right . T.pack . (!!) lns . (`mod` (length lns))
+                else return $ Left "i haz no haikuz!"
+        else return $ Left "i haz no haikufilez!!"
+
+randomHaiku :: Handler Text
+randomHaiku = do
+    rh <- liftIO $ getRandomHaiku "/home/sim/docs/haikut.txt"
+    return $ case rh of
+        Left _  -> "(Error: No haiku found!)"
+        Right x -> T.replace ";" " //" x
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Jul 06 2013 [01:05:44]
+-- Last Modified: Jul 06 2013 [13:27:59]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -10,7 +10,7 @@ module Sections.Film (FilmSec, mkFilmSec) where
 import           Sections
 import           Import
 import           Utils
-import           Data.List            (last)
+import qualified Data.List            as L
 import qualified Data.Conduit         as C
 import qualified Data.Conduit.List    as CL
 import qualified Data.Text            as T
@@ -89,7 +89,7 @@ getContent fsec@FilmSec{sName = sect, sRoute = route} fps = do
         Right node -> animeSingle fsec fps node
 
 buildElem :: Filenode -> (Text, Text, [Text], Text, Text)
-buildElem val = ( last $ T.splitOn "/" $ filenodePath val
+buildElem val = ( L.last $ T.splitOn "/" $ filenodePath val
                 , if' (filenodeIsdir val) "directory" "file"
                 , T.splitOn "/" $ filenodePath val
                 , filenodeSize val
@@ -182,7 +182,6 @@ getFile FilmSec{sName = sect, sPath = root} file = do
 -- TODO: find and update modified (newer than db) entities?
 updateListing :: FilmSec -> Handler [RecentlyAdded]
 updateListing FilmSec{sPath = dir', sName = section} = do
-
   now <- timeNow
 
   -- Get the dir. Follow symbolic link so everything else works.
@@ -198,6 +197,7 @@ updateListing FilmSec{sPath = dir', sName = section} = do
                 in (list ++ [(tpath, F.infoStatus fi)], S.insert tpath set)
           else (list, set)
 
+  -- (List of files in FS, Set of files in FS)
   (filesInFS, filesInFS') <- liftIO $ F.fold F.always f ([], S.empty) dir
 
   let fileNotInFS = flip S.notMember filesInFS' . filenodePath . entityVal
@@ -210,8 +210,12 @@ updateListing FilmSec{sPath = dir', sName = section} = do
               (entityKey <$> parent)
               (T.pack $ normalise $ T.unpack path)
               stat
-          _key <- insert val
-          return $ RecentlyAdded now section (map T.pack $ splitDirectories $ T.unpack $ filenodePath val) (toHtml $ filenodePath val)
+          key <- insert val
+          return $ Entity key val
+
+      recentEntry val = RecentlyAdded now section
+            (map T.pack $ splitDirectories $ T.unpack $ filenodePath val)
+            (toHtml $ filenodePath val)
 
   -- delete files not found in the filesystem
   -- XXX: disable/hide only?
@@ -220,10 +224,20 @@ updateListing FilmSec{sPath = dir', sName = section} = do
       C.$= CL.map entityKey C.$= CL.mapM delete
       C.$$ CL.consume -- do something with results?
 
+    -- Hax to not display subdirectories as recently added if the parent was
+    -- added.
+  let cf (Entity key val) ac = do
+        let path = filenodePath val <> "/"
+        if ac `T.isPrefixOf` path
+            then return (ac, [])
+            else return (path, [recentEntry val])
+        
+
   -- find completely new entities and insert them and their info
-  added <- runDB $ C.runResourceT $ CL.sourceList filesInFS
+  recent <- runDB $ C.runResourceT $ CL.sourceList filesInFS
       C.$= CL.mapMaybeM (\x -> liftM (`ifNothing` x) $ getBy $ UniqueFilenode section $ fst x)
       C.$= CL.mapM insertNode
+      C.$= CL.concatMapAccumM cf "/" -- / may not be prefix in any path given
       C.$$ CL.consume
 
   -- Try to add parents to nodes. XXX: This is needed becouse..?
@@ -232,7 +246,9 @@ updateListing FilmSec{sPath = dir', sName = section} = do
       C.$$ CL.consume
 
   liftIO . print $ "==> # of files fixed: " ++ show (length fixed)
-  return added
+
+  --liftIO $ print (map filenodePath added')
+  return recent
 
     where
   fixParent (Entity key val) = do
