@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          FilmSection.hs
 -- Creation Date: Dec 23 2012 [23:15:20]
--- Last Modified: Jul 06 2013 [13:27:59]
+-- Last Modified: Jul 29 2013 [23:04:47]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -28,6 +28,11 @@ import           Database.Persist.Sql (rawSql)
 
 import Sections.Types
 
+ifNothing :: Maybe a -> b -> Maybe b
+ifNothing mx x = case mx of
+    Nothing -> Just x
+    Just _  -> Nothing
+
 data FilmSec = FilmSec { sName  :: Text
                        , sPath  :: FilePath
                        , sRoute :: [Text] -> Route App
@@ -37,6 +42,7 @@ data FilmSec = FilmSec { sName  :: Text
 mkFilmSec :: Section -> MediaConf -> FilmSec
 mkFilmSec section mc = FilmSec section (mcPath mc) (MediaContentR section)
 
+-- | 
 instance MSection FilmSec where
   sFind        = findFiles
   sWContent    = getContent
@@ -44,10 +50,15 @@ instance MSection FilmSec where
   sUpdateIndex = updateListing
   sWSearch     = searchDB
 
+-- * Internal
+
+data ViewConf
+
+-- |
 getPages :: Handler (Int, Int)
 getPages = do
     limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
-    page  <- liftM (maybe 0 (read . T.unpack)) $ lookupGetParam "page"
+    page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
     return (limit, page)
 
 -- | GET params:
@@ -254,11 +265,6 @@ updateListing FilmSec{sPath = dir', sName = section} = do
   fixParent (Entity key val) = do
       parent <- getBy $ UniqueFilenode section (takeDirectory' $ filenodePath val)
       update key [FilenodeParent =. fmap entityKey parent]
-
-ifNothing :: Maybe a -> b -> Maybe b
-ifNothing mx x = case mx of
-    Nothing -> Just x
-    Just _  -> Nothing
 
 -- | Generate a filenode from properties.
 toFilenode :: FilePath         -- ^ Real path to the file

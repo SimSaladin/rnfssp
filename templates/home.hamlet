@@ -25,32 +25,4 @@
                <h3>Recently downloaded
                ^{mediaRecentDl 15}
    <div .ym-g38 .ym-gl>
-      <div .ym-gbox>
-         <h2>TODOs
-         <ul>
-            <li>
-              <span .todo-done>local niceditor; image upload #
-              <br>
-              <span .todo-fix>Implemented markdown instead
-            <li>
-               <span .todo-done>move these todo's somewhere
-               <br>
-               <span .todo-fix>Guess the homepage will do for now :)
-            <li>search
-            <li>playlist manipulation (search, filter, sort, ...)
-            <li>
-              <span .todo-done>web play #
-              <span .todo-fix>DONE
-            <li>
-              <span .todo-done>localplay #
-              <span .todo-fix>DONE
-            <li>MPD support
-            <li>user profiles
-            <li>easy ProfileR user
-            <li>
-               <span .todo-done>blog post editing
-            <li>blog post deletion
-            <li>news feed
-            <li>clean up default-layout.lucius
-            <li>themes and changer
-            <li>IRC integration (the haiku project)
+      <div .ym-gbox>^{statusCheck}

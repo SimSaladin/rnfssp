@@ -1,27 +1,40 @@
-------------------------------------------------------------------------------
--- File:          Sections/SingleSuorce.hs
--- Creation Date: Jan 28 2013 [19:03:51]
--- Last Modified: Jan 28 2013 [22:01:17]
--- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
-------------------------------------------------------------------------------
-
+-- | Use the contents of a directory as the source for a section.
+--
+-- On startup: 
+--  fork a process, which:
+--      * syncs the index from the directory.
+--      * watches the directory for changes via inotify, and sync changes to the
+--        index.
+--      * 
+--
 module Sections.SingleSource (SingleSource(..)) where
 
 import Sections
 import Import
 import Utils
 
-data SingleSource = SingleSource { sName  :: Text
-                                 , sPath  :: FilePath
-                                 , sRoute :: [Text] -> Route App
-                                 }
+-- Ain't this supposed to be a subsite?
 
+-- | Server-side configuration object.
+data SingleSource = SingleSource
+    { sName  :: Text
+    , sPath  :: FilePath
+    , sRoute :: [Text] -> Route App
+    }
+
+-- | Configuration object from client.
+data SSViewConf = SSViewConf
+    { cPerPage :: Int
+    , cPage    :: Int
+    }
 
 instance MSection SingleSource where
-  ident = sName
-  content = renderContent
+    ident   = sName
+    content = renderContent
+
+
 
 renderContent :: SingleSource -> [Text] -> Widget
 renderContent SingleSource{sPath = fpath} fps = do
-  -- get path in fpath
-  -- render sources
+    -- get path in fpath
+    -- render sources

@@ -77,3 +77,5 @@ randomHaiku = do
         Left _  -> "(Error: No haiku found!)"
         Right x -> T.replace ";" " //" x
 
+statusCheck :: Widget
+statusCheck = mempty -- TODO
