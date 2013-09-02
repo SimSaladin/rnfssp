@@ -5,20 +5,20 @@ import qualified Data.Text as T
 import Data.Maybe
 import Yesod.Auth.HashDB (setPassword, validateUser)
 
-renderProfile :: User -> Widget -> Handler RepHtml
+renderProfile :: User -> Widget -> Handler Html
 renderProfile user w = defaultLayout $ do
     navigation "Profile"
     setTitle . toHtml . T.append "Profile of" . userUsername $ user
     w
 
-getProfileR :: Handler RepHtml
+getProfileR :: Handler Html
 getProfileR = do
   Entity uid uval <- requireAuth
   (passwdW, encType) <- generateFormPost $ userUpdateForm uval
   renderProfile uval $(widgetFile "profile")
   where own = True
 
-postProfileR :: Handler RepHtml
+postProfileR :: Handler Html
 postProfileR = do
   Entity uid uval <- requireAuth
   ((res, passwdW), encType) <- runFormPost $ userUpdateForm uval

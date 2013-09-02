@@ -25,7 +25,7 @@ import Chat
 
 -- * Viewing
 
-renderView :: Blogpost -> Widget -> Handler RepHtml
+renderView :: Blogpost -> Widget -> Handler Html
 renderView post x = defaultLayout $ do
     setTitle $ toHtml (blogpostTitle post) `mappend` " - SS Blog"
     renderBlog (blogpostTitle post) x
@@ -44,7 +44,7 @@ getPostPreview (Entity key val) = do
     blogpostWidget val comments True =<< liftHandlerT isAdmin'
 
 -- | Home redirects to the newest blog post.
-getBlogHomeR :: Handler RepHtml
+getBlogHomeR :: Handler Html
 getBlogHomeR = do
     mpost <- runDB $ selectFirst [BlogpostPublic ==. True] [Desc BlogpostTime]
     maybe noPosts (redirect . BlogViewR . blogpostUrlpath . entityVal) mpost
@@ -55,7 +55,7 @@ getBlogHomeR = do
         renderBlog "" $ [whamlet|<i>No posts!|]
 
 -- | View a post specified in the url.
-getBlogViewR :: Text -> Handler RepHtml
+getBlogViewR :: Text -> Handler Html
 getBlogViewR path = do
     showHidden <- isAdmin'
     e                 <- runDB . getBy404 $ UniqueBlogpost path
@@ -69,7 +69,7 @@ getBlogViewR path = do
     result = FormMissing
 
 -- | Post action in a view is for posting comments.
-postBlogViewR :: Text -> Handler RepHtml
+postBlogViewR :: Text -> Handler Html
 postBlogViewR path = do
     e <- runDB $ getBy404 $ UniqueBlogpost path
     ((result, widget), encType) <- runFormPost (commentForm (entityKey e) Nothing)
@@ -83,7 +83,7 @@ postBlogViewR path = do
             renderView (entityVal e) $(widgetFile "blog-view")
 
 -- | 
-getBlogTagR :: Text -> Handler RepHtml
+getBlogTagR :: Text -> Handler Html
 getBlogTagR tag = do
     posts <- runDB $ rawSql query [toPersistValue $ "%\"s" `mappend` tag `mappend` "\"%"]
     defaultLayout $ do
@@ -96,18 +96,18 @@ getBlogTagR tag = do
 
 -- * Publishing
 
-renderPublish :: Widget -> Handler RepHtml
+renderPublish :: Widget -> Handler Html
 renderPublish x = defaultLayout $ do
     setTitle "Blog - Publishing"
     renderBlog "" x
 
-getBlogAddR :: Handler RepHtml
+getBlogAddR :: Handler Html
 getBlogAddR = do
     Entity _ user <- requireAuth
     (widget, encType) <- generateFormPost (blogpostForm user Nothing) -- new post form
     renderPublish $ renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR FormMissing widget encType
 
-postBlogAddR :: Handler RepHtml
+postBlogAddR :: Handler Html
 postBlogAddR = do
     Entity _ user <- requireAuth
     ((result, widget), encType) <- runFormPost (blogpostForm user Nothing) -- new post form
@@ -122,12 +122,12 @@ postBlogAddR = do
 
 -- * Edit
 
-renderEdit :: Blogpost -> Widget -> Handler RepHtml
+renderEdit :: Blogpost -> Widget -> Handler Html
 renderEdit post x = defaultLayout $ do
     setTitle $ "[Edit] " `mappend` toHtml (blogpostTitle post) `mappend` " - SS Blog"
     renderBlog (blogpostTitle post) x
 
-getBlogEditR :: Text -> Handler RepHtml
+getBlogEditR :: Text -> Handler Html
 getBlogEditR path = do
     Entity _ user     <- requireAuth
     Entity _ val      <- runDB $ getBy404 $ UniqueBlogpost path
@@ -140,7 +140,7 @@ getBlogEditR path = do
                     result widget encType
     where result = FormMissing
 
-postBlogEditR :: Text -> Handler RepHtml
+postBlogEditR :: Text -> Handler Html
 postBlogEditR path = do
     Entity _ user <- requireAuth
     Entity _ val  <- runDB $ getBy404 $ UniqueBlogpost path

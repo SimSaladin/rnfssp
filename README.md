@@ -2,7 +2,7 @@ rnfssp: Media sharing web application
 =====================================
 
 **NOTE: Absolutely not bugfree, but good enough for testing, if you really want
-to...**
+to**
 
 `rnfssp` is a web application built on top of Yesod. Features include
 
@@ -11,13 +11,28 @@ to...**
 * Imageboard-style forum for users.
 * Real-time chat.
 
+
 Installation
 ------------
 
-### Requirements
+### Database
 
-- PostgreSQL setup, and a user/db for rnfssp
-- *nix system with a recent (>=7.4) GHC and cabal-install.
+`rnfssp` is designed to be used with PostgreSQL, and uses a few custom queries
+(for now, to search the media database).
+
+Install the postgresql package your distro provides and setup an account for
+`rnfssp`.
+
+
+```sh
+# pacman -S postgresql
+
+TODO TODO TODO
+```
+
+### Development environment
+
+### Deployment via keter
 
 ### Procedure
 

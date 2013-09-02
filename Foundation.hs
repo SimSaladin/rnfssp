@@ -1,88 +1,41 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Foundation where
 
-import Prelude hiding (appendFile, readFile)
-import Yesod hiding (fileName)
-import Yesod.Static
-import Yesod.Auth
-import Yesod.Auth.HashDB      (authHashDB, getAuthIdHashDB)
-import Yesod.Auth.Message     as Msg
-import Yesod.Default.Config
-import Yesod.Default.Util (addStaticContentExternal)
-import Network.HTTP.Conduit   (Manager)
-import Network.Wai (Request(..))
-
-import           Control.Monad  (liftM)
+import           Prelude
+import           Blaze.ByteString.Builder.Char.Utf8 (fromText, fromString)
 import           Control.Applicative ((<$>))
-import           Data.Maybe
+import           Control.Monad
 import qualified Data.List as L
-import           Data.Monoid    (mappend)
+import           Data.Maybe
+import           Data.Monoid    ((<>))
 import           Data.Text      (Text)
 import qualified Data.Text  as T
-import           Data.Text.IO   (appendFile, readFile)
 import           Data.Text.Encoding  (decodeUtf8)
+import           Data.Time (getCurrentTime)
 import qualified Database.Persist
+import           Database.Persist.Sql (SqlPersistT)
 import           System.Log.FastLogger  (Logger)
 import           Text.Hamlet            (hamletFile)
 import           Text.Jasmine           (minifym)
 import           WaiAppStatic.Types     (StaticSettings(..), File(..), fromPiece)
 
+import           Yesod hiding (fileName)
+import           Yesod.Static
+import           Yesod.Auth
+import           Yesod.Auth.HashDB      (authHashDB, getAuthIdHashDB)
+import           Yesod.Auth.Message     as Msg
+import           Yesod.Default.Config
+import           Yesod.Default.Util (addStaticContentExternal)
+import           Network.HTTP.Conduit   (Manager)
+import           Network.Wai (Request(..))
+
 import           Settings.StaticFiles
 import           Settings (widgetFile, Extra (..))
 import           Model
 import qualified Settings
-import Settings.Development (development)
-import Database.Persist.Sql (SqlPersistT)
-
+import           Settings.Development (development)
 import           Chat
 import           Mpd
-
-instance YesodMpd master => YesodSubDispatch Mpd (HandlerT master IO) where
-    yesodSubDispatch = $(mkYesodSubDispatch resourcesMpd)
-
-instance YesodChat master => YesodSubDispatch Chat (HandlerT master IO) where
-    yesodSubDispatch = $(mkYesodSubDispatch resourcesChat)
-
--- | The site argument for your application. This can be a good place to
--- keep settings and values requiring initialization before your application
--- starts running, such as database connections. Every handler will have
--- access to the data present here.
-data App = App
-    { settings      :: AppConfig DefaultEnv Extra
-    , getStatic     :: Static -- ^ Settings for static file serving.
-    , connPool      :: Database.Persist.PersistConfigPool Settings.PersistConf -- ^ Database connection pool.
-    , httpManager   :: Manager
-    , persistConfig :: Settings.PersistConf
-    , appLogger     :: Logger
-    , getChat       :: Chat
-    , getMpd        :: Mpd
-    }
-
--- Set up i18n messages. See the message folder.
-mkMessage "App" "messages" "en"
-
--- This is where we define all of the routes in our application. For a full
--- explanation of the syntax, please see:
--- http://www.yesodweb.com/book/handler
---
--- This function does three things:
---
--- * Creates the route datatype AppRoute. Every valid URL in your
---   application can be represented as a value of this type.
--- * Creates the associated type:
---       type instance Route App = AppRoute
--- * Creates the value resourcesApp which contains information on the
---   resources declared below. This is used in Handler.hs by the call to
---   mkYesodDispatch
---
--- What this function does *not* do is create a YesodSite instance for
--- App. Creating that instance requires all of the handler functions
--- for our application to be in scope. However, the handler functions
--- usually require access to the AppRoute datatype. Therefore, we
--- split these actions into two functions and place them in separate files.
-mkYesodData "App" $(parseRoutesFile "config/routes")
-
-type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
 
 data ServeType = ServeTemp
                | ServeAuto
@@ -99,13 +52,29 @@ instance PathPiece ServeType where
   fromPathPiece "force" = Just ServeForceDownload
   fromPathPiece       _ = Nothing
 
--- Please see the documentation for the Yesod typeclass. There are a number
--- of settings which can be configured by overriding methods here.
+-- * Application
+
+data App = App
+    { settings      :: AppConfig DefaultEnv Extra
+    , getStatic     :: Static -- ^ Settings for static file serving.
+    , connPool      :: Database.Persist.PersistConfigPool Settings.PersistConf -- ^ Database connection pool.
+    , httpManager   :: Manager
+    , persistConfig :: Settings.PersistConf
+    , appLogger     :: Logger
+    , getChat       :: Chat
+    , getMpd        :: Mpd
+    }
+
+-- Set up i18n messages. See the message folder.
+mkMessage "App" "messages" "en"
+
+mkYesodData "App" $(parseRoutesFile "config/routes")
+
+type Form x = Html -> MForm (HandlerT App IO) (FormResult x, Widget)
+
 instance Yesod App where
     approot = ApprootMaster $ appRoot . settings
 
-    -- Store session data on the client in encrypted cookies,
-    -- default session idle timeout is 120 minutes
     makeSessionBackend _ = fmap Just $ defaultClientSessionBackend
         (120 * 60) -- 120 minutes
         "config/client_session_key.aes"
@@ -124,7 +93,7 @@ instance Yesod App where
             addScript $ StaticR js_json2_js
             addScript $ StaticR js_zepto_min_js
             $(widgetFile "default-layout")
-        hamletToRepHtml $(hamletFile "templates/default-layout-wrapper.hamlet")
+        giveUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
     -- This is done to provide an optimization for serving static files from
     -- a separate domain. Please see the staticRoot setting in Settings.hs
@@ -135,20 +104,13 @@ instance Yesod App where
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
 
-    -- Blog
-    isAuthorized BlogHomeR True  = isAdmin
-    -- Media
-    isAuthorized MediaHomeR          _ = isValidLoggedIn'
+    isAuthorized BlogHomeR        True = isAdmin           -- Blog
+    isAuthorized MediaHomeR          _ = isValidLoggedIn'  -- Media
     isAuthorized (MediaContentR _ _) _ = isValidLoggedIn'
     isAuthorized MediaAdminR         _ = isAdmin
-    -- Misc
-    isAuthorized AdminR        _     = isAdmin
+    isAuthorized AdminR              _ = isAdmin           -- Misc
     isAuthorized _                   _ = return Authorized
 
-    -- This function creates static content files in the static folder
-    -- and names them based on a hash of their content. This allows
-    -- expiration dates to be set far in the future without worry of
-    -- users receiving stale content.
     addStaticContent =
         addStaticContentExternal minifier genFileName Settings.staticDir (StaticR . flip StaticRoute [])
       where
@@ -206,29 +168,6 @@ instance RenderMessage App FormMessage where
 getExtra :: Handler Extra
 getExtra = fmap (appExtra . settings) getYesod
 
--- Note: previous versions of the scaffolding included a deliver function to
--- send emails. Unfortunately, there are too many different options for us to
--- give a reasonable default. Instead, the information is available on the
--- wiki:
---
--- https://github.com/yesodweb/yesod/wiki/Sending-email
-
-chatFile :: FilePath
-chatFile = "chatmessages.txt"
-
-instance YesodChat App where
-  getUserName = liftM (userUsername . entityVal) requireAuth
-  isLoggedIn  = isValidLoggedIn >>= \r -> return $ case r of
-      Authorized -> True
-      _          -> False
-  saveMessage (from, msg) = liftIO $ appendFile chatFile $ from `mappend` " " `mappend` msg `mappend` "\n"
-  getRecent = liftM (map (T.breakOn " ") . last' 5 . T.lines) $ liftIO $ readFile chatFile
-
-instance YesodMpd App where
-  mpdPort = return 6600
-  mpdHost = return "localhost"
-  mpdPass = return ""
-
 setStaticSettings :: Static -> Static
 setStaticSettings (Static ss) = Static $ ss {
     ssGetMimeType = \x -> fromMaybe (ssGetMimeType ss $ x) (getMT x)
@@ -240,6 +179,41 @@ setStaticSettings (Static ss) = Static $ ss {
       | endsWith ".svg"  = Just $ return "image/svg+xml"
       | otherwise        = Nothing
     where endsWith x = x `T.isSuffixOf` (fromPiece $ fileName file)
+
+-- * Subsites
+
+-- ** Chat
+
+instance YesodChat master => YesodSubDispatch Chat (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesChat)
+
+instance YesodChat App where
+    data ChatMessage App = CMsg Chatmsg
+
+    chatIdent = liftM (fmap $ userUsername . entityVal) maybeAuth
+
+    chatCreateMsg poster content = do
+        time <- liftIO getCurrentTime
+        let msg = Chatmsg time poster content
+        _ <- runDB $ insert msg
+        return $ CMsg msg
+
+    chatGet = liftM (map $ CMsg . entityVal) $ runDB $ selectList [] []
+
+    chatRenderMsg (CMsg (Chatmsg time poster msg)) =
+        fromString ("<p><span class=date>" <> show time <> "</span>")
+            <> fromText ("<span class=poster>" <> poster <> "</span>")
+            <> fromText msg
+
+-- ** Mpd
+
+instance YesodMpd master => YesodSubDispatch Mpd (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesMpd)
+
+instance YesodMpd App where
+  mpdPort = return 6600
+  mpdHost = return "localhost"
+  mpdPass = return ""
 
 
 -- * Utils

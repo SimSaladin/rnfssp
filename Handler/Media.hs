@@ -23,7 +23,7 @@ import qualified Data.Map as Map
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
 
-getMediaHomeR :: Handler RepHtml
+getMediaHomeR :: Handler Html
 getMediaHomeR = do
     ent <- requireAuth
     defaultLayout $ do
@@ -32,7 +32,7 @@ getMediaHomeR = do
         renderBrowsable ""
         layoutSplitH renderSearchAll $ userPlaylistWidget ent
 
-renderMaybeBare :: Widget -> Widget -> Handler RepHtml
+renderMaybeBare :: Widget -> Widget -> Handler Html
 renderMaybeBare bareContents nonBareContents = do
     mq <- lookupGetParam "bare"
     case mq of
@@ -41,7 +41,7 @@ renderMaybeBare bareContents nonBareContents = do
             navigation "Media"
             nonBareContents
 
-getMediaContentR :: Text -> [Text] -> Handler RepHtml
+getMediaContentR :: Text -> [Text] -> Handler Html
 getMediaContentR section fps = do
     ent <- requireAuth
     renderMaybeBare content $ do
@@ -52,7 +52,7 @@ getMediaContentR section fps = do
                      (userPlaylistWidget ent)
   where content = sectionWidget section fps
 
-getMediaSearchAllR :: Handler RepHtml
+getMediaSearchAllR :: Handler Html
 getMediaSearchAllR = do
     ent <- requireAuth
     mq  <- lookupGetParam "q"
@@ -79,7 +79,7 @@ getMediaSearchAllR = do
         in maybe (redirect $ MediaHomeR) doSearch mq
 
 -- | search in section @section@ using query string from the @q@ get parameter.
-getMediaSearchR :: Section -> Handler RepHtml
+getMediaSearchR :: Section -> Handler Html
 getMediaSearchR section = do
     ent <- requireAuth
     mq  <- lookupGetParam "q"
@@ -165,7 +165,7 @@ adminWidget = do
                 result widget encType
 
 -- | Admin operations in Media.
-postMediaAdminR :: Handler RepHtml
+postMediaAdminR :: Handler Html
 postMediaAdminR = do
     ((result, _), _) <- runFormPost adminForm
     case result of

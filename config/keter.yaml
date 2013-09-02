@@ -1,7 +1,10 @@
 exec: ../dist/build/rnfssp/rnfssp
 args:
     - production
-host: <<HOST-NOT-SET>>
+host: rnfssp-test.localhost
+ssl: false
+
+copy-to: /srv/keter/incoming
 
 # Use the following to automatically copy your bundle upon creation via `yesod
 # keter`. Uses `scp` internally, so you can set it to a remote destination

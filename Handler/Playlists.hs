@@ -63,7 +63,7 @@ postPlaylistR action = do
     rfail msg = returnJson (1 :: Int, msg)
     rsucc msg = returnJson (0 :: Int, msg)
 
-getPlaylistListR :: Handler RepHtml
+getPlaylistListR :: Handler Html
 getPlaylistListR = undefined
 
 -- | Playlist widget customized for a user.

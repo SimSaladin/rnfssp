@@ -18,7 +18,7 @@ data Result = RBlogPost { rId :: BlogpostId }
             | RFile
 
 -- | run the search and return results in a page.
-getSearchR :: Handler RepHtml
+getSearchR :: Handler Html
 getSearchR = do
   ((formRes, searchWidget),_) <- runFormGet searchForm
   searchResults <- case formRes of

@@ -21,7 +21,7 @@ import Data.Maybe (fromMaybe, isNothing)
 import Utils
 
 -- [/board] 
-getBoardHomeR :: Handler RepHtml
+getBoardHomeR :: Handler Html
 getBoardHomeR = do
     boards <- runDB $ selectList ([] :: [Filter Board]) []
     defaultLayout $ do
@@ -34,14 +34,14 @@ type Thread = (Entity Boardpost, [Entity Boardpost])
 renderThreads :: Entity Board
               -> Either Thread [Thread]
               -> ((FormResult D1, Widget), Enctype) -- 
-              -> Handler RepHtml
+              -> Handler Html
 renderThreads (Entity _ bval) content ((result, formWidget), encType) = defaultLayout $ do
     setTitle $ toHtml $ T.concat ["/", boardName bval, "/"]
     navigation "Lauta"
     $(widgetFile "board")
 
 -- /board/<board>
-getBoardR :: Text -> Handler RepHtml
+getBoardR :: Text -> Handler Html
 getBoardR bname = do
     (board, threads) <- runDB $ do
         b   <- getBy404 $ UniqueBoard bname
@@ -55,7 +55,7 @@ getBoardR bname = do
     renderThreads board (Right threads) form
 
 -- /board/<board> - starting new thread.
-postBoardR :: Text -> Handler RepHtml
+postBoardR :: Text -> Handler Html
 postBoardR bname = do
     Entity bid _ <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost $ postForm bid Nothing
@@ -66,7 +66,7 @@ postBoardR bname = do
       FormMissing -> notFound -- setMessage "Postaus failasi"
 
 -- /board/b/1
-getThreadR :: Text -> BoardpostId -> Handler RepHtml
+getThreadR :: Text -> BoardpostId -> Handler Html
 getThreadR bname opKey = do
     (board, thread) <- runDB $ do
         board <- getBy404 $ UniqueBoard bname
@@ -76,7 +76,7 @@ getThreadR bname opKey = do
     form <- runFormPost (postForm (entityKey board) (Just opKey))
     renderThreads board (Left thread) form
 
-postThreadR :: Text -> BoardpostId -> Handler RepHtml
+postThreadR :: Text -> BoardpostId -> Handler Html
 postThreadR bname opKey = do
     board <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost (postForm (entityKey board) (Just opKey))
@@ -87,7 +87,7 @@ postThreadR bname opKey = do
         FormMissing        -> setMessage "no POST data was received."
     redirect $ ThreadR bname opKey
 
-getBoardFileR :: String -> Handler RepHtml
+getBoardFileR :: String -> Handler Html
 getBoardFileR fname = getFilesPath >>= \p -> sendFile "" $ p </> fname
 
 widgetThreadPost :: Text -> Key Boardpost -> Boardpost -> Widget

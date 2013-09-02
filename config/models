@@ -13,6 +13,11 @@ User
    UniqueUser username
    deriving Typeable
 
+Chatmsg
+   chatTime   UTCTime
+   chatPoster Text
+   chatMsg    Text
+
 -- * Blog
 Blogpost
    time     UTCTime

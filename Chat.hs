@@ -1,11 +1,11 @@
 {-# LANGUAGE OverloadedStrings, TypeFamilies, QuasiQuotes,
              TemplateHaskell, FlexibleInstances, MultiParamTypeClasses,
-             FlexibleContexts
+             FlexibleContexts, ScopedTypeVariables
   #-}
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Jul 06 2013 [14:02:32]
+-- Last Modified: Sep 02 2013 [03:12:50]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -14,53 +14,70 @@
 -- | This modules defines a subsite that allows you to insert a chat box on
 -- any page of your site. It uses eventsource for sending the messages from
 -- the server to the browser.
-module Chat where
+module Chat 
+    ( Chat(..)
+    , Route(..)
+    , resourcesChat
+    , YesodChat(..)
+    , chatWidget
+    , postSendR, getReceiveR
+    ) where
 
-import Yesod
 import Prelude
-import Text.Julius (rawJS)
-import Prelude (Bool, ($), Maybe(..), (.))
+import Yesod
+import Blaze.ByteString.Builder (Builder, toByteString)
 import Control.Concurrent.Chan (Chan, dupChan, writeChan)
+import Data.Foldable
 import Data.Text (Text)
+import Data.Text.Encoding (decodeUtf8)
 import Network.Wai (Response(ResponseSource), responseSource)
 import Network.Wai.EventSource (ServerEvent(..), eventSourceAppChan)
-import Blaze.ByteString.Builder.Char.Utf8 (fromText)
-import Data.Monoid (mappend)
+import Text.Julius (rawJS)
 
 data Chat = Chat (Chan ServerEvent)
-
-class (Yesod master, RenderMessage master FormMessage) => YesodChat master where
-    getUserName :: HandlerT master IO Text
-    isLoggedIn  :: HandlerT master IO Bool
-    saveMessage :: (Text, Text) -> HandlerT master IO ()
-    getRecent   :: HandlerT master IO [(Text, Text)]
-
-
-mkYesodSubData "Chat"
-    --[ ClassP ''YesodChat [VarT $ mkName "master"] ]
-    [parseRoutes|
+mkYesodSubData "Chat" [parseRoutes|
 /send SendR POST
 /recv ReceiveR GET
 |]
 
+-- | Chat interface
+class (Yesod master, RenderMessage master FormMessage) => YesodChat master where
+
+    -- | The message datatype
+    data ChatMessage master
+
+    chatRenderMsg :: ChatMessage master -> Builder
+
+    chatCreateMsg :: Text -> Text -> HandlerT master IO (ChatMessage master)
+
+    -- | Retrieve the chat ident, nick, for the user. Nothing if no nick is
+    -- available (=> chat is disabled)
+    chatIdent :: HandlerT master IO (Maybe Text)
+
+    chatGet   :: HandlerT master IO [ChatMessage master]
+
+
+-- *
+
+type Handler master = HandlerT Chat (HandlerT master IO)
+
 -- | Get a message from the user and send it to all listeners.
-postSendR :: YesodChat master => HandlerT Chat (HandlerT master IO) ()
-postSendR = do
-    from <- lift getUserName
-    body <- lift $ runInputGet $ ireq textField "message"
-    Chat chan <- getYesod
+postSendR :: YesodChat master => Handler master ()
+postSendR = lift chatIdent >>= traverse_ f
+    where f ident = do
+                Chat chan <- getYesod
+                body <- lift (runInputGet $ ireq textField "message")
+                message <- lift $ chatCreateMsg ident body
 
-    -- Set nginx-specific header for eventsource to work.
-    addHeader "X-Accel-Buffering" "no"
+                -- Set nginx-specific header for eventsource to work.
+                addHeader "X-Accel-Buffering" "no"
 
-    -- Send an event to all listeners with the user's name and message.
-    liftIO $ writeChan chan $ ServerEvent Nothing Nothing $ return $
-        fromText from `mappend` fromText ": " `mappend` fromText body
-
-    lift $ saveMessage (from, body)
+                -- Send an event to all listeners with the user's name and message.
+                liftIO $ writeChan chan $ ServerEvent Nothing Nothing
+                                          [chatRenderMsg message]
 
 -- | Send an eventstream response with all messages streamed in.
-getReceiveR :: HandlerT Chat (HandlerT master IO) ()
+getReceiveR :: Handler master ()
 getReceiveR = do
     Chat chan0 <- getYesod
     chan <- liftIO $ dupChan chan0
@@ -72,43 +89,40 @@ getReceiveR = do
     sendWaiResponse $ ResponseSource stat (("X-Accel-Buffering", "no"):hs) src
 
 -- | Provide a widget that the master site can embed on any page.
-chatWidget :: (YesodChat master)
-           => (Route Chat -> Route master)
-           -> WidgetT master IO ()
+chatWidget :: (YesodChat master, ChatMessage master ~ ChatMessage master0)
+           => (Route Chat -> Route master) -> WidgetT master IO ()
 chatWidget toMaster = do
-    chat    <- liftHandlerT newIdent   -- the containing div
-    output  <- liftHandlerT newIdent   -- the box containing the messages
-    input   <- liftHandlerT newIdent   -- input field from the user
-    recent  <- liftHandlerT getRecent
-    ili     <- liftHandlerT isLoggedIn -- check if we're already logged in
-    if ili
-        then do
-            -- Logged in: show the widget
+    let disabledChat = do
+            master <- liftHandlerT getYesod
             [whamlet|
 <h6 .icon-chat> Chat
+<p>
+    You must be #
+    $maybe ar <- authRoute master
+        <a href=@{ar}>logged in
+    $nothing
+        logged in
+    \ to chat.
+|]
+    mident <- liftHandlerT chatIdent -- check if we're already logged in
+    flip (maybe disabledChat) mident $ \_ -> do
+
+        recent  <- liftHandlerT chatGet
+        chat    <- liftHandlerT newIdent   -- the containing div
+
+        [whamlet|
+<h6 .icon-chat> Chat
 <div.clearfix ##{chat}>
-    <div ##{output} .chat-output>
-      $forall (poster, msg) <- recent
-        <p>
-            <span .poster>#{poster}: #
-            #{msg}
-    <input ##{input} type=text placeholder="Enter Message">
-|]
-            toWidget [lucius|
- ##{output} {
-    width: 100%;
-    max-height: 300px;
-    overflow: auto;
-} ##{input} {
-   width: 100%;
-   padding-left:0;
-   padding-right:0;
-}
-|]
-            -- And now that Javascript
-            toWidgetBody [julius|
+    <div ##{chat}-output>
+      $forall msg <- recent
+        #{decodeUtf8 $ toByteString $ chatRenderMsg msg}
+    <input ##{chat}-input type=text placeholder="Enter Message">
+|] >> toWidget [lucius|
+ ##{chat}-output { width: 100%; max-height: 300px; overflow: auto; }
+ ##{chat}-input { width: 100%; padding-left:0; padding-right:0; }
+|] >> toWidgetBody [julius|
 // Set up the receiving end
-var output = document.getElementById("#{rawJS output}");
+var output = document.getElementById("#{rawJS chat}-output");
 var src = new EventSource("@{toMaster ReceiveR}");
 src.onmessage = function(msg) {
     // This function will be called for each new message.
@@ -123,7 +137,7 @@ src.onmessage = function(msg) {
 
 // Set up the sending end: send a message via Ajax whenever the user hits
 // enter.
-var input = document.getElementById("#{rawJS input}");
+var input = document.getElementById("#{rawJS chat}-input");
 input.onkeyup = function(event) {
     var keycode = (event.keyCode ? event.keyCode : event.which);
     if (keycode == '13') {
@@ -135,17 +149,4 @@ input.onkeyup = function(event) {
         xhr.send(null);
     }
 }
-|]
-        else do
-            -- User isn't logged in, give a not-logged-in message.
-            master <- liftHandlerT getYesod
-            [whamlet|
-<h6 .icon-chat> Chat
-<p>
-    You must be #
-    $maybe ar <- authRoute master
-        <a href=@{ar}>logged in
-    $nothing
-        logged in
-    \ to chat.
 |]

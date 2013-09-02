@@ -3,7 +3,7 @@ module Handler.Bet where
 import Import
 import Data.Time (getCurrentTime)
 
-getBetR :: Handler RepHtml
+getBetR :: Handler Html
 getBetR = do
   uid <- requireAuthId
   (newBetW, encType) <- generateFormPost $ newBetForm uid
@@ -12,15 +12,15 @@ getBetR = do
       setTitle "Betting"
       $(widgetFile "bets")
 
-postBetR :: Handler RepHtml
+postBetR :: Handler Html
 postBetR = do
   setMessage "POST not yet implemented @postBetR"
   redirect BetR
 
-getBetViewR :: BetId -> Handler RepHtml
+getBetViewR :: BetId -> Handler Html
 getBetViewR _ = error "Not yet implemented: getBetR"
 
-postBetViewR :: BetId -> Handler RepHtml
+postBetViewR :: BetId -> Handler Html
 postBetViewR _ = error "Not yet implemented: postBetR"
 
 newBetForm :: UserId -> Form Bettarget

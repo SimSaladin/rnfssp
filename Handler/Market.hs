@@ -9,7 +9,7 @@ module Handler.Market where
 import Import
 import Data.List (head, groupBy, union)
 
-getMarketHomeR :: Handler RepHtml
+getMarketHomeR :: Handler Html
 getMarketHomeR = do
   -- XXX: not good
   -- denyIfAnonUnPVL
@@ -25,13 +25,13 @@ getMarketHomeR = do
     setTitle "Kauppa"
     $(widgetFile "market_home")
 
-postMarketNewBuyItemR :: Handler RepHtml
+postMarketNewBuyItemR :: Handler Html
 postMarketNewBuyItemR = do
     muser <- maybeAuth
     ((res, _), _) <- runFormPost $ buyForm $ entityVal <$> muser
     handleItem (Left res)
 
-handleItem :: Either (FormResult BuyItem) (FormResult SaleItem) -> Handler RepHtml
+handleItem :: Either (FormResult BuyItem) (FormResult SaleItem) -> Handler Html
 handleItem sitem = do
     setUltDestReferer
     case sitem of
@@ -55,13 +55,13 @@ handleItem sitem = do
       FormMissing    -> setMessage "Tiedot olivat tyhjiä!" >> redirectUltDest MarketHomeR
       FormFailure xs -> setMessage (toHtml $ "Ilmoituksen lisääminen ei onnistunut: " <> foldl (<>) "" xs) >> getMarketHomeR
 
-postMarketNewSaleItemR :: Handler RepHtml
+postMarketNewSaleItemR :: Handler Html
 postMarketNewSaleItemR = do
   muser <- maybeAuth
   ((res,_),_) <- runFormPost $ sellForm $ entityVal <$> muser
   handleItem $ Right res
 
-postMarketDeleteBuyR :: BuyItemId -> Handler RepHtml
+postMarketDeleteBuyR :: BuyItemId -> Handler Html
 postMarketDeleteBuyR k = do
   denyIfAnonUnPVL -- Not allowed to delete items from outside pvl as anon
   setUltDestReferer
@@ -69,7 +69,7 @@ postMarketDeleteBuyR k = do
   setMessage $ toHtml $ "Kohde " <> buyItemWhat val <> " poistettu."
   redirectUltDest MarketHomeR
 
-postMarketDeleteSaleR :: SaleItemId -> Handler RepHtml
+postMarketDeleteSaleR :: SaleItemId -> Handler Html
 postMarketDeleteSaleR k = do
   denyIfAnonUnPVL -- Not allowed to delete items from outside pvl as anon
   setUltDestReferer

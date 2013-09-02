@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Jul 06 2013 [01:19:24]
+-- Last Modified: Sep 02 2013 [00:03:31]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -15,7 +15,6 @@ import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
 import           Control.Arrow (second)
-import qualified Data.Text as T
 import           Text.Julius (rawJS)
 import           Text.Coffee
 import qualified System.FilePath as F (joinPath)

@@ -8,7 +8,7 @@ import Utils
 import qualified Data.Text as T (append)
 import qualified Handler.Media as Media (adminWidget)
 
-getAdminR :: Handler RepHtml
+getAdminR :: Handler Html
 getAdminR = do
     action <- lookupGetParam "action"
     target <- lookupGetParam "target"
@@ -43,7 +43,7 @@ getAdminR = do
         Entity key _ <- getBy404 $ UniqueUser name
         update key [UserValid =. value]
 
-postAdminR :: Handler RepHtml
+postAdminR :: Handler Html
 postAdminR = do
     ((result, _), _) <- runFormPost newboardForm
     case result of

@@ -12,7 +12,7 @@ import System.Random (randomIO)
 import System.Directory (doesFileExist)
 
 
-getHomePageR :: Handler RepHtml
+getHomePageR :: Handler Html
 getHomePageR = do
     haiku <- randomHaiku
     defaultLayout $ do
@@ -20,17 +20,17 @@ getHomePageR = do
         navigation "SS"
         $(widgetFile "home")
 
-renderRegister :: Widget -> Handler RepHtml
+renderRegister :: Widget -> Handler Html
 renderRegister w = defaultLayout $
     setTitle "Registration" >> navigation "Register" >> w
 
-getRegisterR :: Handler RepHtml
+getRegisterR :: Handler Html
 getRegisterR = do
     homeIfLoggedIn
     (widget, encType) <- generateFormPost registerForm
     renderRegister $(widgetFile "register")
 
-postRegisterR :: Handler RepHtml
+postRegisterR :: Handler Html
 postRegisterR = do
     homeIfLoggedIn
     ((res, widget), encType) <- runFormPost registerForm

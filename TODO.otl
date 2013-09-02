@@ -1,18 +1,18 @@
-	Todos
-	----------------------------------------
+Todos
+----------------------------------------
 
-	Media
-		[_] better search, sphinx?
-		[_] playlist manipulation (search, filter, sort, ...)
-		[_] HTML5 playback of supported content (re-encoding?)
-		[_] git-annex source
-	Users
-		[_] Profile integration
-	Blog
-		[_] BUG: blog post editing bug?
-		[_] blog post deletion
-	UI
-		[_] themes and changer
-	Other
-		[_] RSS/Atom Feed
-		Haikubot integration?
+Media
+	[_] better search, sphinx?
+	[_] playlist manipulation (search, filter, sort, ...)
+	[_] HTML5 playback of supported content (re-encoding?)
+	[_] git-annex source
+Users
+	[_] Profile integration
+Blog
+	[_] BUG: blog post editing bug?
+	[_] blog post deletion
+UI
+	[_] themes and changer
+Other
+	[_] RSS/Atom Feed
+	Haikubot integration?
