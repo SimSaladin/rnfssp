@@ -65,6 +65,7 @@ Playlist
    created UTCTime
    modified UTCTime
    UniquePlaylist owner title
+
 Filenode
    area Text
    parent FilenodeId Maybe
@@ -74,6 +75,19 @@ Filenode
    modTime UTCTime
    details Text Maybe
    UniqueFilenode area path
+
+DNode
+   area        Text
+   parent      DNodeId Maybe
+   path        FilePath
+   UniqueDNode area path
+
+FNode
+   area        Text
+   parent      DNodeId  Maybe
+   path        FilePath
+   details     Text     Maybe
+   UniqueFNode area path
 
 -- Media/temp/log
 LogDownload

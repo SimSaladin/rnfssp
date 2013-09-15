@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Configs.hs
 -- Creation Date: Dec 24 2012 [01:31:05]
--- Last Modified: Jul 05 2013 [22:23:54]
+-- Last Modified: Sep 15 2013 [05:36:38]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 --
@@ -16,6 +16,7 @@ module Configs
   , onSec'
   , onSecs'
   , updateIndeces
+  , wrapMain
   ) where
 
 import Import hiding (update)
@@ -23,6 +24,7 @@ import Sections
 import Sections.Music
 import Sections.Film
 import Sections.Types
+import Sections.BackendGitAnnex
 import qualified Data.Map as Map
 
 invalid :: Text -> HandlerT master IO a
@@ -39,8 +41,9 @@ onSec section f = do
 runMediaConf :: Section -> MediaConf -> (forall a. MSection a => a -> Handler b) -> Handler b
 runMediaConf section mc f = case mcType mc of
 #define g(mk) (f $ mk section mc)
-        "mpd"  -> g( mkMPDSec  )
-        "film" -> g( mkFilmSec )
+        "mpd"   -> g( mkMPDSec  )
+        "film"  -> g( mkFilmSec )
+        "annex" -> g( mkGABE    )
         x      -> invalid $ "Requested section type not supported: " `mappend` x
 #undef g
 
@@ -90,3 +93,6 @@ sectionsBlockNav = do
 $forall x <- sections
   #{show x}
 |]
+
+wrapMain :: Widget -> Widget
+wrapMain w = [whamlet|<main>^{w}|]

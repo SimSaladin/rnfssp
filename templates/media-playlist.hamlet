@@ -1,6 +1,6 @@
 $newline never
-<div ##{mainI} .media-playlist>
-   <h3 ##{headI}>
+<div ##{mainI} .media-playlist .site-block .site-block-h>
+   <h1 ##{headI}>
    <div ##{actionsI} .btn-group>
       <a .btn onclick="playlist.clear_playlist(); return false">Clear
       <a .btn onclick="alert('TODO: not yet implemented'); return false">Rename

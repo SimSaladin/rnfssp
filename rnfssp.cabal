@@ -47,7 +47,6 @@ library
                      Handler.Board
                      Handler.Media
                      Handler.Playlists
-                     Handler.Bet
                      Handler.Profile
                      Chat
                      Mpd
@@ -58,6 +57,7 @@ library
                      Sections.Types
                      Sections.Music
                      Sections.Film
+                     Sections.BackendGitAnnex
                     -- Sections.SingleSource
                      -- Handler.Search
                      -- MediaMPD
@@ -134,6 +134,8 @@ library
                  , sphinx
                  , network
                  , random
+                 , transformers
+
 
 executable         rnfssp
     if flag(library-only)
@@ -164,3 +166,4 @@ test-suite test
                  , monad-logger
                  , transformers
                  , hspec
+                 , conduit

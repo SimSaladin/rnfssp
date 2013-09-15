@@ -1,48 +1,121 @@
 /* vim: set foldmethod=marker: */
 
 /* {{{ Colors */
-@main:      #303030;
-@main_alt:  rgb(56, 56, 56);
-@main_alt_lighter:  rgb(64, 64, 64);
-@main_text: rgb(211, 211, 211);
+@base:    rgb(113, 68, 130);  /* Base color */
+@shadow:  rgba(0,0,0,.2);     /* Base shadow */
+@shadow_more: rgba(0,0,0,.3); 
+@shadow_less: rgba(0,0,0,.05);
 
-@dark:         #222;
-@dark_half:    rgba(34,34,34,0.5);
-@dark_quarter: rgba(34,34,34,0.25);
+@block: #3B2B47; /* Bg of blocks contrasting with base */
+
+@hl: #992A3D;
+@hl_shadow: rgb(153, 42, 61, 0.6);
+@hl_alt: rgb(219, 87, 87);
+@hl_text: rgb(245, 167, 167);
+
+@hl2: rgb(82, 131, 150);
+
+/* ............... */
+
+@main:               #303030;
+@main_alt:           rgb(56, 56, 56);
+@main_alt_lighter:   rgb(64, 64, 64);
+
+@text:               rgb(211, 211, 211);
+
+/* Color 2 (contrast) */
+@dark:                #222;
+@dark_half:           rgba(34,34,34,0.5);
+@dark_quarter:        rgba(34,34,34,0.25);
 @dark_three_quarters: rgba(34,34,34,0.75);
-@dark_text:    #AAA;
+@dark_text:           #AAA;
 
+/* Color 4 (light) */
 @light:           rgb(103, 62, 119);
+@light_half:      rgba(103, 62, 119, 0.5);
 @light_text:      rgb(181, 130, 221);
 @light_text_o:    rgba(229, 189, 255, 0.5);
 @light_text_d:    rgb(127, 80, 146);
 @light_text_dd:   rgb(153, 139, 163);
-
 @light_text_l:    rgb(181, 150, 192);
-
 @light_shadow:    rgb(100, 100, 100);
-
 @highlight_error: rgb(78, 42, 42);
 
 @button_1: rgb(88,59,125);
 @button_2: rgb(81,48,99);
-/*}}}*/
-/*{{{ Layout */
-body {
-   background-color:#{main};
-   color:#{main_text};
-}
-body > footer {
-   background-color:#{dark};
-}
+
+@gradient_background: linear-gradient(to right, transparent 50%, rgba(0,0,0,.1) 50%);
+@block_box_shadow: -4px 5px 3px rgba(0,0,0,.5), inset 1px -1px 3px 3px rgba(0,0,0,0.1);
 /*}}}*/
 /* {{{ Elements */
+body {
+   background-color:#{base};
+   background-image:#{gradient_background};
+   background-size: 40px 50px;
+   color:#{text};
+}
+#container > footer {
+   background-color:#{block};
+   background-image:#{gradient_background};
+   background-size: 40px 50px;
+}
+section, .site-block {
+
+   background-color: #{shadow_more};
+   background-image:
+     -moz-linear-gradient(45deg,  #{shadow_less} 25%, transparent 25%), 
+     -moz-linear-gradient(-45deg, #{shadow_less} 25%, transparent 25%),
+     -moz-linear-gradient(45deg,  transparent 75%, #{shadow_less} 75%),
+     -moz-linear-gradient(-45deg, transparent 75%, #{shadow_less} 75%);
+   background-image:
+     -webkit-gradient(linear, 0 100%, 100% 0, color-stop(.25, #{shadow_less}), color-stop(.25, transparent)), 
+     -webkit-gradient(linear, 0 0, 100% 100%, color-stop(.25, #{shadow_less}), color-stop(.25, transparent)),
+     -webkit-gradient(linear, 0 100%, 100% 0, color-stop(.75, transparent), color-stop(.75, #{shadow_less})),
+     -webkit-gradient(linear, 0 0, 100% 100%, color-stop(.75, transparent), color-stop(.75, #{shadow_less}));
+
+   -moz-background-size:50px 50px;
+   background-size:50px 50px;
+   -webkit-background-size:50px 50px; /* override value for shitty webkit */
+   
+   background-position:0 0, 50px 0, 50px -50px, 0px 50px;
+
+   box-shadow: #{block_box_shadow};
+}
+.site-block-h {
+   margin-top: 2em !important;
+   border-bottom-right-radius: 15px;
+}
+.site-block-h > h1 {
+   margin-top: -0.8em;
+   color: #CCC;
+   text-shadow: 2px 2px #{block};
+   float:right;
+   font-size:1.4em;
+   padding:5px;
+}
+section section {
+   background-color: transparent;
+   box-shadow:none;
+}
+#haiku-quote {
+   margin: 17px 4px 1px 6px;
+   box-shadow: #{block_box_shadow};
+}
 blockquote {
    color:     #{dark_text};
-   background:#{dark};
+   background:#{block};
 }
-blockquote:before {
-   border-color:transparent transparent #{dark} transparent;
+blockquote:after {
+   content:'';
+   width:0;
+   height:0;
+   display:block;
+   position:absolute;
+   top:-25px;
+   left:20px;
+   border-width:15px;
+   border-style:solid;
+   border-color:transparent transparent #{block} transparent;
 }
 pre {
    background:#{dark_half};
@@ -61,7 +134,7 @@ hr {
    background:#{light};
    color:#{light_text};
 } 
-
+/* {{{ Tables */
 table {
    background:#{dark_half};
    box-shadow:1px 1px 0px 3px #{dark};
@@ -84,8 +157,10 @@ table.side-headers {
    box-shadow:-1px 1px 0px 3px #{dark};
 }
 /*}}}*/
+/*}}}*/
 /*{{{ Text */
-h1, h2, h3, h4, h5, h6  { color: #{main_text} }
+
+h1, h2, h3, h4, h5, h6  { color: #{text} }
 h1 { color:#{light_text_l}; }
 h2          { border-bottom:1px solid #{light_text_d}; }
 h3 a:active, h3 a:hover  { color: #DDD; background:transparent }
@@ -118,29 +193,13 @@ form.bare {
 }
 /* }}} */
 /* {{{ State: normal */
-.control-group.required {
-   input, textarea {
-      border-color:#{highlight_error};
-   }
-}
-button, .btn, input[type="submit"], textarea {
-   background: #{main};
-   color:      #{main_text};
-   border:     1px solid #{main_alt_lighter};
-}
-.btn-hl {
-   background: #{main_alt};
-}
+/* Buttons */
 button, .btn, input[type="submit"] {
-   box-shadow:-1px -1px 0 1px #{dark};
+   background: #{hl};
+   color:      #{hl_text};
+   border:     1px solid #{hl_alt};
 }
-input, textarea, form .btn {
-   background: #{main_alt};
-   color:      #{main_text};
-   border:     1px solid #{main_alt_lighter};
-}
-input, textarea { box-shadow: inset 1px 1px 10px 0px #{main}, -1px -1px 0 1px #{dark}; }
-form .btn       { box-shadow: inset 1px 1px 10px 0px #{main}; }
+.btn-hl { background: #{main_alt}; }
 .btn-toolbar {
    box-shadow:-1px -1px 0 1px #{dark};
    border-left: 1px solid #{main_alt_lighter};
@@ -152,11 +211,26 @@ form .btn       { box-shadow: inset 1px 1px 10px 0px #{main}; }
       border-bottom: 1px solid #{main_alt_lighter};
    }
 }
+/* Text input */
+input[type="text"],
+input[type="search"],
+input[type="email"],
+input[type="number"],
+textarea {
+   background: #{hl};
+   color:      #{hl_text};
+   border:     1px solid #{hl_alt};
+   box-shadow: inset 1px 1px 10px 0px #{main}, -1px -1px 0 1px #{dark};
+}
+.required input, .required textarea {
+      border-color:#{highlight_error};
+}
+/* Other */
 input[type="checkbox"] + label,
 input[type="radio"] + label {
    background: #{main_alt_lighter};
-   color:      #{main_text};
-   border:     1px solid #{main_alt_lighter};
+   color:      #{text};
+   border:     1px solid #{hl_alt};
    box-shadow: inset 1px 1px 10px 0px #{main_alt};
 }
 .input-search + button {
@@ -168,12 +242,12 @@ input[type="radio"] + label {
 button:hover, .btn:hover, input[type="submit"]:hover,
 input[type="checkbox"] + label:hover,
 input[type="radio"] + label:hover {
-   background: #{main};
-   color:      #{light_text_l};
+   background:#{hl_alt};
+   color:      #{dark};
+   border-color: #{hl};
 }
 /* }}} */
 /* {{{ State: active/checked */
-
 /* NOTE: overrides the above hover */
 input[type="checkbox"]:checked + label,
 input[type="radio"]:checked + label {
@@ -193,14 +267,22 @@ button:disabled, .btn.disabled, input[type="submit"]:disabled {
    cursor:     default;
 }
 /*}}}*/
+/* {{{ State: focus */
+button:focus,
+input:focus,
+textarea:focus {
+   outline:none;
+   box-shadow:-1px -1px 0 1px #{dark};
+}
+/* }}} */
 /* }}} */
 /*{{{ Navigation */
-#main-header, #main-header nav {
-   background: #{dark};
+#container > header, #container > header nav {
+   background: #{block};
    box-shadow: 0 5px 10px 0px #{dark};
 }
-#main-header {
-	ul li a:focus, ul li a:hover, ul li a:active  {
+#container > header {
+   ul li a:focus, ul li a:hover, ul li a:active  {
       color: #ccc;
       background:#666;
       background: rgba(255,255,255,.25);
@@ -210,7 +292,7 @@ button:disabled, .btn.disabled, input[type="submit"]:disabled {
 /*}}}*/
 /*{{{ Blog */
 .blog-post-wrapper {
-   color:      #{main_text};
+   color:      #{text};
    background: #{main_alt};
    box-shadow:         0 3px 2px 3px #{main_alt};
    -webkit-box-shadow: 0 3px 2px 3px #{main_alt};
@@ -246,7 +328,7 @@ button:disabled, .btn.disabled, input[type="submit"]:disabled {
 /*{{{ Media */
 .browser {
    box-shadow: 0 0 5px 2px rgba(0,0,0,0.2);
-   a.file                  { color:#{main_text}; }
+   a.file                  { color:#{text}; }
    a.file:hover            { color:#{light}; }
    .misc span              { color:#{dark}; }
    .entry:nth-child(even)  { background:#333333 }

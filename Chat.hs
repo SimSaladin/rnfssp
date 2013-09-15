@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Sep 02 2013 [03:12:50]
+-- Last Modified: Sep 14 2013 [23:12:19]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -95,7 +95,7 @@ chatWidget toMaster = do
     let disabledChat = do
             master <- liftHandlerT getYesod
             [whamlet|
-<h6 .icon-chat> Chat
+<h1 .icon-chat> Chat
 <p>
     You must be #
     $maybe ar <- authRoute master
@@ -111,11 +111,11 @@ chatWidget toMaster = do
         chat    <- liftHandlerT newIdent   -- the containing div
 
         [whamlet|
-<h6 .icon-chat> Chat
+<h1 .icon-chat> Chat
 <div.clearfix ##{chat}>
     <div ##{chat}-output>
       $forall msg <- recent
-        #{decodeUtf8 $ toByteString $ chatRenderMsg msg}
+        #{preEscapedToMarkup $ decodeUtf8 $ toByteString $ chatRenderMsg msg}
     <input ##{chat}-input type=text placeholder="Enter Message">
 |] >> toWidget [lucius|
  ##{chat}-output { width: 100%; max-height: 300px; overflow: auto; }
@@ -126,9 +126,7 @@ var output = document.getElementById("#{rawJS chat}-output");
 var src = new EventSource("@{toMaster ReceiveR}");
 src.onmessage = function(msg) {
     // This function will be called for each new message.
-    var p = document.createElement("p");
-    p.appendChild(document.createTextNode(msg.data));
-    output.appendChild(p);
+    output.innerHTML = output.innerHTML + msg.data;
 
     // And now scroll down within the output div so the most recent message
     // is displayed.

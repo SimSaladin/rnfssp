@@ -1,7 +1,6 @@
-<div .ym-column .linearize-level-1>
-   <div .ym-col1>
-      <div .ym-cbox>^{content}
-   <div .ym-col3>
-      <div .ym-cbox>^{chatWidget ChatR}
-      <hr>
-      <div .ym-cbox>^{renderTagcloud current}
+<main .ym-grid .ym-equalize .linearize-level-1>
+   <div .ym-g62 .ym-gl>
+      <section .site-block-h>^{content}
+   <div .ym-g38 .ym-gr>
+      <section .site-block-h>^{chatWidget ChatR}
+      ^{renderTagcloud current}

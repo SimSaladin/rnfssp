@@ -16,6 +16,7 @@ import qualified Database.Persist
 import           Database.Persist.Sql (SqlPersistT)
 import           System.Log.FastLogger  (Logger)
 import           Text.Hamlet            (hamletFile)
+import           Text.Lucius
 import           Text.Jasmine           (minifym)
 import           WaiAppStatic.Types     (StaticSettings(..), File(..), fromPiece)
 
@@ -157,7 +158,10 @@ instance YesodAuth App where
             navigation "Login"
             -- tm <- liftHandlerT $ lift getRouteToParent
             master <- liftHandlerT getYesod
-            mapM_ (flip apLogin tm) (authPlugins master)
+            [whamlet|
+<main>
+    ^{mapM_ (flip apLogin tm) (authPlugins master)}
+                |]
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
@@ -293,7 +297,7 @@ navigation active = do
               , ("Projects", "http://projects.ssdesk.paivola.fi")
               ] :: [ (Text, Text) ]
     [whamlet|
-<header #main-header>
+<header>
     <nav .ym-wrapper>
         <ul>
           $forall (topic, e) <- es
@@ -310,6 +314,7 @@ navigation active = do
             <li>
               <a href="#{href}">
                 <i>#{topic}
+                <sup>&#8689;
         <ul .pull-right>
           $maybe authent <- ma
             $if userAdmin $ entityVal authent
@@ -341,3 +346,21 @@ $else
                <b>/#{boardName val}/ #
                <i>#{boardDescription val}
 |]
+
+cssMyTransition :: Mixin
+cssMyTransition = [luciusMixin|
+-webkit-transition: opacity .4s ease-in-out;
+-moz-transition: opacity .4s ease-in-out;
+-ms-transition: opacity .4s ease-in-out;
+-o-transition: opacity .4s ease-in-out;
+transition: opacity .4s ease-in-out;
+    |]
+
+cssBorderRadius :: String -> Mixin
+cssBorderRadius val = [luciusMixin|
+-webkit-border-radius: #{val};
+-moz-border-radius: #{val};
+-ms-border-radius: #{val};
+-o-border-radius: #{val};
+border-radius: #{val};
+    |]

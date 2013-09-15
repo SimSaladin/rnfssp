@@ -8,8 +8,8 @@ Default: &defaults
   mediasections:
     anime:
       view: "Anime"
-      type: "film"
-      icon: "film"
+      type: "annex"
+      icon: "annex"
       path: "/home/media/anime"
     music:
       view: "Music"

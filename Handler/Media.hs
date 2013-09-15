@@ -23,33 +23,32 @@ import qualified Data.Map as Map
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
 
+topNavigator :: Section -> Widget
+topNavigator current = [whamlet|
+<section>
+    ^{renderBrowsable current}
+    ^{renderSearch current}
+    |]
+
 getMediaHomeR :: Handler Html
 getMediaHomeR = do
     ent <- requireAuth
     defaultLayout $ do
         setTitle "Media"
         navigation "Media"
-        renderBrowsable ""
-        layoutSplitH renderSearchAll $ userPlaylistWidget ent
-
-renderMaybeBare :: Widget -> Widget -> Handler Html
-renderMaybeBare bareContents nonBareContents = do
-    mq <- lookupGetParam "bare"
-    case mq of
-        Just _  -> widgetBodyToRepHtml bareContents
-        Nothing -> defaultLayout $ do
-            navigation "Media"
-            nonBareContents
+        wrapMain $ do
+            topNavigator ""
+            userPlaylistWidget ent
 
 getMediaContentR :: Text -> [Text] -> Handler Html
 getMediaContentR section fps = do
     ent <- requireAuth
     renderMaybeBare content $ do
         setTitle "Media"
-        renderBrowsable section
-        renderSearch section
-        layoutSplitH (browser content [".input-search + button"])
-                     (userPlaylistWidget ent)
+        wrapMain $ do
+            topNavigator section
+            layoutSplitH (browser content [".input-search + button"])
+                         (userPlaylistWidget ent)
   where content = sectionWidget section fps
 
 getMediaSearchAllR :: Handler Html
@@ -72,10 +71,10 @@ getMediaSearchAllR = do
             results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
             renderMaybeBare results $ do
                 setTitle $ toHtml $ "Results for: " `mappend` q
-                renderBrowsable ""
-                renderSearchAll
-                layoutSplitH (browser results [".input-search + button"])
-                             (userPlaylistWidget ent)
+                wrapMain $ do
+                    topNavigator ""
+                    layoutSplitH (browser results [".input-search + button"])
+                                 (userPlaylistWidget ent)
         in maybe (redirect $ MediaHomeR) doSearch mq
 
 -- | search in section @section@ using query string from the @q@ get parameter.
@@ -94,27 +93,39 @@ getMediaSearchR section = do
             results <- onSec' section $ flip sWSearch q
             renderMaybeBare results $ do
                 setTitle $ toHtml $ "Results for: " `mappend` q
-                renderBrowsable section
-                renderSearch section
-                layoutSplitH (browser results [".input-search + button"])
-                             (userPlaylistWidget ent)
+                wrapMain $ do
+                    topNavigator section
+                    layoutSplitH (browser results [".input-search + button"])
+                                 (userPlaylistWidget ent)
     maybe (redirect $ MediaContentR section []) doSearch mq
+
+-- * Widgets
+
+renderMaybeBare :: Widget -> Widget -> Handler Html
+renderMaybeBare bareContents nonBareContents = do
+    mq <- lookupGetParam "bare"
+    case mq of
+        Just _  -> widgetBodyToRepHtml bareContents
+        Nothing -> defaultLayout $ do
+            navigation "Media"
+            nonBareContents
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> [Text] -> Widget
 sectionWidget s fps = join $ liftHandlerT $ onSec' s (`sWContent` fps)
 
 renderSearch :: Section -> Widget
+renderSearch      "" = renderSearchAll
 renderSearch section = [whamlet|$newline never
-<form .bare .text-center .standout action=@{MediaSearchR section} type=get>
-  <input .input-search type="search" name="q" placeholder="In #{section}" autofocus pattern="..*" required>
+<form .bare .text-center action=@{MediaSearchR section} type=get>
+  <input .input-search type="search" name="q" placeholder="Search In #{section}" autofocus pattern="..*" required>
   <button>Go
 |]
 
 renderSearchAll :: Widget
 renderSearchAll = [whamlet|$newline never
-<form .bare .text-center .standout action=@{MediaSearchAllR} type=get>
-  <input .input-search type="search" name="q" placeholder="Search Media" autofocus pattern="..*" required>
+<form .bare .text-center action=@{MediaSearchAllR} type=get>
+  <input .input-search type="search" name="q" placeholder="Search all" autofocus pattern="..*" required>
   <button>Go
 |]
 

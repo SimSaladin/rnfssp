@@ -1,15 +1,26 @@
-<h5 .icon-tags> _{MsgByTags}
-<p>
-   $forall tag <- tagcloud
-      <a href=@{BlogTagR tag}>#{tag}
+<nav .site-block .site-block-h>
+   <h1 .icon-tags> _{MsgByTags}
+   <p>
+      $case tagcloud
+         $of []
+            <i>No tags
+         $of _
+            $forall tag <- tagcloud
+               <a href=@{BlogTagR tag}>#{tag}
 
-<h5 .icon-calendar> _{MsgByDate}
-$forall (month, posts') <- posts
-   <h6>#{month}
-   <ul .list-clean>
-      $forall Entity _ post <- posts'
-         <li>
-            $with title <- blogpostTitle post
-              $if current == title
-              <a href=@{BlogViewR $ blogpostUrlpath post}>#{blogpostTitle post}
+<nav .site-block .site-block-h>
+   <h1 .icon-calendar> _{MsgByDate}
+   $case posts
+      $of []
+         <p>
+            <i>No archives
+      $of _
+         $forall (month, posts') <- posts
+            <h6>#{month}
+            <ul .list-clean>
+               $forall Entity _ post <- posts'
+                  <li>
+                     $with title <- blogpostTitle post
+                       $if current == title
+                       <a href=@{BlogViewR $ blogpostUrlpath post}>#{blogpostTitle post}
 

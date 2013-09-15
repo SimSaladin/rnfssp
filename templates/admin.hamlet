@@ -1,31 +1,31 @@
-<h1>_{MsgAdminSpace}
-<div .ym-grid .ym-equalize .linearize-level-1>
-   <div .ym-g50 .ym-gl>
-      <div .ym-gbox .standout>
-         <h3>Board
-         ^{form}
-   <div .ym-g50>
-      <div .ym-gbox .standout>
-         <h3>Media
-         ^{Media.adminWidget}
+<main>
+   <div .ym-grid .ym-equalize .linearize-level-1>
+      <div .ym-g50 .ym-gl>
+         <section .site-block-h>
+            <h1>Board
+            ^{form}
+      <div .ym-g50>
+         <section .site-block-h>
+            <h1>Media
+            ^{Media.adminWidget}
 
-<div .standout>
-   <h3>Users
-   <table>
-      <thead>
-         <tr>
-           <th>Username
-           <th>Comment
-           <th>Actions
-      <tbody>
-         $forall Entity _ user <- users
-           <tr>
-             <td>#{userUsername user}
-             <td>#{userComment user}
-             <td>
-               <a .btn.btn-small href=@{AdminR}?action=#{if' (userValid user) disapprove approve}&target=#{userUsername user}>
-                  $if userValid user
-                     Disapprove
-                  $else
-                     Approve
+   <section .site-block-h>
+      <h1>Users
+      <table>
+         <thead>
+            <tr>
+              <th>Username
+              <th>Comment
+              <th>Actions
+         <tbody>
+            $forall Entity _ user <- users
+              <tr>
+                <td>#{userUsername user}
+                <td>#{userComment user}
+                <td>
+                  <a .btn.btn-small href=@{AdminR}?action=#{if' (userValid user) disapprove approve}&target=#{userUsername user}>
+                     $if userValid user
+                        Disapprove
+                     $else
+                        Approve
 

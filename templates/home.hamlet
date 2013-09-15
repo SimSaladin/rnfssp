@@ -1,28 +1,18 @@
-<blockquote>
-   #{haiku}
-<div .ym-grid .ym-equalize .linearize-level-1>
+<blockquote #haiku-quote>#{haiku}
+<main .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
-      <div .ym-gbox>
-         <div .blog-wrapper>
-            ^{newestPost}
+      <section .site-block-h>
+         ^{newestPost}
    <div .ym-g38 .ym-gr>
-      <div .ym-gbox>
+      <section .site-block-h>
          ^{chatWidget ChatR}
-      <div .ym-gbox>
-         <h2>
-            <a href=@{BoardHomeR}>Board
-
-<div .ym-grid .ym-equalize .linearize-level-1>
-   <div .ym-g62 .ym-gl>
-      <div .ym-gbox>
-         <h2>
-            <a href=@{MediaHomeR}>Media
-         <div .ym-grid>
-            <div .ym-g50 .ym-gl>
-               <h3>Recently added
-               ^{mediaRecent 15}
-            <div .ym-g50 .ym-gr>
-               <h3>Recently downloaded
-               ^{mediaRecentDl 15}
-   <div .ym-g38 .ym-gl>
-      <div .ym-gbox>^{statusCheck}
+      <section .site-block-h>
+         <h1>Newest
+         ^{mediaRecent 15}
+         <a .text-right href=@{MediaHomeR}>To media
+      <section .site-block-h>
+         <h1>Hot
+         ^{mediaRecentDl 15}
+      <section .site-block-h>
+         <h1>????
+         ^{statusCheck}

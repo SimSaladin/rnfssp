@@ -15,7 +15,7 @@ getAdminR = do
     case (action, target) of
         (Just "noapprove_user", Just u) -> setApprove u False >> redirect AdminR
         (Just "approve_user"  , Just u) -> setApprove u True  >> redirect AdminR
-        (Just "update_media"  ,      _) -> hamletToRepHtml [hamlet||]
+        (Just "update_media"  ,      _) -> giveUrlRenderer [hamlet||]
         (Just _,_) -> invalidArgs ["Unknown action!"]
         (     _,_) -> do
             (formWidget, encType) <- generateFormPost newboardForm

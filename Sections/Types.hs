@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections/Types.hs
 -- Creation Date: Apr 15 2013 [22:38:30]
--- Last Modified: Jul 05 2013 [22:02:45]
+-- Last Modified: Sep 15 2013 [09:19:32]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -42,8 +42,8 @@ class Monad master => MediaBrowsable master source where
     -- | Get JSON data to source.
     browsableContent     :: ToJSON a => [Text] -> source -> HandlerT (HandlerSite master) IO a
 
-    -- | For defining Javascript function <identifier>(data) which returns dom
-    -- element with the content.
+    -- | Define the Javascript function which is used to render content client
+    -- side.
     browsableRenderer    :: Text -> source -> WidgetT (HandlerSite master) IO ()
 
     -- | Description widget.

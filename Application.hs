@@ -28,7 +28,6 @@ import Handler.Blog
 import Handler.Board
 import Handler.Media
 import Handler.Playlists
-import Handler.Bet
 import Handler.Profile
 import Handler.Market
 import Chat

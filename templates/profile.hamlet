@@ -1,12 +1,13 @@
-$if own
-  <h1>My Profile
-$else
-  <h1>Profile of #{userUsername uval}
-
-$if own
-  <h2>Profile info
-  <div.page-element>
-    <form .form-horizontal method=post>
-      ^{passwdW}
-      <div .form-actions>
-         <input.btn type=submit value="Tallenna">
+<main>
+   <section .site-block-h>
+      <h1>#{userUsername uval} #
+         $if own
+            (Me)
+      $if own
+         <form .form-horizontal method=post>
+            ^{passwdW}
+            <div .form-actions>
+               <input.btn type=submit value="Tallenna">
+      $else
+         <p>
+            <i>Sorry, you can only view yourself.

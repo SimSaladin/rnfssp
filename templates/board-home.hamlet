@@ -1,7 +1,11 @@
-<h1>Lauta
-<h2>Laudat
-<div .row-fluid>
-  <div .span6>
-    <ol>
-    $forall Entity _ val <- boards
-      <li><a href="@{BoardR (boardName val)}">/#{boardName val}/ - #{boardDescription val}</a>
+<main>
+   <section .site-block-h>
+      <h1>Alueet
+      <ol>
+      $case boards
+         $of []
+            <p>
+               <i>Oops, it's empty! Add a board here.
+         $of _
+            $forall Entity _ val <- boards
+              <li><a href="@{BoardR (boardName val)}">/#{boardName val}/ - #{boardDescription val}</a>

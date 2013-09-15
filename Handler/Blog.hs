@@ -12,36 +12,43 @@ import           Import
 import qualified Data.List as L
 import qualified Data.Char as C
 import           Data.Maybe
-import Data.Time (getCurrentTime)
 import qualified Data.Conduit         as C
 import qualified Data.Conduit.List    as CL
 import qualified Data.Text as T
-import           Data.Time (formatTime)
+import           Data.Time (formatTime, getCurrentTime)
 import           System.Locale (defaultTimeLocale)
 import           Yesod.Markdown (Markdown(..), markdownField, markdownToHtml)
 import           Database.Persist.Sql (rawSql)
 import Chat
 
 
--- * Viewing
+-- * Render combinators
 
+-- | Adds chat and tags navigation.
+renderBlog :: Text -> Widget -> Widget
+renderBlog current content = do
+    navigation "Blog"
+    $(widgetFile "blog-wrapper")
+
+-- | Viewing single post.
 renderView :: Blogpost -> Widget -> Handler Html
 renderView post x = defaultLayout $ do
-    setTitle $ toHtml (blogpostTitle post) `mappend` " - SS Blog"
+    setTitle $ toHtml (blogpostTitle post) <> " at animu"
     renderBlog (blogpostTitle post) x
 
--- | 
-getWidgets :: Entity Blogpost
-           -> Handler (Widget, Widget) -- ^ (Blogpost Widget, comments Widget)
-getWidgets (Entity key val) = do
-    comments <- runDB $ selectList [BlogcommentPost ==. key] [Desc BlogcommentTime]
-    post     <- liftM (blogpostWidget val (length comments) False) isAdmin'
-    return (post, blogcommentsWidget comments)
+-- | Editing.
+renderPublish :: Widget -> Handler Html
+renderPublish x = defaultLayout $ do
+    setTitle "Blog - Publishing"
+    renderBlog "" x
 
-getPostPreview :: Entity Blogpost -> Widget
-getPostPreview (Entity key val) = do
-    comments <- liftHandlerT $ runDB $ count [BlogcommentPost ==. key]
-    blogpostWidget val comments True =<< liftHandlerT isAdmin'
+renderEdit :: Blogpost -> Widget -> Handler Html
+renderEdit post x = defaultLayout $ do
+    setTitle $ "[Edit] " <> toHtml (blogpostTitle post) <> " - SS Blog"
+    renderBlog (blogpostTitle post) x
+
+
+-- * Viewing, listing and commenting posts
 
 -- | Home redirects to the newest blog post.
 getBlogHomeR :: Handler Html
@@ -51,8 +58,7 @@ getBlogHomeR = do
   where
     noPosts = defaultLayout $ do
         setTitle "Blog: No posts."
-        navigation "Blog"
-        renderBlog "" $ [whamlet|<i>No posts!|]
+        renderBlog "Blog" emptyBlogWidget
 
 -- | View a post specified in the url.
 getBlogViewR :: Text -> Handler Html
@@ -62,7 +68,7 @@ getBlogViewR path = do
     if (blogpostPublic $ entityVal e) || showHidden 
       then do
           (widget, encType) <- generateFormPost $ commentForm (entityKey e) Nothing
-          (post, comments)  <- getWidgets e
+          (post, comments)  <- generateView e
           renderView (entityVal e) $(widgetFile "blog-view")
       else permissionDenied "Need admin access to show hidden blog posts."
   where
@@ -79,27 +85,126 @@ postBlogViewR path = do
             setMessage "Comment sent."
             redirect $ BlogViewR path
         _  -> do
-            (post, comments) <- getWidgets e
+            (post, comments) <- generateView e
             renderView (entityVal e) $(widgetFile "blog-view")
 
--- | 
+-- | Render a preview of the most recent post.
+newestPost :: Widget
+newestPost = do
+    posts <- liftHandlerT $ runDB $ selectList [BlogpostPublic ==. True] [Desc BlogpostTime, LimitTo 3]
+    case posts of
+        []                    -> emptyBlogWidget
+        (Entity key val : xs) -> do
+            editing       <- liftHandlerT isAdmin'
+            commentCount  <- liftHandlerT $ runDB $ count [BlogcommentPost ==. key]
+            blogpostWidget val commentCount True editing
+            [whamlet|
+<h6>Previous posts:
+<ul .list-clean>
+$forall Entity _ post <- xs
+  <li>
+    <a href=@{BlogViewR $ blogpostUrlpath post}>#{blogpostTitle post}
+|]
+
+emptyBlogWidget :: Widget
+emptyBlogWidget = [whamlet|
+<h1>Title h1
+<h2>Mui.
+<h3>h3 here
+<h4>and h4
+<h5>...and h5
+<h6>Newest post
+<p>There could be a block post here. But since there are no posts, we only show #
+   header h1-h6 test here. Click here to write one :)
+    |]
+
+generateView :: Entity Blogpost -> Handler (Widget, Widget) -- ^ (Blogpost Widget, comments Widget)
+generateView (Entity key val) = do
+    comments <- runDB $ selectList [BlogcommentPost ==. key] [Desc BlogcommentTime]
+    post     <- liftM (blogpostWidget val (length comments) False) isAdmin'
+    return (post, blogcommentsWidget comments)
+
+generatePreview :: Entity Blogpost -> Widget
+generatePreview (Entity key val) = do
+    comments <- liftHandlerT $ runDB $ count [BlogcommentPost ==. key]
+    blogpostWidget val comments True =<< liftHandlerT isAdmin'
+
+-- | A single post.
+-- TODO: 3 formatTime's really needed?
+blogpostWidget :: Blogpost -- ^ Post to render.
+               -> Int      -- ^ Number of comments.
+               -> Bool     -- ^ Render as preview?
+               -> Bool     -- ^ Include editing shortcuts?
+               -> Widget
+blogpostWidget post commentCount preview editing = $(widgetFile "blog-post")
+      where title    = blogpostTitle post
+            poster   = blogpostPoster post
+            link     = BlogViewR $ blogpostUrlpath post
+            month    = formatTime defaultTimeLocale "%b" (blogpostTime post)
+            day      = formatTime defaultTimeLocale "%d" (blogpostTime post)
+            year     = formatTime defaultTimeLocale "%Y" (blogpostTime post)
+
+blogcommentsWidget :: [Entity Blogcomment] -> Widget
+blogcommentsWidget comments =
+    let (roots', children)  = part Nothing comments
+    in case roots' of
+        []      -> [whamlet|<i>No comments.|]
+        parents -> $(widgetFile "blog-comments")
+  where
+    part                mpid           = L.partition ((==) mpid . blogcommentParent . entityVal)
+    blogcommentsWidget' mpid children' =
+      let (parents, children)          = part mpid children'
+      in $(widgetFile "blog-comments")
+
+commentForm :: BlogpostId          -- ^ main post
+            -> Maybe BlogcommentId -- ^ Maybe parent comment
+            -> Form  Blogcomment
+commentForm pid mcid = renderBootstrap $ Blogcomment
+    <$> pure pid
+    <*> pure mcid
+    <*> lift timeNow
+    <*> pure Nothing --TODO user creds checking
+    <*> areq textField "Name" Nothing
+    <*> aopt urlField "Webpage" Nothing
+    <*> areq textareaField "Message" Nothing
+
+-- ** Tags
+
+-- | Retrieve posts tagged under @tag@.
 getBlogTagR :: Text -> Handler Html
 getBlogTagR tag = do
-    posts <- runDB $ rawSql query [toPersistValue $ "%\"s" `mappend` tag `mappend` "\"%"]
+    posts <- runDB $ rawSql query [toPersistValue $ "%\"s" <> tag <> "\"%"]
     defaultLayout $ do
-        setTitle $ toHtml $ "Posts under " `mappend` tag
+        setTitle $ toHtml $ "Posts under " <> tag
         renderBlog "" $ [whamlet|
 \<i>Found #{length posts} posts under</i> #{tag}.
-|] >> mapM_ getPostPreview posts
+|] >> mapM_ generatePreview posts
   where
     query = "SELECT ?? FROM \"blogpost\" WHERE \"public\" = true AND \"tags\" SIMILAR TO ? ORDER BY \"time\""
 
--- * Publishing
+renderTagcloud :: Text -> Widget
+renderTagcloud current = do
+    (posts, tagcloud) <- liftHandlerT $ runDB $ C.runResourceT $ selectSource [BlogpostPublic ==. True] [Asc BlogpostTime]
+        C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
+    $(widgetFile "blog-navigation")
+  where
+    addTags [] = blogpostTags
+    addTags xs = L.union xs . blogpostTags
+    getMonth   = formatTime defaultTimeLocale "%B %Y" . blogpostTime . entityVal
 
-renderPublish :: Widget -> Handler Html
-renderPublish x = defaultLayout $ do
-    setTitle "Blog - Publishing"
-    renderBlog "" x
+    sortMonth ys@((month, xs) : ys') x = let
+        month' = getMonth x
+        in if month == month'
+            then (month , x : xs) : ys'
+            else (month',    [x]) : ys
+    sortMonth                     [] x = [(getMonth x, [x])]
+
+tagField :: Field (HandlerT App IO) [Text]
+tagField = checkMMap f T.unwords textField
+  where f :: Text -> Handler (Either Text [Text])
+        f = return . Right . T.words
+
+-- * Content management
 
 getBlogAddR :: Handler Html
 getBlogAddR = do
@@ -114,18 +219,10 @@ postBlogAddR = do
     case result of
         FormSuccess post -> do
             _ <- runDB $ insert post
-            setMessage $ toHtml $ "Post " `mappend` blogpostTitle post `mappend` " published."
+            setMessage $ toHtml $ "Post " <> blogpostTitle post <> " published."
             redirect $ BlogViewR $ blogpostUrlpath post
         _ -> renderPublish $
             renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR result widget encType
-
-
--- * Edit
-
-renderEdit :: Blogpost -> Widget -> Handler Html
-renderEdit post x = defaultLayout $ do
-    setTitle $ "[Edit] " `mappend` toHtml (blogpostTitle post) `mappend` " - SS Blog"
-    renderBlog (blogpostTitle post) x
 
 getBlogEditR :: Text -> Handler Html
 getBlogEditR path = do
@@ -166,115 +263,6 @@ postBlogEditR path = do
         Entity key _ <- getBy404 $ UniqueBlogpost path
         replace key post
 
-
--- * Helpers
-
-getParam :: Text -> Text -> Handler Text
-getParam which fallback = fromGet
-  where fromGet = lookupGetParam which >>= maybe fromCookie return
-        fromCookie = liftM (fromMaybe fallback) $ lookupCookie which
-
--- | Render a preview of the most recent post.
-newestPost :: Widget
-newestPost = do
-    posts <- liftHandlerT $ runDB $ selectList [BlogpostPublic ==. True] [Desc BlogpostTime, LimitTo 3]
-    case posts of
-        []                    -> mempty
-        (Entity key val : xs) -> do
-            editing       <- liftHandlerT isAdmin'
-            commentCount  <- liftHandlerT $ runDB $ count [BlogcommentPost ==. key]
-            blogpostWidget val commentCount True editing
-            [whamlet|
-<h6>Previous posts:
-<ul .list-clean>
-$forall Entity _ post <- xs
-  <li>
-    <a href=@{BlogViewR $ blogpostUrlpath post}>#{blogpostTitle post}
-|]
-
-pageNav :: [Int]     -- ^ Available pages.
-        -> Int       -- ^ Current page.
-        -> Int       -- ^ Limit per page.
-        -> Route App -- ^ Route for links.
-        -> Widget
-pageNav pages current limit route = [whamlet|
-$if length pages > 1
-    <div .nav-three>
-        <span>
-            $if current > 1
-                <a href=@{route}?per_page=#{limit}&page=#{current - 1}>Newer
-            $else
-                &nbsp;
-        <span>
-            $if current < length pages
-                <a href=@{route}?per_page=#{limit}&page=#{current + 1}>Older
-            $else
-                &nbsp;
-        <span>
-            $forall n <- pages
-                $if n == current
-                    <span>#{n}
-                $else
-                    <a href=@{route}?per_page=#{limit}&page=#{n}> #{n}
-|]
-
-getPreview :: Markdown -> Markdown
-getPreview = Markdown . fst . T.breakOn "\n\n" . unMarkdown
-
-
--- * Widgets
-
--- | Wrap blog content with chat and tags.
-renderBlog :: Text -> Widget -> Widget
-renderBlog current content = do
-    navigation "Blog"
-    $(widgetFile "blog-wrapper")
-
--- | A single post.
--- TODO: 3 formatTime's really needed?
-blogpostWidget :: Blogpost -- ^ Post to render.
-               -> Int      -- ^ Number of comments.
-               -> Bool     -- ^ Render as preview?
-               -> Bool     -- ^ Include editing shortcuts?
-               -> Widget
-blogpostWidget post commentCount preview editing = $(widgetFile "blog-post")
-      where title    = blogpostTitle post
-            poster   = blogpostPoster post
-            link     = BlogViewR $ blogpostUrlpath post
-            month    = formatTime defaultTimeLocale "%b" (blogpostTime post)
-            day      = formatTime defaultTimeLocale "%d" (blogpostTime post)
-            year     = formatTime defaultTimeLocale "%Y" (blogpostTime post)
-
-blogcommentsWidget :: [Entity Blogcomment] -> Widget
-blogcommentsWidget comments =
-    let (roots', children)  = part Nothing comments
-    in case roots' of
-        []      -> [whamlet|<i>No comments.|]
-        parents -> $(widgetFile "blog-comments")
-  where
-    part                mpid           = L.partition ((==) mpid . blogcommentParent . entityVal)
-    blogcommentsWidget' mpid children' =
-      let (parents, children)          = part mpid children'
-      in $(widgetFile "blog-comments")
-
-renderTagcloud :: Text -> Widget
-renderTagcloud current = do
-    (posts, tagcloud) <- liftHandlerT $ runDB $ C.runResourceT $ selectSource [BlogpostPublic ==. True] [Asc BlogpostTime]
-        C.$$  CL.fold (\(x, x') p -> (sortMonth x p, addTags x' $ entityVal p)) ([], [])
-    $(widgetFile "blog-navigation")
-  where
-    addTags [] = blogpostTags
-    addTags xs = L.union xs . blogpostTags
-    getMonth   = formatTime defaultTimeLocale "%B %Y" . blogpostTime . entityVal
-
-    sortMonth ys@((month, xs) : ys') x = let
-        month' = getMonth x
-        in if month == month'
-            then (month , x : xs) : ys'
-            else (month',    [x]) : ys
-    sortMonth                     [] x = [(getMonth x, [x])]
-
-
 -- * Forms
 blogpostForm :: User -> Maybe Blogpost -> Form Blogpost
 blogpostForm poster mp = renderBootstrap $ mkBlogpost
@@ -304,20 +292,44 @@ blogpostForm poster mp = renderBootstrap $ mkBlogpost
                     | otherwise      = Right toCheck
                 in return ret
 
+-- * Helpers
 
-tagField :: Field (HandlerT App IO) [Text]
-tagField = checkMMap f T.unwords textField
-  where f :: Text -> Handler (Either Text [Text])
-        f = return . Right . T.words
+-- | Accumulating param fetching:
+--  * try GET param
+--  * try cookie
+--  * return fallback
+getParam :: Text -> Text -> Handler Text
+getParam which fallback = fromGet
+  where fromGet = lookupGetParam which >>= maybe fromCookie return
+        fromCookie = liftM (fromMaybe fallback) $ lookupCookie which
 
-commentForm :: BlogpostId          -- ^ main post
-            -> Maybe BlogcommentId -- ^ Maybe parent comment
-            -> Form  Blogcomment
-commentForm pid mcid = renderBootstrap $ Blogcomment
-    <$> pure pid
-    <*> pure mcid
-    <*> lift timeNow
-    <*> pure Nothing --TODO user creds checking
-    <*> areq textField "Name" Nothing
-    <*> aopt urlField "Webpage" Nothing
-    <*> areq textareaField "Message" Nothing
+-- | Page based navigation in some content.
+pageNav :: [Int]     -- ^ Available pages.
+        -> Int       -- ^ Current page.
+        -> Int       -- ^ Limit per page.
+        -> Route App -- ^ Route for links.
+        -> Widget
+pageNav pages current limit route = [whamlet|
+$if length pages > 1
+    <div .nav-three>
+        <span>
+            $if current > 1
+                <a href=@{route}?per_page=#{limit}&page=#{current - 1}>Newer
+            $else
+                &nbsp;
+        <span>
+            $if current < length pages
+                <a href=@{route}?per_page=#{limit}&page=#{current + 1}>Older
+            $else
+                &nbsp;
+        <span>
+            $forall n <- pages
+                $if n == current
+                    <span>#{n}
+                $else
+                    <a href=@{route}?per_page=#{limit}&page=#{n}> #{n}
+|]
+
+getPreview :: Markdown -> Markdown
+getPreview = Markdown . fst . T.breakOn "\n\n" . unMarkdown
+

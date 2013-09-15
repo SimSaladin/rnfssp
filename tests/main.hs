@@ -11,9 +11,22 @@ import Application (makeFoundation)
 
 import HomeTest
 
+import Sections.BackendGitAnnex
+import Data.Conduit
+import Data.Conduit.List as CL
+
+-- TODO TODO TODO MOOOVE THIS!
+gitTests = do
+    gitSource "/home/media/anime" ["annex", "find"]
+        $= gitSeparatePaths
+        $$ CL.mapM_ print
+
 main :: IO ()
 main = do
-    conf <- loadConfig $ (configSettings Testing) { csParseExtra = parseExtra }
-    foundation <- makeFoundation conf
-    app <- toWaiAppPlain foundation
-    runTests app (connPool foundation) homeSpecs
+
+    gitTests
+
+--    conf <- Import.loadConfig $ (configSettings Testing) { csParseExtra = parseExtra }
+--    foundation <- makeFoundation conf
+--    app <- toWaiAppPlain foundation
+--    runTests app (connPool foundation) homeSpecs

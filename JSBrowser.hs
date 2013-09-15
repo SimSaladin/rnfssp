@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Sep 02 2013 [00:03:31]
+-- Last Modified: Sep 14 2013 [23:19:53]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -40,7 +40,8 @@ browser :: WidgetT master IO () -- ^ Initial content of the browser.
 browser content extra = do
     browserId <- liftHandlerT newIdent
     [whamlet|$newline never
-<div##{browserId}>
+<section##{browserId} .site-block-h>
+    <h1>Browse
     ^{content}
 |]
     toWidget [coffee|

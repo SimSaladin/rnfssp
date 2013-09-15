@@ -1,26 +1,35 @@
 /* vim: set foldmethod=marker: */
 
-/* {{{ Layout */
-html, body {
-   height:100%
-}
-#main > header {
-   min-width: 380px;
-}
-body > footer {
-   padding: 2em 1.5em;
-   margin: 1em 0 0 0;
-   min-width: 380px;
-}
-.ym-wbox {
-   padding: 10px
-}
-#main {
+/* {{{ Main elements */
+html, body { height:100%; }
+main, #container > header { min-width:380px; }
+#container {
    min-height:100%;
    position:relative;
 }
+main {
+   padding-top:10px !important;
+   padding-bottom:14em !important;
+}
+#container > footer {
+   position:absolute;
+   bottom:0;
+   width:100%;
+   min-width:380px;
+   height:6em;
+   padding:0 0 1.5em 0;
+   div {
+      position:absolute;
+      bottom:0;
+      width:100%;
+      font-size:3em;
+      text-align:center;
+      line-height:2em;
+   }
+}
+.ym-wbox { padding:10px; }
 
-@media screen and ( max-width: 760px ) {
+@media screen and ( max-width:760px ) {
    /* linearization for grid module */
    .linearize-level-1, .linearize-level-1 > [class*="ym-g"],
    .linearize-level-1 > [class*="ym-c"] {
@@ -29,6 +38,7 @@ body > footer {
       padding: 0;
       margin: 0;
       width: 100% !important;
+      min-width:380px;
    }
 
    /* reset defined gutter values */
@@ -54,6 +64,10 @@ body > footer {
    min-width:380px;
    max-width:40em;
 }
+section, .site-block {
+   margin: 6px 4px 1px 6px;
+   padding: 1px 8px 8px;
+}
 @media screen and ( max-width: 480px ) {
    .standout { padding:2em 1em; }
    .center-box { margin: 1em auto; }
@@ -68,23 +82,10 @@ pre {
 /*}}}*/
 /* {{{ blockquotes */
 blockquote {
-   border-radius: 4px;
-   -moz-border-radius: 4px;
-   -webkit-border-radius: 4px;
+   ^{cssBorderRadius "4"};
    position:relative;
    padding:1em;
    margin-right:2em;
-}
-blockquote:before {
-   content:'';
-   width:0;
-   height:0;
-   display:block;
-   border-width:10px;
-   border-style:solid;
-   position:absolute;
-   top:-20px;
-   left:20px;
 }
 /*}}}*/
 /*{{{ Lists */
@@ -111,6 +112,7 @@ h1, h2, h3, h4, h5, h6 {
 h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
    .icon-pin { opacity:0.5; }
 }
+h1 { font-size: 200%; }
 .text-right {
    text-align:right;
    display:inline-block;
@@ -125,8 +127,9 @@ h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
 /*}}}*/
 /* {{{ Navigation */
 /* {{{ Main navbar */
-#main-header {
+#container > header {
    overflow:hidden;
+   box-sizing:border-box;
    padding: 0 1em 0 2em;
    nav { overflow:visible; width:100%; line-height:1em; }
    ul { margin:0; padding:0; display:inline; float:left; }
@@ -179,10 +182,8 @@ h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
       padding: 2px;
       opacity:0;
 
-      -webkit-transition: opacity .4s ease-in-out;
-      -moz-transition: opacity .4s ease-in-out;
-      -o-transition: opacity .4s ease-in-out;
-      transition: opacity .4s ease-in-out;
+      ^{cssMyTransition}
+
       background:#333;
       border:1px solid #444;
       border-top:none;
@@ -196,7 +197,7 @@ h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
 
 /* Navigation: Small screens */
 @media screen and ( max-width: 760px ) {
-   #main-header {
+   #container > header {
       nav, nav > ul { position:static !important }
       ul { float:left; }
       li {
@@ -211,9 +212,7 @@ h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
       }
       ul li.active a, ul li a,
       ul li a:focus, ul li a:hover, ul li a:active  {
-         -webkit-border-radius: 0;
-         -moz-border-radius: 0;
-         border-radius: 0;
+         ^{cssBorderRadius "0"}
       }
       ul li:hover > ul { opacity: 1 }
       ul ul li:hover > ul { opacity: 1; }
@@ -403,11 +402,14 @@ html[xmlns] .clearfix {
 }
 /*}}}*/
 /* {{{ Media :: playlist */
-.media-playlist > h3 { float:left; margin-top:0.5em; margin-right: 1em; }
-.media-playlist > .btn-toolbar { display:inline-block; }
+.media-playlist > .btn-toolbar {
+   display:inline-block;
+}
 .media-playlist {
-   margin:1em 0.5em 1em 0.5em;
-   .playlist-items { clear:both; margin-top:0.5em; }
+   .playlist-items {
+      clear:both;
+      margin-top:0.5em;
+   }
    .entry {
       padding:0 0.5em 0 0.3em;
       -webkit-transition: all 5s ease-in-out;

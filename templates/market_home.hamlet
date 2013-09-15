@@ -1,42 +1,50 @@
-<h3>Kauppa
+<main>
+   <section .site-block .site-block-h>
+      <h1>Market
 
-<p>Täällä voit ilmoittaa myytäviä sekä ostettavia kohteita (kuten lukiokirjoja), #
- päivöliiniltä päivöliinille -periaatteella.
+      <p>Täällä voit ilmoittaa myytäviä sekä ostettavia kohteita (kuten lukiokirjoja), #
+       päivöliiniltä päivöliinille -periaatteella.
 
-<p>Matematiikkakesällä 2013 tiedetysti tarvittavien kirjojen lista löytyy #
-   <a href="http://www.paivola.fi/fi/matematiikkakesa2013">täältä.
+      <p>Matematiikkakesällä 2013 tiedetysti tarvittavien kirjojen lista löytyy #
+         <a href="http://www.paivola.fi/fi/matematiikkakesa2013">täältä.
 
-<div .ym-grid .ym-equalize .linearize-level-1>
-   <div .ym-g50 .ym-gl>
-      <div .ym-gbox>
-         <h4>Halutaan ostaa
-         ^{buy}
-         <form .form-horizontal method=post action=@{MarketNewBuyItemR} enctype=#{buyerEnctype}>
-            <legend>Uusi ostoilmoitus
-            ^{buyerForm}
-            <div .form-actions>
-               <input type="submit" value="Lisää ostoilmoitus">
-   <div .ym-g50 .ym-gr>
-      <div .ym-gbox>
-         <h4>Myydään
-         ^{sale}
-         <form .form-horizontal method=post action=@{MarketNewSaleItemR} enctype=#{sellerEnctype}>
-            <legend>Uusi myynti-ilmoitus
-            ^{sellerForm}
-            <div .form-actions>
-               <input type="submit" value="Lisää myynti-ilmoitus">
-<datalist #market-items>
-   $forall item <- items
-      <option value=#{item}>
-<p>
-   <b>Vinkki: #
-   Voit #
-   <a href=@{RegisterR}>rekisteröityä
-   ja lisätä tietosi #
-   \<a href=@{ProfileR}>profiiliisi</a>, jolloin säästyt yhteystietojesi uudelleentäyttämiseltä.
+   <div .ym-grid .ym-equalize .linearize-level-1>
+      <div .ym-g50 .ym-gl>
+         <section .site-block-h>
+            <h1>Ostetaan
+            ^{buy}
+         <section .site-block-h>
+            <h1>Uusi ostoilmoitus
+            <form .form-horizontal method=post action=@{MarketNewBuyItemR} enctype=#{buyerEnctype}>
+               ^{buyerForm}
+               <div .form-actions>
+                  <input type="submit" value="Lisää ostoilmoitus">
+      <div .ym-g50 .ym-gr>
+         <section .site-block-h>
+            <h1>Myydään
+            ^{sale}
+         <section .site-block-h>
+            <h1>Uusi myynti-ilmoitus
+            <form .form-horizontal method=post action=@{MarketNewSaleItemR} enctype=#{sellerEnctype}>
+               ^{sellerForm}
+               <div .form-actions>
+                  <input type="submit" value="Lisää myynti-ilmoitus">
+   <datalist #market-items>
+      $forall item <- items
+         <option value=#{item}>
+   <aside .site-block>
+      <p>
+         <b>Vinkki: #
+         Voit #
+         <a href=@{RegisterR}>rekisteröityä
+         ja lisätä tietosi #
+         \<a href=@{ProfileR}>profiiliisi</a>, jolloin säästyt yhteystietojesi uudelleentäyttämiseltä.
 
-<p>Tämä sivu on nähtävissä kaikkialta. #
-   <b>Poistotoiminnot vain Päivölästä tai sisäänkirjautuneille. #
-   Bugeja ja ehdotuksia otetaan vastaan irkissä #
-   (bps@PVLnet), sähköpostilla <a href="mailto:simsaladin@paivola.fi">simsaladin@paivola.fi</a>,
-   sekä esimerkiksi etusivun yleisessä chatissa.
+      <p>Tämä sivu on nähtävissä kaikkialta. #
+         <b>Poistotoiminnot vain Päivölästä tai sisäänkirjautuneille. #
+      <p>
+         Bugeja ja parannusehdotuksia otetaan vastaan irkissä #
+         (bps@PVLnet), sähköpostilla
+         <a href="mailto:simsaladin -ät- paivola.fi">
+            simsaladin -ät- paivola.fi
+         , sekä esimerkiksi <a href="/">etusivun</a> yleisessä chatissa.
