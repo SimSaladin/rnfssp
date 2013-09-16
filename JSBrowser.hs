@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Sep 14 2013 [23:19:53]
+-- Last Modified: Sep 16 2013 [02:27:54]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -19,6 +19,7 @@ import           Text.Julius (rawJS)
 import           Text.Coffee
 import qualified System.FilePath as F (joinPath)
 import           Utils
+import Sections.Types
 
 -- | Assumptions this widget makes:
 --
@@ -97,11 +98,11 @@ $ ->
 
 data SimpleListingSettings = SimpleListingSettings
     { slSect    :: Text     -- ^ Section
-    , slCurrent :: [Text]   -- ^ Url parts
+    , slCurrent :: FPS      -- ^ Url parts
     , slCount   :: Int      -- ^ Total number of elements to scroll
     , slPage    :: Int      -- ^ Nth page
     , slLimit   :: Int      -- ^ Elements per page
-    , slContent :: [(Text, Text, [Text], Text, Text)] -- ^ (filename, filetype, fps, size, modified)
+    , slContent :: [(Text, Text, FPS, Text, Text)] -- ^ (filename, filetype, fps, size, modified)
     }
 
 simpleListingSettings :: SimpleListingSettings
@@ -116,9 +117,9 @@ simpleListingSettings = SimpleListingSettings
 
 -- | Simple listing of content.
 simpleListing :: SimpleListingSettings
-              -> ([Text] -> Route master)                -- ^ Route to content.
-              -> (ServeType -> [Text] -> Route master)   -- ^ Route to file serving.
-              -> (Text, Text, Text)                      -- ^ (msgFilename, msgFileize, msgModified)
+              -> (FPS -> Route master)                -- ^ Route to content.
+              -> (ServeType -> FPS -> Route master)   -- ^ Route to file serving.
+              -> (Text, Text, Text)                   -- ^ (msgFilename, msgFileize, msgModified)
               -> WidgetT master IO ()
 simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
     let options = [25, 50, 100, 200] :: [Int]
@@ -138,7 +139,7 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
 <div .browser>
     $forall (filename, filetype, fps, size, modified) <- slContent sl
       <div .entry .type-#{filetype}>
-        <div .data-field style="display:none">#{toPath fps}
+        <div .data-field style="display:none">#{F.joinPath fps}
         <div .browser-controls>
           $if (/=) filetype directory
             <a .icon-download href=@{toFile ServeForceDownload fps} onclick="">
@@ -175,8 +176,8 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
 
 -- | Construct breadcrumbs into a widget.
 simpleNav :: Text
-          -> [Text]
-          -> ([Text] -> Route master)
+          -> FPS
+          -> (FPS -> Route master)
           -> WidgetT master IO ()
 simpleNav _    []  _ = mempty
 simpleNav home fps f = [whamlet|

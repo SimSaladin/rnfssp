@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: May 28 2013 [14:14:29]
+-- Last Modified: Sep 16 2013 [01:14:03]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -13,12 +13,16 @@ module Handler.Playlists
 
 import           Utils
 import           Import
-import           Configs
+import qualified Data.Conduit.List as CL
+import           Data.Conduit
 import qualified Data.Text as T
 import qualified Data.Text.IO as T
-import           System.IO (hClose)
+import qualified System.FilePath as FS
+import           System.IO (hClose, hPutStrLn)
 import           System.Directory (getTemporaryDirectory)
 import           System.IO.Temp (openTempFile)
+
+import           Sections
 
 -- | GET actions on playlists. 'action' is based on
 --  * get.*       : Get the active playlist with @solvePlaylist@ and send it as
@@ -110,22 +114,25 @@ generateM3U :: Playlist -> Handler FilePath
 generateM3U pl = do
     resolved <- gServeroot
     yesod    <- getYesod
-    time     <- timeNow
-    let render a p t = yesodRender
-          yesod resolved (MediaServeR ServeTemp a (t : splitPath' p)) []
 
+    let render a p t = yesodRender
+          yesod resolved (MediaServeR ServeTemp a (t : FS.splitPath p)) []
+
+        -- write single file entry to handle. calculate a temporary name.
         write h (area, path) = do
             temp <- randomText 32
-            T.hPutStrLn h (render area path temp)
+            T.hPutStrLn h (render area path $ T.unpack temp)
             return (temp, path)
 
     (path, temps) <- liftIO $ do
       (path, handle) <- getTemporaryDirectory >>= flip openTempFile "playlist.m3u"
-      T.hPutStrLn handle "#EXTM3U\n"
+      hPutStrLn handle "#EXTM3U\n"
       temps <- mapM (write handle) $ playlistElems pl
       hClose handle
       return (path, temps)
-    mapM_ (uncurry $ ((runDB . insert) .) . DlTemp time) temps
+
+    time <- timeNow
+    mapM_ (\(ident, realpath) -> runDB $ insert $ DlTemp time (T.unpack ident) realpath) temps
     return path
 
 
@@ -160,16 +167,13 @@ plUpdate :: PlaylistId -- ^ id of playlist to replace
 plUpdate plid pl = runDB (replace plid pl) >> return pl
 
 -- | add file OR every child of directory to playlist.
-plInsert :: Playlist
-    -> Text -- ^ File area
-    -> [Text] -- ^ File paths
-    -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
+plInsert :: Playlist -> SectionId -> FPS -> Handler (Bool, Playlist) -- (playlist changed?, changed playlist)
 plInsert pl section paths = do
     t <- timeNow
-    these' <- onSec section $ flip sFind paths
+    elemSource <- onSection section (browsableFetchPlainR paths)
+    these'     <- elemSource $$ CL.consume
     return $ case these' of
-      [] -> (False, pl)
-      these -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) these
+        [] -> (False, pl)
+        these -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) these
                      , playlistModified = t 
                      })
-

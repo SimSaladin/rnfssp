@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections/Types.hs
 -- Creation Date: Apr 15 2013 [22:38:30]
--- Last Modified: Sep 15 2013 [09:19:32]
+-- Last Modified: Sep 16 2013 [02:41:07]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -10,11 +10,16 @@ module Sections.Types where
 
 import           Prelude
 import           Data.Text (Text)
+import           Data.Conduit
 import           Control.Monad
 import           Control.Applicative
 import           Yesod
 
 -- * Configuration types
+
+-- | Identifier of a section.
+type SectionId = Text
+type FPS = [FilePath]
 
 -- | Defines settings for a section. Section implementations are constructed
 -- from these.
@@ -33,42 +38,71 @@ instance FromJSON MediaConf where
       <*> o .: "path"
     parseJSON _ = mzero
 
--- | Identifier for a section.
-type SectionId = Text
+-- | Wrapper class to ease type signatures
+class ( MediaBrowsable  app source
+      , MediaUpdate     app source
+      , MediaSearchable app source)
+      => MyMedia app source where
 
--- | Media search
-class Monad master => MediaBrowsable master source where
+-- * Backends
 
-    -- | Get JSON data to source.
-    browsableContent     :: ToJSON a => [Text] -> source -> HandlerT (HandlerSite master) IO a
+-- | Browsable media. 
+class MediaBrowsable app source where
+    data MElem source :: *
 
-    -- | Define the Javascript function which is used to render content client
-    -- side.
-    browsableRenderer    :: Text -> source -> WidgetT (HandlerSite master) IO ()
+    -- | Fetch elements at FPS in JSON format
+    browsableFetchElems  :: (ToJSON (MElem source))
+                         => FPS
+                         -> source
+                         -> Source (HandlerT app IO) (MElem source)
 
-    -- | Description widget.
-    browsableDescription :: source -> WidgetT (HandlerSite master) IO ()
+    browsableFetchWidget :: FPS
+                         -> source
+                         -> WidgetT app IO ()
 
-    -- | Finding items for adding to the playlist.
-    -- XXX: playlist 
-    browsableFindElems   :: [Text] -> source -> HandlerT (HandlerSite master) IO [Text]
+    browsableRender :: Source (HandlerT app IO) (MElem source)
+                    -> WidgetT app IO ()
+
+    browsableFetchPlain :: FPS -> source -> HandlerT app IO FilePath
+
+    -- | Fetch plain elements recursively.
+    browsableFetchPlainR :: FPS
+                         -> source
+                         -> Source (HandlerT app IO) FilePath
+
+    -- | Provide a banner widget to the media.
+    -- XXX: Add default implemantion
+    browsableBanner :: source
+                    -> WidgetT app IO ()
+
+    -- | Define the JS function used to render the content client side.
+    -- TODO: details?
+    browsableJSRender :: Text
+                      -> source
+                      -> WidgetT app IO ()
+
+class MediaUpdate app source where
+    updateMedia :: source -> HandlerT app IO [(FPS, Html)]
 
 -- | Search interface to a media source.
-class MediaBrowsable master source => MediaSearchable master source where
+class MediaBrowsable app source => MediaSearchable app source where
 
     -- | The datatype for an advanced search.
-    type Search
+    data MSearch source :: *
 
     -- | Clientside javascript `function identifier(data, dom)`, which renders
     -- search results from `data` in `dom`.
-    searchableRender  :: Text -> source -> WidgetT (HandlerSite master) IO ()
+    searchableJSRender  :: Text -> source
+                        -> WidgetT app IO ()
 
     -- | Advanced search form.
-    searchableForm    :: source -> AForm master Search
+    searchableForm    :: source -> AForm (HandlerT app IO) (MSearch source)
 
     -- | Text search.
-    searchableSearchT :: ToJSON a => Text   -> source -> HandlerT (HandlerSite master) IO a
+    searchableSearchT :: Text -> source
+                      -> Source (HandlerT app IO) (MElem source)
 
     -- | Advanced search.
-    searchableSearch  :: ToJSON a => Search -> source -> HandlerT (HandlerSite master) IO a
+    searchableSearch  :: MSearch source -> source
+                      -> Source (HandlerT app IO) (MElem source)
 

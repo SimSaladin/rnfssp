@@ -52,11 +52,10 @@ library
                      Mpd
                      JSBrowser
                      Utils
-                     Configs
                      Sections
                      Sections.Types
                      Sections.Music
-                     Sections.Film
+                     --Sections.Film
                      Sections.BackendGitAnnex
                     -- Sections.SingleSource
                      -- Handler.Search

@@ -61,7 +61,7 @@ Boardpost
 Playlist
    title Text
    owner UserId
-   elems [TupleText]
+   elems [PlaylistElem]
    created UTCTime
    modified UTCTime
    UniquePlaylist owner title
@@ -94,17 +94,17 @@ LogDownload
    time UTCTime
    user UserId
    section Text
-   fps Texts
+   fps FPS
 DlTemp
-   date UTCTime
-   ident Text
-   target Text
+   date     UTCTime
+   ident    String
+   realpath FilePath
    UniqueDlTemp ident
 
 RecentlyAdded
    date     UTCTime
    section  Text
-   parts    Texts
+   parts    FPS
    desc     Html
 
 -- Other

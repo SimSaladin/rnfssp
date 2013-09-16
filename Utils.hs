@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: May 28 2013 [13:46:24]
+-- Last Modified: Sep 15 2013 [22:41:38]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -109,10 +109,10 @@ guessFiletype fp
 -- * Widgets
 
 -- | Convert a widget to a whole page.
-widgetBodyToRepHtml :: Yesod master => WidgetT master IO () -> HandlerT master IO RepHtml
+widgetBodyToRepHtml :: Yesod master => WidgetT master IO () -> HandlerT master IO Html
 widgetBodyToRepHtml w = do
     pc <- widgetToPageContent w
-    hamletToRepHtml [hamlet|^{pageBody pc}|]
+    giveUrlRenderer [hamlet|^{pageBody pc}|]
 
 layoutSplitH :: WidgetT master IO () -> WidgetT master IO () -> WidgetT master IO ()
 layoutSplitH w1 w2 = [whamlet|
@@ -200,3 +200,6 @@ renderForm' extra buttons title route res widget encType = [whamlet|
     ^{buttons}
 |]
 
+
+wrapMain :: Widget -> Widget
+wrapMain w = [whamlet|<main>^{w}|]

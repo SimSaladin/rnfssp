@@ -1,6 +1,6 @@
+{-# LANGUAGE FlexibleInstances #-}
 module Sections.BackendGitAnnex where
 
-import Sections
 import Import
 import Utils
 import qualified Data.Text as T
@@ -24,26 +24,20 @@ import Sections.Types
 data GitAnnexBackend = GitAnnexBackend
     { gaName :: Text
     , gaPath :: FilePath
-    , gaRoute :: [Text] -> Route App
+    , gaRoute :: FPS -> Route App
     }
 
-mkGABE :: Section -> MediaConf -> GitAnnexBackend
+mkGABE :: SectionId -> MediaConf -> GitAnnexBackend
 mkGABE section mc = GitAnnexBackend section (mcPath mc) (MediaContentR section)
 
-instance MSection GitAnnexBackend where
-    sWContent = getContent
-    sUpdateIndex = updateIndex
+-- * Content browse and find
 
-instance MediaBrowsable master GitAnnexBackend where
-    browsableContent     = undefined
+instance MediaBrowsable App GitAnnexBackend where
+    browsableFetchElems  = undefined
+    browsableJSRender    = undefined
+    browsableBanner      = undefined
 
-    browsableRenderer    = undefined
-
-    browsableDescription = undefined
-
-    browsableFindElems   = undefined
-
--- * Content
+instance MediaSearchable App GitAnnexBackend where
 
 getContent :: GitAnnexBackend -> [Text] -> Widget
 getContent ga fps = do
@@ -53,33 +47,41 @@ getContent ga fps = do
 
 type UpdateTarget = Either FilePath FWrap
 
-updateIndex :: GitAnnexBackend -> Handler [RecentlyAdded]
-updateIndex ga = do
-    now <- timeNow
-    differenceSortedE unFWrap (dbSource (gaName ga)) (gitGetFileList (gaPath ga) "")
-        $$ handler now [] []
+instance MediaUpdate App GitAnnexBackend where
+  updateMedia ga = differenceSortedE unFWrap
+        (dbSource (gaName ga)) (gitGetFileList (gaPath ga) "")
+        $$ handler [] []
     where
       delete'          [] = return ()
       delete'       paths = runDB $ deleteWhere [DNodeArea ==. gaName ga, DNodePath <-. paths]
       findParent     path = getBy $ UniqueDNode (gaName ga) (FP.takeDirectory path)
-      addrecent time path = return $ RecentlyAdded time (gaName ga) (map T.pack $ FP.splitPath path)
-                                                                 (toHtml $ last $ FP.splitPath path)
-      handler :: UTCTime -> [FilePath] -> [RecentlyAdded] -> Sink UpdateTarget Handler [RecentlyAdded]
-      handler now deleteThese ra = await >>= maybe (lift (delete' deleteThese) >> return ra) handleElement
+
+      handler :: [FilePath] -> [(FPS, Html)] -> Sink UpdateTarget Handler [(FPS, Html)]
+      handler todel ra = await >>= maybe (lift (delete' todel) >> return ra) handleElement
         where
-            handleElement (Left fp) = handler now (deleteThese ++ [fp]) ra
+            handleElement (Left fp) = handler (todel ++ [fp]) ra
             handleElement (Right e) = do
               ra' <- lift $ runDB $ case e of
                   FFile path -> do
-                      parent <- findParent
+                      parent <- findParent path
                       _      <- insert $ FNode (gaName ga) (entityKey <$> parent) path Nothing
-                      addrecent now path
+                      pathToRecent path
                   FDir path -> do
-                      parent <- findParent
+                      parent <- findParent path
                       _      <- insert $ DNode (gaName ga) (entityKey <$> parent) path
-                      addrecent now path
-              lift $ delete' deleteThese
-              handler now [] (ra':ra)
+                      pathToRecent path
+              lift $ delete' todel
+              handler [] (ra' : ra)
+
+--pathToRecent :: 
+pathToRecent path = return
+    ( FP.splitPath path
+    , toHtml $ last $ FP.splitPath path
+    )
+--addrecent time path = return $ RecentlyAdded
+--    time (gaName ga) (map T.pack $ FP.splitPath path)
+--    (toHtml $ last $ FP.splitPath path)
+-- now <- timeNow
 
 -- | Takes the difference between two sorted sources. Output values are wrapped
 -- in Either: unique values from first source are wrapped in Left and vice
@@ -117,7 +119,7 @@ unFWrap :: FWrap -> FilePath
 unFWrap (FFile fp) = fp
 unFWrap (FDir  fp) = fp
 
-dbSource :: Section -> Source Handler FilePath
+dbSource :: SectionId -> Source Handler FilePath
 dbSource section = mapM_ yield =<< lift action
     where
         action :: Handler [FilePath]

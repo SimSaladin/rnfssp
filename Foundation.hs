@@ -30,6 +30,7 @@ import           Yesod.Default.Util (addStaticContentExternal)
 import           Network.HTTP.Conduit   (Manager)
 import           Network.Wai (Request(..))
 
+import           Sections.Types
 import           Settings.StaticFiles
 import           Settings (widgetFile, Extra (..))
 import           Model

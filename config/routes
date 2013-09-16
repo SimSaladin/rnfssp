@@ -23,11 +23,11 @@
 /files/board/#String                   BoardFileR     GET
 
 /media                                 MediaHomeR     GET
-/media/#Text/*Texts                    MediaContentR  GET
+/media/#Text/*FPS                      MediaContentR  GET
 /search/media                          MediaSearchAllR GET
 /search/media/#Text                    MediaSearchR   GET
 /playlists/#Text                       PlaylistR      GET POST
-/files/media/#ServeType/#Text/*Texts   MediaServeR    GET
+/files/media/#ServeType/#Text/*FPS     MediaServeR    GET
 
 /market              MarketHomeR          GET
 /market/buy-items    MarketNewBuyItemR        POST

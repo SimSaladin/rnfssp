@@ -1,3 +1,4 @@
+{-# LANGUAGE RankNTypes #-}
 module Handler.Media
     ( getMediaHomeR
     , getMediaContentR
@@ -11,19 +12,22 @@ module Handler.Media
 
 import           Utils
 import           Import
-import           Configs
-import           JSBrowser (browser)
-import           Handler.Playlists (userPlaylistWidget)
+import qualified Data.Conduit.List as CL
+import           Data.Conduit
 import qualified Data.Text as T
-import           Data.List (head, tail)
+import           Data.List (head, tail, last)
 import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 import qualified Data.Map as Map
+import qualified System.FilePath as FP
+import           Handler.Playlists (userPlaylistWidget)
+import           JSBrowser (browser)
+import           Sections
 
 -- | Maximum time a file can be accessed via a temporary url.
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
 
-topNavigator :: Section -> Widget
+topNavigator :: SectionId -> Widget
 topNavigator current = [whamlet|
 <section>
     ^{renderBrowsable current}
@@ -40,7 +44,7 @@ getMediaHomeR = do
             topNavigator ""
             userPlaylistWidget ent
 
-getMediaContentR :: Text -> [Text] -> Handler Html
+getMediaContentR :: Text -> FPS -> Handler Html
 getMediaContentR section fps = do
     ent <- requireAuth
     renderMaybeBare content $ do
@@ -55,10 +59,6 @@ getMediaSearchAllR :: Handler Html
 getMediaSearchAllR = do
     ent <- requireAuth
     mq  <- lookupGetParam "q"
-    let f section hres = hres >>= \res -> return [whamlet|
-<h3>#{section}
-^{res}
-|] 
     let doSearch q
           | T.null q  = do
             let msg = "Search must be at least one character!" :: Html
@@ -67,18 +67,24 @@ getMediaSearchAllR = do
                 redirect MediaHomeR
 
           | otherwise = do
-            results' <- onSecs' $ flip sWSearch q
-            results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
-            renderMaybeBare results $ do
-                setTitle $ toHtml $ "Results for: " `mappend` q
+            rs' <- onSections (browsableRender . searchableSearchT q :: forall source. MediaSearchable App source => source -> Widget)
+            rs  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f rs'
+            --results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
+            renderMaybeBare rs $ do
+                setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
                     topNavigator ""
-                    layoutSplitH (browser results [".input-search + button"])
+                    layoutSplitH (browser rs [".input-search + button"])
                                  (userPlaylistWidget ent)
-        in maybe (redirect $ MediaHomeR) doSearch mq
+        in maybe (redirect MediaHomeR) doSearch mq
+  where
+      f section hres = hres >>= \res -> return [whamlet|
+<h3>#{section}
+^{res}
+|] 
 
 -- | search in section @section@ using query string from the @q@ get parameter.
-getMediaSearchR :: Section -> Handler Html
+getMediaSearchR :: SectionId -> Handler Html
 getMediaSearchR section = do
     ent <- requireAuth
     mq  <- lookupGetParam "q"
@@ -90,9 +96,9 @@ getMediaSearchR section = do
                 redirect $ MediaContentR section []
 
           | otherwise = do
-            results <- onSec' section $ flip sWSearch q
+            results <- onSection section (browsableRender . searchableSearchT q)
             renderMaybeBare results $ do
-                setTitle $ toHtml $ "Results for: " `mappend` q
+                setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
                     topNavigator section
                     layoutSplitH (browser results [".input-search + button"])
@@ -111,10 +117,10 @@ renderMaybeBare bareContents nonBareContents = do
             nonBareContents
 
 -- | Generate content based on section and path.
-sectionWidget :: Text -> [Text] -> Widget
-sectionWidget s fps = join $ liftHandlerT $ onSec' s (`sWContent` fps)
+sectionWidget :: Text -> FPS -> Widget
+sectionWidget s fps = join $ liftHandlerT $ onSection s $ browsableFetchWidget fps
 
-renderSearch :: Section -> Widget
+renderSearch :: SectionId -> Widget
 renderSearch      "" = renderSearchAll
 renderSearch section = [whamlet|$newline never
 <form .bare .text-center action=@{MediaSearchR section} type=get>
@@ -133,11 +139,8 @@ renderSearchAll = [whamlet|$newline never
 
 -- | Downloading files.
 -- /tmp does not require authentication, other kinds do.
-getMediaServeR :: ServeType -- ^ kind of download
-               -> Text      -- ^ file section
-               -> [Text]    -- ^ file path
-               -> Handler RepJson
-getMediaServeR     _       _   [] = invalidArgs ["No file provided."]
+getMediaServeR :: ServeType -> SectionId -> FPS -> Handler RepJson
+getMediaServeR     _       _   [] = invalidArgs ["No target provided."]
 getMediaServeR stype section path = case stype of
     ServeTemp           -> solveTemp         >>= send ""
     ServeAuto           -> solvePathWithAuth >>= send ""
@@ -146,17 +149,17 @@ getMediaServeR stype section path = case stype of
     send ct fp = addHeader "Accept-Ranges" "bytes" >> sendFile ct fp
 
     solveTemp  = do
-        Entity _ (DlTemp time _ target) <- runDB $ getBy404 $ UniqueDlTemp $ head path
+        Entity _ (DlTemp time _ realpath) <- runDB $ getBy404 $ UniqueDlTemp $ head path
         now <- timeNow
         denyIf (diffUTCTime now time > maxTempUrlAlive) "File not available."
-        denyIf (target /= toPath (tail path)          ) "Malformed url."
-        onSec section (`sFilePath` target)
+        denyIf (FP.joinPath (tail path) /= realpath      ) "Malformed url."
+        join $ onSection section (browsableFetchPlain path) -- :: forall s. MyMedia Handler s => s -> Handler FilePath)
 
     solvePathWithAuth = do
         uid <- requireAuthId
-        fp  <- onSec section (flip sFilePath $ toPath path)
+        fp  <- join $ onSection section (browsableFetchPlain path)
         t   <- timeNow
-        _   <- runDB $ insert $ LogDownload t uid section path -- TODO: use a log file
+        _   <- runDB $ insert $ LogDownload t uid section path -- TODO: use a log file?
         return fp
 
 -- * Sections
@@ -187,9 +190,9 @@ postMediaAdminR = do
 
 mediaUpdateR :: Handler ()
 mediaUpdateR = do
-    ras <- updateIndeces
-    runDB $ mapM_ (mapM_ insert . snd) ras
-    setMessage $ toHtml $ "Added " <> show (sum $ map (length . snd) ras) <> " new items."
+    ras <- updateAllMedia
+    runDB $ mapM_ insert ras
+    setMessage $ toHtml $ "Added " <> (show . length) ras <> " new items."
 
 mediaRecent :: Int -> Widget
 mediaRecent n = do
@@ -213,7 +216,7 @@ mediaRecentDl n = do
     $forall Entity _ dl <- recent
         <li>
             <a href=@{MediaContentR (logDownloadSection dl) (logDownloadFps dl)}>
-                #{toPath $ logDownloadFps dl}
+                #{last $ logDownloadFps dl}
             <small>
                 <i>Played #{printfTime "%h:%M %d.%m" $ logDownloadTime dl}
 |]

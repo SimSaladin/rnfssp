@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File: Mpd.hs
 -- Creation Date: Jul 16 2012 [23:01:24]
--- Last Modified: May 28 2013 [14:27:55]
+-- Last Modified: Sep 16 2013 [02:07:44]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Mpd where
@@ -11,9 +11,9 @@ import Yesod
 import Prelude
 import Control.Monad (liftM)
 import Network.MPD
-import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Encoding (encodeUtf8, decodeUtf8)
+import qualified System.FilePath as FP
 
 data Mpd = Mpd
 
@@ -27,7 +27,7 @@ mkYesodSubData "Mpd" [parseRoutes|
 |]
 
 -- | 
-getQueryR :: Yesod master => HandlerT Mpd (HandlerT master IO) RepHtml
+getQueryR :: Yesod master => HandlerT Mpd (HandlerT master IO) Html
 getQueryR = do
     lift $ defaultLayout [whamlet|Coming soon!|]
 
@@ -42,13 +42,13 @@ mpdFullWidget = do
     [whamlet|Controlling coming soon|]
 
 pathContents :: YesodMpd master
-             => [Text] -> HandlerT master IO [LsResult]
-pathContents = execMpd . lsInfo . Path . encodeUtf8 . T.intercalate "/"
+             => [FilePath] -> HandlerT master IO [LsResult]
+pathContents = execMpd . lsInfo . Path . encodeUtf8 . T.pack . FP.joinPath
 
 songPaths :: YesodMpd master
-          => [Text] -> HandlerT master IO [Text]
-songPaths = liftM (f . concat) . mapM (execMpd . listAll . Path . encodeUtf8)
-        where f = map $ \(Path x) -> decodeUtf8 x
+          => [FilePath] -> HandlerT master IO [FilePath]
+songPaths = liftM (f . concat) . mapM (execMpd . listAll . Path . encodeUtf8 . T.pack)
+        where f = map $ \(Path x) -> T.unpack $ decodeUtf8 x
 
 execMpd :: YesodMpd master
         => MPD a -> HandlerT master IO a

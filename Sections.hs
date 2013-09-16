@@ -1,38 +1,87 @@
-{-# LANGUAGE ExistentialQuantification, StandaloneDeriving #-}
-------------------------------------------------------------------------------
--- File:          Sections.hs
--- Creation Date: Dec 23 2012 [23:10:22]
--- Last Modified: Jul 05 2013 [20:48:09]
--- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
-------------------------------------------------------------------------------
+{-# LANGUAGE CPP, ExistentialQuantification #-}
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
+{-# LANGUAGE RankNTypes #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+module Sections
+   ( module Sections.Types
+   , onSection
+   , onSections
+   , renderBrowsable
+   , updateAllMedia
+   ) where
 
-module Sections (MSection(..), Section) where
-
+import qualified Data.Map as Map
 import Import
-
 import Sections.Types
+import Sections.BackendGitAnnex
+import Utils
+--import Sections.Music
+--import Sections.Film
 
+instance MyMedia App GitAnnexBackend
 
-type Section = SectionId
+-- | Execute an action on a section.
+onSection :: SectionId
+          -> (forall a. MyMedia App a => a -> b)
+          -> Handler b
+onSection section f = do
+    mmc <- liftM (Map.lookup section) getSections
+    maybe failed (\mc -> runMediaConf section mc f) mmc
+  where failed = invalid $ "Requested content not found: " <> section
 
-class MSection a where
+onSections :: (forall s. MyMedia App s => s -> a)
+           -> Handler (Map.Map SectionId (Handler a))
+onSections f = do
+    secs <- getSections
+    return $ Map.mapWithKey (\s mc -> runMediaConf s mc f) secs
 
-  -- | Find stuff to add on a specific path
-  sFind :: a -> [Text] -> Handler [Text]
+-- | Take a MediaConf and run an action on it.
+runMediaConf :: SectionId -> MediaConf
+             -> (forall a. MyMedia App a => a -> b)
+             -> Handler b
+runMediaConf section mc f = case mcType mc of
+#define g(mk) (return $ f $ mk section mc)
+--      "mpd"   -> g( mkMPDSec  )
+--      "film"  -> g( mkFilmSec )
+        "annex" -> g( mkGABE    )
+        x -> invalid $ "Requested section type not supported: " <> x
+#undef g
 
-  -- | Content widget for a path
-  sWContent :: a -> [Text] -> Widget
+-- * Navigation
 
-  -- | Get results by a search query
-  sWSearch :: a -> Text -> Widget
+renderBrowsable :: SectionId -> Widget
+renderBrowsable current = do
+    elements <- liftHandlerT browsable'
+    [whamlet|$newline never
+<nav .subnavbar>
+  <ul>
+    $forall (ident, view, icon) <- elements
+        <li :current == ident:.active>
+          <a href=@{f ident}>
+            <i .icon-white .icon-#{icon}>
+            &nbsp;#{view}
+    |] where f = flip MediaContentR []
 
-  -- | Resolve to a real file in FS.
-  sFilePath :: a -> Text -> Handler FilePath
+-- | XXX: convert to renderBrowsable
+browsable' :: Handler [(SectionId, Text, Text)]
+browsable' = liftM (Map.elems . Map.mapWithKey f . extraSections) getExtra
+  where f key mc = (key, mcView mc, mcIcon mc)
 
-  -- | Action which updates index of the section. May return the newest added
-  -- things as @RecentlyAdded@.
-  sUpdateIndex :: a -> Handler [RecentlyAdded]
+-- * Helper functions
 
-  -- | Get path to a large icon for the section.
-  sLargeIcon :: a -> FilePath
-  sLargeIcon _ = ""
+invalid :: Text -> HandlerT master IO a
+invalid how = invalidArgs $
+    [how, "If you reached this page through a link on the website, please contact the webmaster."]
+
+getSections :: Handler (Map.Map SectionId MediaConf)
+{-# INLINE getSections #-}
+getSections = liftM extraSections getExtra
+
+updateAllMedia :: Handler [RecentlyAdded]
+updateAllMedia = getSections >>= liftM join . sequence . Map.elems . Map.mapWithKey f
+    where f s mc = do
+            xs <- join $ runMediaConf s mc
+                     (updateMedia :: forall s. MyMedia App s => s -> Handler [(FPS, Html)])
+            time <- timeNow
+            return $ map (uncurry $ RecentlyAdded time s) (xs :: [(FPS, Html)])
+
