@@ -67,7 +67,7 @@ getMediaSearchAllR = do
                 redirect MediaHomeR
 
           | otherwise = do
-            rs' <- onSections (browsableRender . searchableSearchT q :: forall source. MediaSearchable App source => source -> Widget)
+            rs' <- onSections (\s -> (\source -> browsableRender source ["Search results for \n" <> T.unpack q <>"\n"] s) $ searchableSearchT q s) -- :: forall source. MediaSearchable App source => source -> Widget)
             rs  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f rs'
             --results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
             renderMaybeBare rs $ do
@@ -96,7 +96,7 @@ getMediaSearchR section = do
                 redirect $ MediaContentR section []
 
           | otherwise = do
-            results <- onSection section (browsableRender . searchableSearchT q)
+            results <- onSection section (\s -> (\source -> browsableRender source ["Search results for \n" <> T.unpack q <> "\n"] s) $ searchableSearchT q s) -- :: forall source. MediaSearchable App source => source -> Widget)
             renderMaybeBare results $ do
                 setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
@@ -118,21 +118,21 @@ renderMaybeBare bareContents nonBareContents = do
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> FPS -> Widget
-sectionWidget s fps = join $ liftHandlerT $ onSection s $ browsableFetchWidget fps
+sectionWidget s fps = join $ liftHandlerT $ onSection s (browsableFetchWidget fps)
 
 renderSearch :: SectionId -> Widget
 renderSearch      "" = renderSearchAll
 renderSearch section = [whamlet|$newline never
 <form .bare .text-center action=@{MediaSearchR section} type=get>
-  <input .input-search type="search" name="q" placeholder="Search In #{section}" autofocus pattern="..*" required>
-  <button>Go
+  <input .input-search type="search" name="q" placeholder="Search #{section}" autofocus pattern="..*" required>
+  <button .btn type="submit">Go
 |]
 
 renderSearchAll :: Widget
 renderSearchAll = [whamlet|$newline never
 <form .bare .text-center action=@{MediaSearchAllR} type=get>
   <input .input-search type="search" name="q" placeholder="Search all" autofocus pattern="..*" required>
-  <button>Go
+  <button .btn type="submit">Go
 |]
 
 -- * Playing & Downloading

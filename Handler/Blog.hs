@@ -115,7 +115,9 @@ emptyBlogWidget = [whamlet|
 <h5>...and h5
 <h6>Newest post
 <p>There could be a block post here. But since there are no posts, we only show #
-   header h1-h6 test here. Click here to write one :)
+   header h1-h6 test here. #
+<br>
+<a .btn href=@{BlogAddR}>Click here to write one
     |]
 
 generateView :: Entity Blogpost -> Handler (Widget, Widget) -- ^ (Blogpost Widget, comments Widget)
@@ -209,13 +211,13 @@ tagField = checkMMap f T.unwords textField
 getBlogAddR :: Handler Html
 getBlogAddR = do
     Entity _ user <- requireAuth
-    (widget, encType) <- generateFormPost (blogpostForm user Nothing) -- new post form
+    (widget, encType) <- generateFormPost (blogpostForm False user Nothing) -- new post form
     renderPublish $ renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR FormMissing widget encType
 
 postBlogAddR :: Handler Html
 postBlogAddR = do
     Entity _ user <- requireAuth
-    ((result, widget), encType) <- runFormPost (blogpostForm user Nothing) -- new post form
+    ((result, widget), encType) <- runFormPost (blogpostForm False user Nothing) -- new post form
     case result of
         FormSuccess post -> do
             _ <- runDB $ insert post
@@ -228,7 +230,7 @@ getBlogEditR :: Text -> Handler Html
 getBlogEditR path = do
     Entity _ user     <- requireAuth
     Entity _ val      <- runDB $ getBy404 $ UniqueBlogpost path
-    (widget, encType) <- generateFormPost (blogpostForm user (Just val))
+    (widget, encType) <- generateFormPost (blogpostForm True user (Just val))
     renderEdit val $ do
         [whamlet|<h1>Editing #{path}|]
         renderFormH (submitButton "Publish")
@@ -241,7 +243,7 @@ postBlogEditR :: Text -> Handler Html
 postBlogEditR path = do
     Entity _ user <- requireAuth
     Entity _ val  <- runDB $ getBy404 $ UniqueBlogpost path
-    ((result, widget), encType) <- runFormPost $ blogpostForm user (Just val)
+    ((result, widget), encType) <- runFormPost $ blogpostForm True user (Just val)
     case result of
         FormSuccess post -> if blogpostUrlpath post /= path
             then invalidUrl
@@ -264,8 +266,8 @@ postBlogEditR path = do
         replace key post
 
 -- * Forms
-blogpostForm :: User -> Maybe Blogpost -> Form Blogpost
-blogpostForm poster mp = renderBootstrap $ mkBlogpost
+blogpostForm :: Bool -> User -> Maybe Blogpost -> Form Blogpost
+blogpostForm editing poster mp = renderBootstrap $ mkBlogpost
     <$> lift (liftIO getCurrentTime)
     <*> areq textField     "Title"              (blogpostTitle    <$> mp)
     <*> areq urlpathField  "Unique URL part"    (blogpostUrlpath  <$> mp)
@@ -273,6 +275,7 @@ blogpostForm poster mp = renderBootstrap $ mkBlogpost
     <*> areq boolField     "Public"             (blogpostPublic   <$> mp)
     <*> areq markdownField "Content (Markdown)" (blogpostMarkdown <$> mp)
   where
+    urlpathField   = if' editing id (checkM validUrlpart) $ textField
     mkBlogpost time title url tags public md = Blogpost
         (maybe                  time blogpostTime   mp)
         (maybe (userUsername poster) blogpostPoster mp)
@@ -281,7 +284,6 @@ blogpostForm poster mp = renderBootstrap $ mkBlogpost
         (markdownToHtml $ getPreview md)
         (md == getPreview md)
 
-    urlpathField   = checkM validUrlpart textField
     validUrlpart u = let
         toCheck = T.toLower u
         isLegal = isNothing $ T.find (\x -> not ( C.isAsciiLower x || C.isDigit x || x == '-' || x == '_')) toCheck

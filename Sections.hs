@@ -1,6 +1,7 @@
 {-# LANGUAGE CPP, ExistentialQuantification #-}
 {-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Sections
    ( module Sections.Types
@@ -12,13 +13,18 @@ module Sections
 
 import qualified Data.Map as Map
 import Import
-import Sections.Types
-import Sections.BackendGitAnnex
 import Utils
---import Sections.Music
+
+import Sections.Types
+import Sections.Music
+import Sections.BackendGitAnnex
 --import Sections.Film
 
+instance ToJSON (MElem MPDSec) where
+    toJSON = undefined
+
 instance MyMedia App GitAnnexBackend
+instance MyMedia App MPDSec
 
 -- | Execute an action on a section.
 onSection :: SectionId
@@ -41,7 +47,7 @@ runMediaConf :: SectionId -> MediaConf
              -> Handler b
 runMediaConf section mc f = case mcType mc of
 #define g(mk) (return $ f $ mk section mc)
---      "mpd"   -> g( mkMPDSec  )
+        "mpd"   -> g( mkMPDSec  )
 --      "film"  -> g( mkFilmSec )
         "annex" -> g( mkGABE    )
         x -> invalid $ "Requested section type not supported: " <> x
@@ -49,29 +55,20 @@ runMediaConf section mc f = case mcType mc of
 
 -- * Navigation
 
-renderBrowsable :: SectionId -> Widget
-renderBrowsable current = do
-    elements <- liftHandlerT browsable'
+renderBrowsable :: SectionId -- ^ Currently selected section
+                -> Widget
+renderBrowsable cur = do
+    bs <- liftHandlerT sectionBanners
     [whamlet|$newline never
 <nav .subnavbar>
   <ul>
-    $forall (ident, view, icon) <- elements
-        <li :current == ident:.active>
-          <a href=@{f ident}>
-            <i .icon-white .icon-#{icon}>
-            &nbsp;#{view}
-    |] where f = flip MediaContentR []
-
--- | XXX: convert to renderBrowsable
-browsable' :: Handler [(SectionId, Text, Text)]
-browsable' = liftM (Map.elems . Map.mapWithKey f . extraSections) getExtra
-  where f key mc = (key, mcView mc, mcIcon mc)
+    $forall (s, w) <- bs
+        <li :cur == s:.active>
+          <a href=@{f s}>^{w}
+    |] where
+        f = flip MediaContentR []
 
 -- * Helper functions
-
-invalid :: Text -> HandlerT master IO a
-invalid how = invalidArgs $
-    [how, "If you reached this page through a link on the website, please contact the webmaster."]
 
 getSections :: Handler (Map.Map SectionId MediaConf)
 {-# INLINE getSections #-}
@@ -85,3 +82,11 @@ updateAllMedia = getSections >>= liftM join . sequence . Map.elems . Map.mapWith
             time <- timeNow
             return $ map (uncurry $ RecentlyAdded time s) (xs :: [(FPS, Html)])
 
+sectionBanners :: Handler [(SectionId, Widget)]
+sectionBanners = do
+    banners <- onSections browsableBanner
+    sequence $ Map.elems $ Map.mapWithKey (\k -> liftM (k,)) banners
+
+invalid :: Text -> HandlerT master IO a
+invalid how = invalidArgs $
+    [how, "If you reached this page through a link on the website, please contact the webmaster."]

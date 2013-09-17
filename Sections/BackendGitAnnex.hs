@@ -1,5 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
-module Sections.BackendGitAnnex where
+module Sections.BackendGitAnnex 
+    ( GitAnnexBackend(..)
+    , mkGABE
+    ) where
 
 import Import
 import Utils
@@ -9,17 +12,23 @@ import Data.Conduit.Binary
 import Data.Maybe
 import Data.Conduit.Internal (Pipe(..), ConduitM(..))
 import qualified Data.Conduit.Internal as CI
-import Data.List hiding (insert)
+import Data.List hiding (insert, delete)
 import qualified System.FilePath as FP
 import qualified Data.Conduit.List as CL
 import System.Process
 import qualified Data.ByteString.Char8 as BC
 import Database.Persist.Sql
-import Debug.Trace
 import           Data.Time.Clock (UTCTime)
 
 import Control.Monad.Trans.Maybe
 import Sections.Types
+
+import JSBrowser
+
+import Debug.Trace
+
+map3 :: (x -> a) -> (x -> b) -> (x -> c) -> x -> (a, b, c)
+map3 f g h x = (f x, g x, h x)
 
 data GitAnnexBackend = GitAnnexBackend
     { gaName :: Text
@@ -30,18 +39,150 @@ data GitAnnexBackend = GitAnnexBackend
 mkGABE :: SectionId -> MediaConf -> GitAnnexBackend
 mkGABE section mc = GitAnnexBackend section (mcPath mc) (MediaContentR section)
 
--- * Content browse and find
+instance ToJSON (MElem GitAnnexBackend) where
+    toJSON = undefined
+
+-- * Browse
 
 instance MediaBrowsable App GitAnnexBackend where
-    browsableFetchElems  = undefined
+    data MElem GitAnnexBackend = GAElem (Bool, FilePath, Maybe Text)
+
+    browsableBanner    s = [whamlet|
+<i .icon-white .icon-link>
+    #{gaName s}
+|]
     browsableJSRender    = undefined
-    browsableBanner      = undefined
+
+    browsableFetchElems fps s = do
+        pager <- liftHandlerT pagerSettings
+        fetchElements s fps pager
+
+    browsableRender source fps s = do
+        pager <- liftHandlerT pagerSettings
+        renderElements s pager fps source
+
+renderElements :: GitAnnexBackend -> (Int, Int) -> FPS -> Source Handler (MElem GitAnnexBackend) -> Widget
+renderElements s pager fps source = do
+    elems <- liftHandlerT $ source $$ CL.consume
+    case elems of
+        (GAElem (True, path, desc) : []) -> renderSingle  s path desc
+        xs                               -> renderListing s pager fps xs
+
+renderSingle :: GitAnnexBackend -> FilePath -> Maybe Text -> Widget
+renderSingle s path mdesc = do
+    let section = gaName s
+        fps     = FP.splitPath path
+        hauto   = (MediaServeR ServeAuto          section fps, [])
+        hforce  =  MediaServeR ServeForceDownload section fps
+    simpleNav section fps (gaRoute s)
+    [whamlet|
+<section .ym-gbox .details>
+    <h1>#{path}
+    <div .text-center>
+        <div .btn-group>
+          <a .btn .btn-primary href="@?{hauto}" target="_blank">
+            \<i .icon-white .icon-play></i> Auto-open
+          <a .btn href="@{hforce}">
+            \<i .icon .icon-download-alt></i> Download
+          <a .btn onclick="window.playlist.to_playlist('#{section}', ['#{path}']); return false">
+            To playlist
+    $maybe desc <- mdesc
+        <section>
+            <h1>Mediainfo
+            <pre>#{desc}
+    $nothing
+        <i>Details not available.
+|]
+
+renderListing :: GitAnnexBackend -> (Int, Int) -> FPS -> [MElem GitAnnexBackend] -> Widget
+renderListing s (limit, page) fps xs = do
+    let sl = simpleListingSettings
+                { slSect    = gaName s
+                , slCurrent = fps
+                , slCount   = length xs
+                , slPage    = page
+                , slLimit   = limit
+                , slContent = map buildElem xs
+                }
+        buildElem (GAElem (isfile, path, _)) =
+            ( T.pack path
+            , if' isfile "file" "directory"
+            , FP.splitPath path
+            , "", "")
+    simpleListing sl (gaRoute s)
+                     (flip MediaServeR $ gaName s)
+                     ("Filename", "File size", "Modified")
+
+fetchElements :: GitAnnexBackend -> FPS -> (Int, Int) -> Source Handler (MElem GitAnnexBackend)
+fetchElements s fps (per_page, current_page) = case fps of
+    [] -> fetchRoot
+    xs -> do
+        md <- lift . runDB . getBy $ UniqueDNode (gaName s) path
+        case md of
+            Just dir -> fetchDirectory dir
+            Nothing  -> lift (fetchFile path) >>= yield
+  where
+    section         = gaName s
+    path            = FP.joinPath fps
+    fetchRoot :: Source Handler (MElem GitAnnexBackend)
+    fetchRoot       = runDBSource $ queryForRaw Nothing
+    fetchDirectory  = runDBSource . queryForRaw . Just . entityKey
+
+    fetchFile       = liftM (GAElem . map3 (const True) fNodePath fNodeDetails . entityVal)
+        . runDB . getBy404 . UniqueFNode section
+
+    queryForRaw Nothing = mapOutput toElem $ rawQuery (dirQuery True)
+        [ toPersistValue section,  toPersistValue section
+        , toPersistValue per_page, toPersistValue current_page ]
+
+    queryForRaw parent  = mapOutput toElem $ rawQuery (dirQuery False)
+        [ toPersistValue section,  toPersistValue parent -- dirs
+        , toPersistValue section,  toPersistValue parent -- files
+        , toPersistValue per_page, toPersistValue current_page ]
+
+    dirQuery isNullParent = T.pack $ unlines
+        [ "( SELECT FALSE as ts, path as paths, NULL FROM d_node"
+        , "WHERE area = ? AND parent " <> if' isNullParent "IS NULL" "= ?"
+        , ") UNION"
+        , "( SELECT TRUE as ts, path as paths, details FROM f_node"
+        , "WHERE area = ? AND parent " <> if' isNullParent "IS NULL" "= ?"
+        , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
+
+toElem :: [PersistValue] -> MElem GitAnnexBackend
+toElem [PersistBool isfile, PersistText path, PersistNull]      = GAElem (isfile, T.unpack path, Nothing)
+toElem [PersistBool isfile, PersistText path, PersistText desc] = GAElem (isfile, T.unpack path, Just desc)
+toElem _ = error "Sections.BackendGitAnnex.toElem: invalid value."
+
+-- | Get pager settings.
+pagerSettings :: Handler (Int, Int) -- TODO: move somewhere (browser? sections helpers?)
+pagerSettings = do
+    limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
+    page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
+    return (limit, page)
+
+-- * Search
 
 instance MediaSearchable App GitAnnexBackend where
+    searchableSearchT q s = searchFor s q
 
-getContent :: GitAnnexBackend -> [Text] -> Widget
-getContent ga fps = do
-    undefined
+searchFor :: GitAnnexBackend -> Text -> Source Handler (MElem GitAnnexBackend)
+searchFor s q = do
+    (limit, offset) <- lift pagerSettings
+    runDBSource $ mapOutput toElem $ rawQuery query
+        [ toPersistValue section, toPersistValue $ ".*" <> q <> ".*"
+        , toPersistValue section, toPersistValue $ ".*" <> q <> ".*"
+        , toPersistValue limit, toPersistValue offset
+        ]
+  where
+      section = gaName s
+      query = T.pack $ unlines
+        [ "( SELECT FALSE as ts, path as paths, NULL FROM d_node"
+        , "WHERE area = ? AND path ~* ?"
+        , ") UNION"
+        , "( SELECT TRUE as ts, path as paths, details FROM f_node"
+        , "WHERE area = ? AND path ~* ?"
+        , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
+
 
 -- * Update
 
@@ -52,10 +193,6 @@ instance MediaUpdate App GitAnnexBackend where
         (dbSource (gaName ga)) (gitGetFileList (gaPath ga) "")
         $$ handler [] []
     where
-      delete'          [] = return ()
-      delete'       paths = runDB $ deleteWhere [DNodeArea ==. gaName ga, DNodePath <-. paths]
-      findParent     path = getBy $ UniqueDNode (gaName ga) (FP.takeDirectory path)
-
       handler :: [FilePath] -> [(FPS, Html)] -> Sink UpdateTarget Handler [(FPS, Html)]
       handler todel ra = await >>= maybe (lift (delete' todel) >> return ra) handleElement
         where
@@ -70,8 +207,15 @@ instance MediaUpdate App GitAnnexBackend where
                       parent <- findParent path
                       _      <- insert $ DNode (gaName ga) (entityKey <$> parent) path
                       pathToRecent path
-              lift $ delete' todel
+              lift $ delete' todel -- reached a directory => delete queue (does this work always?)
               handler [] (ra' : ra)
+
+      findParent     path = getBy $ UniqueDNode (gaName ga) (FP.takeDirectory path)
+      delAll (Entity k _) = do deleteWhere [FNodeArea ==. gaName ga, FNodeParent ==. Just k]
+                               delete k
+      delete'          [] = return ()
+      delete'       paths = runDB $ mapM_ delAll
+          =<< selectList [DNodeArea ==. gaName ga, DNodePath <-. paths] [Asc DNodePath]
 
 --pathToRecent :: 
 pathToRecent path = return

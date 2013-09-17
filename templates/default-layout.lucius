@@ -96,6 +96,7 @@ ul.list-clean {
 /*}}}*/
 /* {{{ Tables */
 table {
+   margin-bottom:0.5em;
    td {
       padding:0.4em 0.3em;
       vertical-align:middle;
@@ -113,6 +114,10 @@ h1:hover, h2:hover, h3:hover, h4:hover, h5:hover, h6:hover {
    .icon-pin { opacity:0.5; }
 }
 h1 { font-size: 200%; }
+section section h1 {
+   font-size: 1.5em;
+   line-height:1.5em;
+}
 .text-right {
    text-align:right;
    display:inline-block;
@@ -237,15 +242,10 @@ h1 { font-size: 200%; }
 }
 /* Media: pagination */
 .subnavbar {
-   margin:0.5em 1em;
-   ul {
-      border-bottom: 2px solid;
-      list-style:none;
-   }
-   li {
-      display:inline;
-   }
-   li.active { border-bottom: 4px solid; }
+   margin:0.5em;
+   ul { list-style:none; margin:0;}
+   li { display:inline; }
+   li:first-child { margin:0 }
 }
 .breadcrumb {
    list-style:none;
@@ -263,7 +263,7 @@ h1 { font-size: 200%; }
 /*{{{ Forms & Inputs */
 /* {{{ Layout */
 form {
-   margin:1.3em 0 0 0;
+   margin:0.5em 0.2em;
 }
 form .control-group {
    padding:0.5em;
@@ -314,14 +314,18 @@ input, textarea {
 .input-search { padding:0.5em 1em; }
 /* }}} */
 /* {{{ Buttons */
-input[type="submit"], .btn, button {
+button { /* Reset */
+   background:none;
+   border:none;
+   cursor:pointer;
+}
+input[type="submit"], .btn {
    display:inline-block;
    padding: 0.5em 1em;
    cursor:pointer;
 }
 .btn-small { padding: 0.3em 0.5em; }
 .btn-group {
-   padding: 0.5em 0;
    display:inline-block;
    button, .btn { margin:0.2em; }
 }
@@ -365,7 +369,7 @@ html[xmlns] .clearfix {
 /*}}}*/
 /* {{{ Media :: Browser */
 .browser {
-   margin:0 0.5em 0 0.5em;
+   margin:0.5em 0.5em 0 0.5em;
 
    .entry {
       padding:0 0 0 0.3em;
@@ -382,7 +386,7 @@ html[xmlns] .clearfix {
       float:right;
       padding:0;
       *            { font-size:120%; }
-      *:last-child { font-size:180%; }
+      *:last-child { font-size:160%; }
    }
 
    .misc { margin:0; }
@@ -412,7 +416,6 @@ html[xmlns] .clearfix {
    }
    .entry {
       padding:0 0.5em 0 0.3em;
-      -webkit-transition: all 5s ease-in-out;
    }
    .entry > span {
       display:block;
@@ -420,7 +423,10 @@ html[xmlns] .clearfix {
       text-overflow:ellipsis;
       overflow:hidden;
    }
-   .entry > .controls { float:right; }
+   .entry > .controls {
+      float:right;
+      font-size:140%;
+   }
 }
 .details { margin-top:1em; }
 /* }}} */

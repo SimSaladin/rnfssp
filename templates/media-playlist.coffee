@@ -47,7 +47,7 @@ class Playlist
       @cont.append(
          $('<div class="entry"/>').append(
             $('<div class="controls">').append(
-               $('<a class="icon-minus href=#" />').bind('click', -> that.delete_elem(index-1))
+               $('<button class="icon-minus" />').bind('click', -> that.delete_elem(index-1))
             )
          ).append( $('<span title="'+value[1]+'"/>').text(value[1].split("/").pop())
          ).append( $('<span class="misc" />').text(value[0])

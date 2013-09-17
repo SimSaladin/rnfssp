@@ -1,11 +1,11 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Sep 16 2013 [02:57:01]
+-- Last Modified: Sep 17 2013 [05:08:36]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
-module Sections.Music (MPDSec, mkMPDSec) where
+module Sections.Music (MPDSec(..), mkMPDSec) where
 
 import           Import
 import qualified Network.MPD as M
@@ -30,27 +30,44 @@ mkMPDSec :: SectionId -> MediaConf -> MPDSec
 mkMPDSec section mc = MPDSec section (mcPath mc) (MediaContentR section)
 
 instance MediaBrowsable App MPDSec where
---  sFind _         = M.songPaths
---  sWContent       = musicContent
---  sWSearch        = searchMPD
+    data MElem MPDSec = MESong M.Song
+                      | MEPath M.Path
 
-    data MElem MPDSec = MPDElem M.Song
+    browsableFetchPlainR fps                    s = CL.sourceList
+        =<< (lift $ M.songPaths fps)
 
-    browsableFetchPlain fps MPDSec{sRoot = root} = return $ FP.joinPath $ root : fps
+    browsableFetchPlain  fps MPDSec{sRoot = root} =
+        return $ FP.joinPath $ root : fps
+
+    browsableBanner s = [whamlet|
+<i .icon-white .icon-music>#{sName s}
+|]
+
+    browsableFetchElems fps s = musicFetch s fps
+
+    browsableRender source fps s = musicRender s fps source
 
 instance MediaSearchable App MPDSec where
-    searchableSearchT q msec =
-        CL.sourceList =<< (liftM (map MPDElem) $ lift $ mpdSearch msec q)
+
+    searchableSearchT q msec = CL.sourceList
+        =<< (liftM (map MESong) $ lift $ mpdSearch msec q)
 
 instance MediaUpdate App MPDSec where
     updateMedia _  = return [] -- TODO: mpd update?
 
-musicContent :: MPDSec -> FPS -> Widget
-musicContent sec@MPDSec{sRoute = route} fps = do
-    contents <- liftHandlerT $ M.pathContents fps
+musicFetch :: MPDSec -> FPS -> Source Handler (MElem MPDSec)
+musicFetch _ fps = lift (liftHandlerT (M.pathContents fps))
+    >>= mapOutputMaybe go . CL.sourceList 
+        where
+            --go :: M.LsResult -> ConduitM () (MElem MPDSec) Handler ()
+            go (M.LsSong song) = Just (MESong song)
+            go              _  = Nothing
+
+musicRender :: MPDSec -> FPS -> Source Handler (MElem MPDSec) -> Widget
+musicRender sec@MPDSec{sRoute = route} fps source = do
+    contents <- liftHandlerT $ source $$ CL.consume
     case contents of
-        [M.LsSong song] -> songSingle sec fps song
-        [M.LsPlaylist (M.PlaylistName _)] -> undefined
+        [MESong song] -> songSingle sec fps song
         _ -> let sl = SimpleListingSettings
                      { slSect       = sName sec
                      , slCurrent    = fps
@@ -61,10 +78,10 @@ musicContent sec@MPDSec{sRoute = route} fps = do
                      }
             in simpleListing sl route (flip MediaServeR $ sName sec) ("Filename", "TODO", "TODO")
   where
-    buildElem res = case res of
-      M.LsDirectory (M.Path bs)                   -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", map T.unpack $ T.splitOn "/" p, "", "")
-      M.LsSong (M.Song{M.sgFilePath = M.Path bs}) -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", map T.unpack $ T.splitOn "/" p, "", "")
-      M.LsPlaylist (M.PlaylistName bs)            -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", map T.unpack $ T.splitOn "/" p, "", "")
+    --buildElem res = case res of
+    buildElem (MEPath (M.Path bs))                        = let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "directory", map T.unpack $ T.splitOn "/" p, "", "")
+    buildElem (MESong (M.Song{M.sgFilePath = M.Path bs})) = let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", map T.unpack $ T.splitOn "/" p, "", "")
+--      M.LsPlaylist (M.PlaylistName bs)            -> let p = decodeUtf8 bs in (last $ T.splitOn "/" p, "file", map T.unpack $ T.splitOn "/" p, "", "")
 
 
 mpdSearch :: MPDSec -> Text -> Handler [M.Song]
@@ -97,9 +114,18 @@ songSingle MPDSec{sName = name, sRoute = route} fps M.Song
   let path = decodeUtf8 bs
   simpleNav name fps route
   [whamlet|
-<div .container-fluid style="padding:0">
-  <div .row-fluid>
-    <div .span7 .page-element>
+<section .ym-gbox>
+ <div .site-block>
+    <h1>#{path}
+    <div .text-center>
+      <a .btn .btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
+        \<i.icon-white.icon-play></i> Auto-open
+      <a .btn href="@{MediaServeR ServeForceDownload name fps}">
+        \<i .icon .icon-download-alt></i> Download
+      <a .btn onclick="window.playlist.to_playlist('#{name}', ['#{FP.joinPath fps}']); return false">
+        Add to playlist
+ <section>
+      <h1>Details
       <table>
         <tr>
           <th>Filename
@@ -107,13 +133,4 @@ songSingle MPDSec{sName = name, sRoute = route} fps M.Song
         <tr>
           <th>Length
           <td>#{seconds} seconds
-    <div.span5 .page-element>
-      <a.btn.btn-primary href="@{MediaServeR ServeAuto name fps}" target="_blank">
-        <i.icon-white.icon-play> #
-        Auto-open
-      <a.btn href="@{MediaServeR ServeForceDownload name fps}">
-        <i.icon.icon-download-alt> #
-        Download
-      <a.btn onclick="window.playlist.to_playlist('#{name}', '#{FP.joinPath fps}'); return false">
-        Add to playlist
 |]

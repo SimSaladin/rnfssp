@@ -1,10 +1,11 @@
 $forall Entity key val <- parents
-   <div .blog-comment>
+   <section .site-block .blog-comment >
       <div .avatar .icon-comment>&nbsp;
       <div .content>
          <div .info-block>
             #{blogcommentAuthor val}
-            <span .balloon .date>
+            <i .balloon> #
+            <span .date>
                #{formatTime defaultTimeLocale "%H:%M %d-%m-%Y" $ blogcommentTime val}
          <p>#{blogcommentContent val}
          <footer>

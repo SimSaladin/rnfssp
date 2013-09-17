@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Sep 14 2013 [23:12:19]
+-- Last Modified: Sep 17 2013 [04:10:21]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -120,6 +120,9 @@ chatWidget toMaster = do
 |] >> toWidget [lucius|
  ##{chat}-output { width: 100%; max-height: 300px; overflow: auto; }
  ##{chat}-input { width: 100%; padding-left:0; padding-right:0; }
+ ##{chat}-output p {
+    margin:0;
+}
 |] >> toWidgetBody [julius|
 // Set up the receiving end
 var output = document.getElementById("#{rawJS chat}-output");

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Sep 16 2013 [02:27:54]
+-- Last Modified: Sep 16 2013 [22:50:48]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -15,6 +15,7 @@ import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
 import           Control.Arrow (second)
+import qualified Data.Text as T
 import           Text.Julius (rawJS)
 import           Text.Coffee
 import qualified System.FilePath as F (joinPath)
@@ -41,9 +42,9 @@ browser :: WidgetT master IO () -- ^ Initial content of the browser.
 browser content extra = do
     browserId <- liftHandlerT newIdent
     [whamlet|$newline never
-<section##{browserId} .site-block-h>
+<section .site-block-h>
     <h1>Browse
-    ^{content}
+    <div ##{browserId}>^{content}
 |]
     toWidget [coffee|
 $ ->
@@ -97,11 +98,11 @@ $ ->
 |]
 
 data SimpleListingSettings = SimpleListingSettings
-    { slSect    :: Text     -- ^ Section
-    , slCurrent :: FPS      -- ^ Url parts
-    , slCount   :: Int      -- ^ Total number of elements to scroll
-    , slPage    :: Int      -- ^ Nth page
-    , slLimit   :: Int      -- ^ Elements per page
+    { slSect    :: SectionId    -- ^ Section
+    , slCurrent :: FPS          -- ^ Url parts
+    , slCount   :: Int          -- ^ Total number of elements to scroll
+    , slPage    :: Int          -- ^ Nth page
+    , slLimit   :: Int          -- ^ Elements per page
     , slContent :: [(Text, Text, FPS, Text, Text)] -- ^ (filename, filetype, fps, size, modified)
     }
 
@@ -123,17 +124,23 @@ simpleListing :: SimpleListingSettings
               -> WidgetT master IO ()
 simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
     let options = [25, 50, 100, 200] :: [Int]
-    -- Pages
+        parameters = if' (slLimit sl == 0) [] [ ("limit_to", T.pack $ show $ slLimit sl) ]
+
+    --  Pager
     [whamlet|$newline never
-<div .text-center>
+<nav .text-center>
   Per page: #
   <span .btn-toolbar>
     $forall n <- options
       $if slLimit sl == n
         <a .btn .btn-small .disabled>#{n}
       $else
-        <a .btn .btn-small .browser-link href="?limit_to=#{n}&page=#{slPage sl}">#{n} #
-  <a .btn onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{slSect sl}'); return false" title="Adds all files in this folder.">Add files
+        <a .btn .btn-small .browser-link href="?limit_to=#{n}&page=#{slPage sl}">
+            #{n} #
+  <a .btn
+    onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{slSect sl}'); return false"
+    title="Adds all files in this folder.">
+      Add all files
 ^{simpleNav (slSect sl) (slCurrent sl) routeToContent}
 ^{pageNav}
 <div .browser>
@@ -144,8 +151,8 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
           $if (/=) filetype directory
             <a .icon-download href=@{toFile ServeForceDownload fps} onclick="">
             <a .icon-play     href=@{toFile ServeAuto fps}          onclick="" target="_blank">
-          <a .icon-plus .action href="" onclick="playlist.to_playlist('#{slSect sl}', [$(this).closest('.entry').children()[0].innerText]); return false">
-        <a .browser-link .#{filetype} href=@?{(routeToContent fps, [("asd", "ui")])}>
+          <button .icon-plus .action onclick="playlist.to_playlist('#{slSect sl}', [$(this).closest('.entry').children()[0].innerText]); return false">
+        <a .browser-link .#{filetype} href=@?{(routeToContent fps, parameters)}>
             <span .filename>#{filename}
             <span .misc>
                 <span><i>#{msgModified}:</i> #{modified}

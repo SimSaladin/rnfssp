@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: Jul 05 2013 [22:08:58]
+-- Last Modified: Sep 17 2013 [05:14:44]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
@@ -114,7 +114,7 @@ buy = do
       $forall Entity k x <- ys
         <tr>
           <td>
-            <form action=@{MarketDeleteBuyR k} method=post>
+            <form .bare action=@{MarketDeleteBuyR k} method=post>
               <input type="submit" value="X">
           <td>#{buyItemWhat x} #
             $if (/=) (buyItemCount x) 1
@@ -152,7 +152,7 @@ sale = do
     $forall Entity k x <- xs
       <tr>
         <td>
-          <form action=@{MarketDeleteSaleR k} method=post>
+          <form .bare action=@{MarketDeleteSaleR k} method=post>
             <input type="submit" value="X">
         <td>#{saleItemName x} #
             $if (/=) (saleItemCount x) 1

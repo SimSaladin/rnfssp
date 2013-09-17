@@ -19,6 +19,8 @@ import           Text.Hamlet            (hamletFile)
 import           Text.Lucius
 import           Text.Jasmine           (minifym)
 import           WaiAppStatic.Types     (StaticSettings(..), File(..), fromPiece)
+import           Data.Time.Format (formatTime)
+import           System.Locale (defaultTimeLocale)
 
 import           Yesod hiding (fileName)
 import           Yesod.Static
@@ -78,7 +80,7 @@ instance Yesod App where
     approot = ApprootMaster $ appRoot . settings
 
     makeSessionBackend _ = fmap Just $ defaultClientSessionBackend
-        (120 * 60) -- 120 minutes
+        (24 * 60 * 60)
         "config/client_session_key.aes"
 
     defaultLayout widget = do
@@ -131,6 +133,15 @@ instance Yesod App where
         development || level == LevelWarn || level == LevelError
 
     makeLogger = return . appLogger
+
+-- XXX: TODO
+--    errorHandler _ = defaultLayout $ do
+--        setTitle "Error"
+--        navigation ""
+--        [whamlet|
+-- <main>
+--            |]
+
 
 -- How to run database actions.
 instance YesodPersist App where
@@ -206,8 +217,8 @@ instance YesodChat App where
     chatGet = liftM (map $ CMsg . entityVal) $ runDB $ selectList [] []
 
     chatRenderMsg (CMsg (Chatmsg time poster msg)) =
-        fromString ("<p><span class=date>" <> show time <> "</span>")
-            <> fromText ("<span class=poster>" <> poster <> "</span>")
+        fromString ("<p><span class=date>" <> formatTime defaultTimeLocale "%H:%M" time <> "</span> ")
+            <> fromText ("<span class=poster> " <> poster <> "</span> ")
             <> fromText msg
 
 -- ** Mpd

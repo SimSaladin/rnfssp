@@ -2,8 +2,8 @@ $newline never
 <div ##{mainI} .media-playlist .site-block .site-block-h>
    <h1 ##{headI}>
    <div ##{actionsI} .btn-group>
-      <a .btn onclick="playlist.clear_playlist(); return false">Clear
-      <a .btn onclick="alert('TODO: not yet implemented'); return false">Rename
+      <a .btn href="javascript:playlist.clear_playlist(); return false">Clear
+      <a .btn href="javascripT:alert('TODO: not yet implemented'); return false">Rename
       <a .btn href="@{PlaylistR "play"}" target="_blank">Play
       <a .btn href=@{PlaylistR "download"} download type="audio/x-mpegurl">Download
    <div ##{contI} .playlist-items>

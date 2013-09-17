@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections/Types.hs
 -- Creation Date: Apr 15 2013 [22:38:30]
--- Last Modified: Sep 16 2013 [02:41:07]
+-- Last Modified: Sep 17 2013 [05:08:04]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -41,7 +41,8 @@ instance FromJSON MediaConf where
 -- | Wrapper class to ease type signatures
 class ( MediaBrowsable  app source
       , MediaUpdate     app source
-      , MediaSearchable app source)
+      , MediaSearchable app source
+      , ToJSON (MElem source))
       => MyMedia app source where
 
 -- * Backends
@@ -56,11 +57,9 @@ class MediaBrowsable app source where
                          -> source
                          -> Source (HandlerT app IO) (MElem source)
 
-    browsableFetchWidget :: FPS
-                         -> source
-                         -> WidgetT app IO ()
-
     browsableRender :: Source (HandlerT app IO) (MElem source)
+                    -> FPS
+                    -> source
                     -> WidgetT app IO ()
 
     browsableFetchPlain :: FPS -> source -> HandlerT app IO FilePath
@@ -72,14 +71,15 @@ class MediaBrowsable app source where
 
     -- | Provide a banner widget to the media.
     -- XXX: Add default implemantion
-    browsableBanner :: source
-                    -> WidgetT app IO ()
+    browsableBanner :: source -> WidgetT app IO ()
 
     -- | Define the JS function used to render the content client side.
     -- TODO: details?
-    browsableJSRender :: Text
-                      -> source
-                      -> WidgetT app IO ()
+    browsableJSRender :: Text -> source -> WidgetT app IO ()
+
+browsableFetchWidget :: (ToJSON (MElem source), MediaBrowsable app source)
+                     => FPS -> source -> WidgetT app IO ()
+browsableFetchWidget fps source = browsableRender (browsableFetchElems fps source) fps source
 
 class MediaUpdate app source where
     updateMedia :: source -> HandlerT app IO [(FPS, Html)]

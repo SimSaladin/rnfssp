@@ -2,26 +2,26 @@
 
 /* {{{ Colors */
 @base:    rgb(113, 68, 130);  /* Base color */
-@shadow:  rgba(0,0,0,.2);     /* Base shadow */
-@shadow_more: rgba(0,0,0,.3); 
+@block:   #3B2B47;            /* BG of blocks, contrast to base */
+@shadow:  rgba(0,0,0,.2);     /* Shadows */
+@shadow_more: rgba(0,0,0,.3);
 @shadow_less: rgba(0,0,0,.05);
 
-@block: #3B2B47; /* Bg of blocks contrasting with base */
-
-@hl: #992A3D;
+@hl:        #992A3D;              /* Highlight: buttons etc. */
+@hl_opacity:rgba(153, 42, 61, 0.15);
+@hl_alt:    rgb(219, 87, 87);
 @hl_shadow: rgb(153, 42, 61, 0.6);
-@hl_alt: rgb(219, 87, 87);
-@hl_text: rgb(245, 167, 167);
+@hl2: rgb(82, 131, 150);           /* Alternative highlight */
 
-@hl2: rgb(82, 131, 150);
+/* Text */
+@text:      rgb(211, 211, 211);
+@hl_text:   rgb(245, 167, 167);
 
 /* ............... */
 
 @main:               #303030;
 @main_alt:           rgb(56, 56, 56);
 @main_alt_lighter:   rgb(64, 64, 64);
-
-@text:               rgb(211, 211, 211);
 
 /* Color 2 (contrast) */
 @dark:                #222;
@@ -41,11 +41,10 @@
 @light_shadow:    rgb(100, 100, 100);
 @highlight_error: rgb(78, 42, 42);
 
-@button_1: rgb(88,59,125);
-@button_2: rgb(81,48,99);
-
 @gradient_background: linear-gradient(to right, transparent 50%, rgba(0,0,0,.1) 50%);
 @block_box_shadow: -4px 5px 3px rgba(0,0,0,.5), inset 1px -1px 3px 3px rgba(0,0,0,0.1);
+@block_box_shadow_less: -4px 5px 3px rgba(0,0,0,.3), inset 1px -1px 3px 3px rgba(0,0,0,0.1);
+@button_box_shadow:  -1px 1px 2px 2px rgba(0,0,0,.2);
 /*}}}*/
 /* {{{ Elements */
 body {
@@ -60,7 +59,6 @@ body {
    background-size: 40px 50px;
 }
 section, .site-block {
-
    background-color: #{shadow_more};
    background-image:
      -moz-linear-gradient(45deg,  #{shadow_less} 25%, transparent 25%), 
@@ -81,6 +79,12 @@ section, .site-block {
 
    box-shadow: #{block_box_shadow};
 }
+section section,
+section .site-block,
+.site-block section {
+   background-image: none;
+   background-color: #{shadow_less};
+}
 .site-block-h {
    margin-top: 2em !important;
    border-bottom-right-radius: 15px;
@@ -92,6 +96,9 @@ section, .site-block {
    float:right;
    font-size:1.4em;
    padding:5px;
+}
+.site-block-h > *:nth-child(2) {
+   margin-top:1em;
 }
 section section {
    background-color: transparent;
@@ -129,22 +136,23 @@ hr {
   background:#{light};
 }
 #message {
-   margin:1em;
+   margin:1em 1em 0;
    padding:0.5em 1em;
-   background:#{light};
+   box-shadow:#{block_box_shadow};
+   background:#{shadow};
    color:#{light_text};
 } 
 /* {{{ Tables */
 table {
-   background:#{dark_half};
-   box-shadow:1px 1px 0px 3px #{dark};
+   background:#{shadow_less};
+   box-shadow:#{block_box_shadow};
    > thead th {
-      background:#{dark_half};
+      background:#{shadow};
       border-top:solid 1px #{dark};
    }
 
    > tbody th {
-      background:#{dark_half};
+      background:#{shadow};
       border:none;
       border-left:  1px solid #{dark};
       border-right: 1px solid #{main_alt};
@@ -170,45 +178,53 @@ a {
 } 
 a:hover {
    background:transparent; /* ???? */
-   color:#{light_text}; 
+   color:#{hl_text}; 
 }
-::selection { background:#{light_text_dd} }
+::selection { background:#{hl} }
 
 .market-description { color:#{light_shadow} }
 /*}}}*/
 /* {{{ Forms & inputs */
 /* {{{ Layout */
 form {
-   background:#{dark_half};
-   box-shadow:-1px 0px 0px 3px #{dark};
+   background:#{shadow};
+   box-shadow:#{block_box_shadow};
 }
 form.bare {
    background:none;
    box-shadow:none;
 }
 .form-actions {
-   background:#{dark_half};
+   background:#{hl_opacity};
    border-top: 1px solid #{main_alt};
 
 }
 /* }}} */
 /* {{{ State: normal */
 /* Buttons */
-button, .btn, input[type="submit"] {
+.btn, input[type="submit"] {
    background: #{hl};
    color:      #{hl_text};
    border:     1px solid #{hl_alt};
+   box-shadow:#{button_box_shadow};
+}
+[class*="icon-"] {
+   color: #{hl};
+   text-shadow:-3px 4px 3px rgba(0,0,0,.3);
+}
+[class*="icon-"]:hover {
+   color:#{hl_alt};
 }
 .btn-hl { background: #{main_alt}; }
 .btn-toolbar {
-   box-shadow:-1px -1px 0 1px #{dark};
-   border-left: 1px solid #{main_alt_lighter};
+   box-shadow:#{button_box_shadow};
+   border-left: 1px solid #{hl_alt};
    .btn, button {
       border:none;
       box-shadow:none;
-      border-right: 1px solid #{main_alt_lighter};
-      border-top:    1px solid #{main_alt_lighter};
-      border-bottom: 1px solid #{main_alt_lighter};
+      border-right: 1px solid #{hl_alt};
+      border-top:    1px solid #{hl_alt};
+      border-bottom: 1px solid #{hl_alt};
    }
 }
 /* Text input */
@@ -216,11 +232,12 @@ input[type="text"],
 input[type="search"],
 input[type="email"],
 input[type="number"],
+input[type="url"],
 textarea {
    background: #{hl};
    color:      #{hl_text};
    border:     1px solid #{hl_alt};
-   box-shadow: inset 1px 1px 10px 0px #{main}, -1px -1px 0 1px #{dark};
+   box-shadow: inset 1px 1px 10px 0px #{main}, #{button_box_shadow};
 }
 .required input, .required textarea {
       border-color:#{highlight_error};
@@ -234,12 +251,12 @@ input[type="radio"] + label {
    box-shadow: inset 1px 1px 10px 0px #{main_alt};
 }
 .input-search + button {
-   box-shadow: 0 -2px 0 0px #{dark};
+   box-shadow: 1px 1px 2px 1px #{shadow}; /* altered button_box_shadow (next to input field) */
    border-left:none;
 }
 /* }}} */
 /* {{{ State: hover */
-button:hover, .btn:hover, input[type="submit"]:hover,
+.btn:hover, input[type="submit"]:hover,
 input[type="checkbox"] + label:hover,
 input[type="radio"] + label:hover {
    background:#{hl_alt};
@@ -261,7 +278,7 @@ input[type="radio"]:checked + label {
 }
 /* }}} */
 /*{{{ State: disabled */
-button:disabled, .btn.disabled, input[type="submit"]:disabled {
+.btn:disabled, .btn.disabled, input[type="submit"]:disabled {
    background: #{main_alt};
    color:      #{dark_text};
    cursor:     default;
@@ -282,30 +299,41 @@ textarea:focus {
    box-shadow: 0 5px 10px 0px #{dark};
 }
 #container > header {
+   margin:0 7px;
+   border-bottom-left-radius:20px;
+   border-bottom-right-radius:20px;
+
    ul li a:focus, ul li a:hover, ul li a:active  {
       color: #ccc;
       background:#666;
       background: rgba(255,255,255,.25);
    }
 }
-.subnavbar { ul { border-color: #FFF; } }
+.subnavbar {
+   font-size:1.5em;
+   li.active i { color:#{hl_alt}; }
+}
 /*}}}*/
 /*{{{ Blog */
 .blog-post-wrapper {
    color:      #{text};
-   background: #{main_alt};
-   box-shadow:         0 3px 2px 3px #{main_alt};
-   -webkit-box-shadow: 0 3px 2px 3px #{main_alt};
 }
 .date-wrapper { 
    background: #{light};
    color:      #{light_text_o};
 }
 .date-wrapper:after {
-  border-color: #{light} transparent transparent transparent;
+   border-color: #{light} transparent transparent transparent;
 }
 .comments {
    margin-bottom:1em;
+}
+/* XXX: move */
+.date {
+   color:#{dark_text};
+}
+.poster {
+   color:#{hl_text};
 }
 .blog-comment {
    border-top:1px solid #{main};
@@ -316,7 +344,10 @@ textarea:focus {
       min-width:2em;
       float:left;
    }
-   .date { color:#{dark_text} }
+   .date {
+      color:#{dark_text};
+      letter-spacing:0.13em;
+   }
    .content {
       margin-left:2em;
    }
@@ -327,33 +358,28 @@ textarea:focus {
 /*}}}*/
 /*{{{ Media */
 .browser {
-   box-shadow: 0 0 5px 2px rgba(0,0,0,0.2);
-   a.file                  { color:#{text}; }
-   a.file:hover            { color:#{light}; }
-   .misc span              { color:#{dark}; }
-   .entry:nth-child(even)  { background:#333333 }
-   .entry:nth-child(odd)   { background:#444444 }
+   a.file       { color:#{text}; }
+   a.file:hover { color:#{light}; }
+   .misc span   { color:#{hl_alt}; }
 }
-.browser:empty       { box-shadow:none }
-.browser:empty:after { content:"No items."; font-style:italic}
-.browser-pagenav .btn-toolbar {
-   background:#{main_alt};
-   border-bottom:1px solid #444444;
-   box-shadow: -2px -2px  0 0px #{dark};
+.browser:empty:after {
+   content:"No items.";
+   font-style:italic
 }
-.browser + .browser-pagenav .btn-toolbar {
-   border:none
-   border-top:1px solid #444444;
-   box-shadow: 2px 2px 0 0px #{dark};
+.browser .entry, .media-playlist .entry {
+   box-shadow: #{block_box_shadow_less};
+   margin-top: 5px;
+   -webkit-transition: background 0.1s ease-in-out;
 }
-
+.browser .entry:hover, .media-playlist .entry:hover {
+   background-color:rgba(255,255,255,.2);
+}
 .media-playlist {
-   .playlist-items         { box-shadow: 0 0 5px 2px rgba(0,0,0,0.2); }
-   .playlist-items:empty   { box-shadow:none;}
-   .playlist-items:empty:after   { content:"No items."; font-style:italic}
-   .misc                   { color:#{dark}; }
-   .entry:nth-child(even)  { background:#333333 }
-   .entry:nth-child(odd)   { background:#444444 }
+   .playlist-items:empty:after {
+      content:"Playlist is empty.";
+      font-style:italic;
+   }
+   .misc { color:#{dark}; }
 }
 /*}}}*/
 /*{{{ Misc. */

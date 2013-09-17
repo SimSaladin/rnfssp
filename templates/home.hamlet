@@ -3,6 +3,9 @@
    <div .ym-g62 .ym-gl>
       <section .site-block-h>
          ^{newestPost}
+      <section .site-block-h>
+         <h1>Hot
+         ^{mediaRecentDl 15}
    <div .ym-g38 .ym-gr>
       <section .site-block-h>
          ^{chatWidget ChatR}
@@ -10,9 +13,8 @@
          <h1>Newest
          ^{mediaRecent 15}
          <a .text-right href=@{MediaHomeR}>To media
-      <section .site-block-h>
-         <h1>Hot
-         ^{mediaRecentDl 15}
+      \<!--
       <section .site-block-h>
          <h1>????
          ^{statusCheck}
+      \-->
