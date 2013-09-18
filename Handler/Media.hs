@@ -196,7 +196,7 @@ mediaUpdateR = do
 
 mediaRecent :: Int -> Widget
 mediaRecent n = do
-    recent <- liftHandlerT $ runDB $ do
+    recent <- liftHandlerT $ runDB $
         selectList [] [Desc RecentlyAddedDate, LimitTo n]
     [whamlet|
 <ul>
@@ -218,7 +218,7 @@ mediaRecentDl n = do
             <a href=@{MediaContentR (logDownloadSection dl) (logDownloadFps dl)}>
                 #{last $ logDownloadFps dl}
             <small>
-                <i>Played #{printfTime "%h:%M %d.%m" $ logDownloadTime dl}
+                <i>Played #{printfTime "%d.%m %H:%M" $ logDownloadTime dl}
 |]
 
 adminForm :: Form (Bool, Bool)
