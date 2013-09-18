@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Sep 16 2013 [22:50:48]
+-- Last Modified: Sep 18 2013 [05:32:54]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
         where
     directory   = "directory"
     pages       = [1 .. (ceiling $ (fromIntegral (slCount sl) :: Double) / fromIntegral (slLimit sl) :: Int)]
-    pageNav     = flip (if' $ length pages > 1) mempty [whamlet|$newline never
+    pageNav     = if' (length pages == 1) mempty [whamlet|$newline never
 <div .text-center .browser-pagenav>
   <span .btn-toolbar>
     $if slPage sl > 0

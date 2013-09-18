@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Sep 17 2013 [05:08:36]
+-- Last Modified: Sep 18 2013 [05:36:11]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -60,8 +60,9 @@ musicFetch _ fps = lift (liftHandlerT (M.pathContents fps))
     >>= mapOutputMaybe go . CL.sourceList 
         where
             --go :: M.LsResult -> ConduitM () (MElem MPDSec) Handler ()
-            go (M.LsSong song) = Just (MESong song)
-            go              _  = Nothing
+            go (M.LsSong      song) = Just (MESong song)
+            go (M.LsDirectory path) = Just (MEPath path)
+            go                   _  = Nothing
 
 musicRender :: MPDSec -> FPS -> Source Handler (MElem MPDSec) -> Widget
 musicRender sec@MPDSec{sRoute = route} fps source = do

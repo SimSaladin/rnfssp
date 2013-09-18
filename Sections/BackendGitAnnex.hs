@@ -7,6 +7,7 @@ module Sections.BackendGitAnnex
 import Import
 import Utils
 import qualified Data.Text as T
+import Data.Text.Encoding (decodeUtf8)
 import Data.Conduit
 import Data.Conduit.Binary
 import Data.Maybe
@@ -133,12 +134,12 @@ fetchElements s fps (per_page, current_page) = case fps of
 
     queryForRaw Nothing = mapOutput toElem $ rawQuery (dirQuery True)
         [ toPersistValue section,  toPersistValue section
-        , toPersistValue per_page, toPersistValue current_page ]
+        , toPersistValue per_page, toPersistValue $ per_page * current_page ]
 
     queryForRaw parent  = mapOutput toElem $ rawQuery (dirQuery False)
         [ toPersistValue section,  toPersistValue parent -- dirs
         , toPersistValue section,  toPersistValue parent -- files
-        , toPersistValue per_page, toPersistValue current_page ]
+        , toPersistValue per_page, toPersistValue $ per_page * current_page ]
 
     dirQuery isNullParent = T.pack $ unlines
         [ "( SELECT FALSE as ts, path as paths, NULL FROM d_node"
@@ -199,19 +200,30 @@ instance MediaUpdate App GitAnnexBackend where
             handleElement (Left fp) = handler (todel ++ [fp]) ra
             handleElement (Right e) = do
               ra' <- lift $ runDB $ case e of
+
                   FFile path -> do
                       parent <- findParent path
-                      _      <- insert $ FNode (gaName ga) (entityKey <$> parent) path Nothing
+                      -- FIXME this check shouldn't be necessary!
+                      exists <- getBy $ UniqueFNode (gaName ga) path
+                      case exists of
+                          Nothing -> void $ insert $ FNode (gaName ga) (entityKey <$> parent) path Nothing
+                          Just _  -> return ()
                       pathToRecent path
+
                   FDir path -> do
                       parent <- findParent path
-                      _      <- insert $ DNode (gaName ga) (entityKey <$> parent) path
+                      exists <- getBy $ UniqueDNode (gaName ga) path
+                      case exists of
+                          Nothing -> void $ insert $ DNode (gaName ga) (entityKey <$> parent) path
+                          Just _  -> return ()
                       pathToRecent path
+
               lift $ delete' todel -- reached a directory => delete queue (does this work always?)
               handler [] (ra' : ra)
 
       findParent     path = getBy $ UniqueDNode (gaName ga) (FP.takeDirectory path)
       delAll (Entity k _) = do deleteWhere [FNodeArea ==. gaName ga, FNodeParent ==. Just k]
+                               deleteWhere [DNodeArea ==. gaName ga, DNodeParent ==. Just k]
                                delete k
       delete'          [] = return ()
       delete'       paths = runDB $ mapM_ delAll
@@ -300,15 +312,23 @@ explodeSortPaths = explode' [] where
             handleParts pos (x:xs) (y:ys)
                 | x == y    = handleParts (pos ++ [x])     xs ys
                 | otherwise = handleParts  pos         (x:xs) []
+            handleParts pos _ _ = return () -- FIXME: ?????
 
 gitSource :: MonadIO m
           => Maybe FilePath -- ^ Path to repository
           -> [String] -> Source m FilePath
 gitSource repo params =
-    (git >>= sourceHandle) $= CL.mapFoldable (map BC.unpack . BC.lines)
+    (git >>= sourceHandle) $= CL.concatMapAccum getOutLines BC.empty
   where
       git = liftIO $ liftM (\(_,h,_,_) -> h) $
           runInteractiveProcess "git" params repo Nothing
+
+getOutLines :: BC.ByteString -- ^ New input
+            -> BC.ByteString -- ^ Buffer. Guaranteed to not have newlines
+            -> (BC.ByteString, [FilePath])
+getOutLines bs buffer = let
+    (x:xs) = BC.split '\n' bs
+    in (last xs, map (T.unpack . decodeUtf8) $ (buffer <> x) : init xs)
 
 composeSubPaths :: [FilePath] -> [FilePath] -> [FWrap]
 composeSubPaths xs ys = let
