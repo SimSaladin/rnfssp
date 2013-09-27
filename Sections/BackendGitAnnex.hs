@@ -62,6 +62,11 @@ instance MediaBrowsable App GitAnnexBackend where
         pager <- liftHandlerT pagerSettings
         renderElements s pager fps source
 
+    browsableFetchPlain fps s = do
+        (GAElem (_,fp,_):_) <- fetchElements s fps (1,1) $$ CL.consume
+        return $ gaPath s FP.</> fp
+
+
 renderElements :: GitAnnexBackend -> (Int, Int) -> FPS -> Source Handler (MElem GitAnnexBackend) -> Widget
 renderElements s pager fps source = do
     elems <- liftHandlerT $ source $$ CL.consume
