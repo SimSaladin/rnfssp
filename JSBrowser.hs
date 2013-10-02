@@ -1,12 +1,14 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Sep 18 2013 [05:32:54]
+-- Last Modified: Oct 03 2013 [02:25:40]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
 -- | Javascript browser, which utilises the onpopstate functionality of modern
 -- browsers.
+--
+--  How to use: *To be written*
 module JSBrowser where
 
 import           Prelude
@@ -14,15 +16,19 @@ import           Foundation
 import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
+import           Control.Applicative
 import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
 import           Text.Coffee
 import qualified System.FilePath as F (joinPath)
+
 import           Utils
 import Sections.Types
 
--- | Assumptions this widget makes:
+-- | The core widget in which the browser lives.
+--
+--  Assumptions:
 --
 --  1. The current url must provide content to be shown inside the browser when
 --  the GET parameter "bare" is set. The content can be either HTML (directly
@@ -36,25 +42,37 @@ import Sections.Types
 --  injects it to the browser.
 --
 --  NOTE: Only one browser instance may be safely based on a single page.
-browser :: WidgetT master IO () -- ^ Initial content of the browser.
-        -> [Text]               -- ^ Optional doms that can bind browser content. (DomId, )
+browser :: WidgetT master IO ()
+        -> [Text] -- ^ Optional doms that can bind browser content. (DomId, )
         -> WidgetT master IO ()
-browser content extra = do
-    browserId <- liftHandlerT newIdent
-    [whamlet|$newline never
+browser c extra = do
+    bId <- liftHandlerT newIdent
+    browserFrames bId c
+    browserScript bId extra
+
+-- | Markup
+browserFrames :: Text -- ^ Browser ID
+              -> WidgetT master IO () -- ^ Initial content
+              -> WidgetT master IO ()
+browserFrames browserId c = [whamlet|$newline never
 <section .site-block-h>
     <h1>Browse
-    <div ##{browserId}>^{content}
+    <div ##{browserId}>
+        ^{c}
 |]
-    toWidget [coffee|
+
+-- | 
+browserScript :: Text   -- ^ Browser Dom ID
+              -> [Text] -- ^ Extra Dom IDs
+              -> WidgetT master IO ()
+browserScript browserId extra = toWidget [coffee|
 $ ->
-  
   ## The browser dom. ###
   dom = $ "#%{rawJS browserId}"
 
   ### Bind a search form to be loaded by the browser. ###
   bind_form = (selector) ->
-      $(selector).siblings("input").on "change", -> $(selector).attr("disabled", null)
+      $(selector).siblings("input").on "change",  -> $(selector).attr("disabled", null)
       $(selector).siblings("input").on "keydown", -> $(selector).attr("disabled", null)
 
       form = $(selector).closest("form")
@@ -63,7 +81,7 @@ $ ->
           loadpage this.action + "?" + $(this).serialize(), true
           return false
 
-  ### Bind all extra items with assumption they are search forms :) ###
+  ### Bind all extra items - assuming they are all search forms :) ###
   bind_form s for s in %{rawJS $ show extra}
 
   ### Bind the function loadpage() to the browser links ###
@@ -97,6 +115,10 @@ $ ->
   register_links()
 |]
 
+-- * Listing styles
+
+-- ** Old simple
+
 data SimpleListingSettings = SimpleListingSettings
     { slSect    :: SectionId    -- ^ Section
     , slCurrent :: FPS          -- ^ Url parts
@@ -122,7 +144,7 @@ simpleListing :: SimpleListingSettings
               -> (ServeType -> FPS -> Route master)   -- ^ Route to file serving.
               -> (Text, Text, Text)                   -- ^ (msgFilename, msgFileize, msgModified)
               -> WidgetT master IO ()
-simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) = do
+simpleListing sl routeToContent toFile (_msgFilename, msgFilesize, msgModified) = do
     let options = [25, 50, 100, 200] :: [Int]
         parameters = if' (slLimit sl == 0) [] [ ("limit_to", T.pack $ show $ slLimit sl) ]
 
@@ -180,6 +202,10 @@ simpleListing sl routeToContent toFile (msgFilename, msgFilesize, msgModified) =
     $else
         <a .btn .btn-small .disabled>Next
 |]
+
+-- ** Blocks
+
+-- * Navigation
 
 -- | Construct breadcrumbs into a widget.
 simpleNav :: Text

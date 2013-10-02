@@ -12,8 +12,6 @@ module Handler.Media
 
 import           Utils
 import           Import
-import qualified Data.Conduit.List as CL
-import           Data.Conduit
 import qualified Data.Text as T
 import           Data.List (head, tail, last)
 import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
@@ -67,7 +65,8 @@ getMediaSearchAllR = do
                 redirect MediaHomeR
 
           | otherwise = do
-            rs' <- onSections (\s -> (\source -> browsableRender source ["Search results for \n" <> T.unpack q <>"\n"] s) $ searchableSearchT q s) -- :: forall source. MediaSearchable App source => source -> Widget)
+            rs' <- onSections (liftHandlerT . searchableSearchT q >=> browsableServerRender)
+                {- ( \source -> browsableServerRender ["Search results for \n" <> T.unpack q <>"\n"] s) -}
             rs  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f rs'
             --results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
             renderMaybeBare rs $ do
@@ -96,7 +95,7 @@ getMediaSearchR section = do
                 redirect $ MediaContentR section []
 
           | otherwise = do
-            results <- onSection section (\s -> (\source -> browsableRender source ["Search results for \n" <> T.unpack q <> "\n"] s) $ searchableSearchT q s) -- :: forall source. MediaSearchable App source => source -> Widget)
+            results <- onSection section (liftHandlerT . searchableSearchT q >=> browsableServerRender)
             renderMaybeBare results $ do
                 setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
@@ -118,7 +117,8 @@ renderMaybeBare bareContents nonBareContents = do
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> FPS -> Widget
-sectionWidget s fps = join $ liftHandlerT $ onSection s (browsableFetchWidget fps)
+sectionWidget s fps = join $ liftHandlerT $ onSection s
+    (liftHandlerT . flip (browsableFetchElems fps) Nothing >=> browsableServerRender) -- FIXME paging, not Nothing (or no paging)
 
 renderSearch :: SectionId -> Widget
 renderSearch      "" = renderSearchAll

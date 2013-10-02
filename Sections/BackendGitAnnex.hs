@@ -1,86 +1,103 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Sections.BackendGitAnnex 
-    ( GitAnnexBackend(..)
-    , mkGABE
+    ( AnnexSec, mkAnnexSec
     ) where
 
-import Import
-import Utils
-import qualified Data.Text as T
-import Data.Text.Encoding (decodeUtf8)
-import Data.Conduit
-import Data.Conduit.Binary
-import Data.Maybe
-import Data.Conduit.Internal (Pipe(..), ConduitM(..))
-import qualified Data.Conduit.Internal as CI
-import Data.List hiding (insert, delete)
-import qualified System.FilePath as FP
-import qualified Data.Conduit.List as CL
-import System.Process
-import qualified Data.ByteString.Char8 as BC
-import Database.Persist.Sql
-import           Data.Time.Clock (UTCTime)
+import           Import
+import           Utils
+import           Sections.Types
+import           JSBrowser
+import qualified Data.ByteString.Char8  as BC
+import           Data.Maybe (isNothing)
+import           Data.Conduit
+import           Data.Conduit.Binary
+import           Data.Conduit.Internal          (Pipe(..), ConduitM(..))
+import qualified Data.Conduit.Internal  as CI
+import qualified Data.Conduit.List      as CL
+import           Data.List              hiding  (insert, delete)
+import qualified Data.Text              as T
+import           Data.Text.Encoding             (decodeUtf8)
+import qualified System.FilePath        as FP
+import           System.Process
+import           Database.Persist.Sql
 
-import Control.Monad.Trans.Maybe
-import Sections.Types
-
-import JSBrowser
-
-import Debug.Trace
-
-map3 :: (x -> a) -> (x -> b) -> (x -> c) -> x -> (a, b, c)
-map3 f g h x = (f x, g x, h x)
-
-data GitAnnexBackend = GitAnnexBackend
-    { gaName :: Text
-    , gaPath :: FilePath
-    , gaRoute :: FPS -> Route App
+data AnnexSec = AnnexSec
+    { sArea  :: Text
+    , sPath  :: FilePath
+    , sRoute :: FPS -> Route App
     }
 
-mkGABE :: SectionId -> MediaConf -> GitAnnexBackend
-mkGABE section mc = GitAnnexBackend section (mcPath mc) (MediaContentR section)
+mkAnnexSec :: SectionId -> MediaConf -> AnnexSec
+mkAnnexSec section mc = AnnexSec section (mcPath mc) (MediaContentR section)
 
-instance ToJSON (MElem GitAnnexBackend) where
-    toJSON = undefined
+instance ToJSON (MElem AnnexSec) where
+    toJSON = undefined -- TODO implement/derive?
 
 -- * Browse
 
-instance MediaBrowsable App GitAnnexBackend where
-    data MElem GitAnnexBackend = GAElem (Bool, FilePath, Maybe Text)
+instance MediaBrowsable App AnnexSec where
+    data MElem AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
 
-    browsableBanner    s = [whamlet|
-<i .icon-white .icon-link>
-    #{gaName s}
-|]
-    browsableJSRender    = undefined
-
-    browsableFetchElems fps s = do
-        pager <- liftHandlerT pagerSettings
-        fetchElements s fps pager
-
-    browsableRender source fps s = do
-        pager <- liftHandlerT pagerSettings
-        renderElements s pager fps source
-
+    browsableBanner         s = [whamlet|<i .icon-white .icon-link>#{sArea s}|]
+    browsableFetchElems       = fetchElements
     browsableFetchPlain fps s = do
-        (GAElem (_,fp,_):_) <- fetchElements s fps (1,1) $$ CL.consume
-        return $ gaPath s FP.</> fp
+        GAElem _ fp _ <- fetchFile (sArea s) (FP.joinPath fps)
+        return $ sPath s FP.</> fp
+    browsableFetchPlainR  = undefined -- TODO Huh?
+    browsableServerRender = renderElements
+    browsableJSRender     = undefined -- TODO Haaa?
 
+fetchElements :: FPS -> AnnexSec -> Paging -> MediaView App AnnexSec
+fetchElements fps s mpg = case fps of
+    [] -> return $ ListBlocks s fps fetchRoot
+    _  -> do
+        md <- runDB . getBy $ UniqueDNode (sArea s) path
+        case md of
+            Just dir -> return $ ListFlat s fps $ fetchDirectory dir
+            Nothing  -> liftM (ListSingle s fps) $ fetchFile (sArea s) path
+  where
+    path            = FP.joinPath fps
+    fetchRoot       = fetchQuery (sArea s) mpg Nothing
+    fetchDirectory  = fetchQuery (sArea s) mpg . Just . entityKey
 
-renderElements :: GitAnnexBackend -> (Int, Int) -> FPS -> Source Handler (MElem GitAnnexBackend) -> Widget
-renderElements s pager fps source = do
-    elems <- liftHandlerT $ source $$ CL.consume
-    case elems of
-        (GAElem (True, path, desc) : []) -> renderSingle  s path desc
-        xs                               -> renderListing s pager fps xs
+fetchFile :: SectionId -> FilePath -> Handler (MElem AnnexSec)
+fetchFile area = liftM ((GAElem <$> const True <*> fNodePath <*> fNodeDetails) . entityVal)
+    . runDB . getBy404 . UniqueFNode area
 
-renderSingle :: GitAnnexBackend -> FilePath -> Maybe Text -> Widget
+fetchQuery :: SectionId -> Paging -> Maybe (Key DNode) -> Source Handler (MElem AnnexSec)
+fetchQuery secid paging mp = runDBSource . mapOutput toElem . rawQuery qstring $ case mp of
+    Nothing ->        replicate 2 (toPersistValue secid)
+    Just p  -> join $ replicate 2 [toPersistValue secid, toPersistValue p]
+  where
+    qstring = T.pack $ unlines
+        [ "( SELECT FALSE as ts, path as paths, NULL    FROM d_node WHERE area = ? AND parent " <> pval
+        , ") UNION"
+        , "( SELECT TRUE  as ts, path as paths, details FROM f_node WHERE area = ? AND parent " <> pval
+        , ") ORDER BY ts, paths" <> limits ]
+
+    pval   = if' (isNothing mp) "IS NULL" "= ?"
+    limits = case paging of
+        Nothing              -> ""
+        Just (offset, limit) -> " LIMIT " <> show limit <> " OFFSET " <> show offset
+
+--renderElements' :: AnnexSec -> (Int, Int) -> FPS -> Source Handler (MElem AnnexSec) -> Widget
+--renderElements' s pager fps source = do
+--    elems <- liftHandlerT $ source $$ CL.consume
+--    case elems of
+--        (GAElem True path desc : []) -> renderSingle  s path desc
+--        xs                           -> renderListing s pager fps xs
+
+renderElements :: ListContent AnnexSec -> Widget
+renderElements (ListSingle s _   (GAElem True path desc)) = renderSingle  s path desc
+renderElements (ListFlat   s fps                  source) = renderListing s fps source
+
+renderSingle :: AnnexSec -> FilePath -> Maybe Text -> Widget
 renderSingle s path mdesc = do
-    let section = gaName s
+    let section = sArea s
         fps     = FP.splitPath path
         hauto   = (MediaServeR ServeAuto          section fps, [])
         hforce  =  MediaServeR ServeForceDownload section fps
-    simpleNav section fps (gaRoute s)
+    simpleNav section fps (sRoute s)
     [whamlet|
 <section .ym-gbox .details>
     <h1>#{path}
@@ -100,63 +117,28 @@ renderSingle s path mdesc = do
         <i>Details not available.
 |]
 
-renderListing :: GitAnnexBackend -> (Int, Int) -> FPS -> [MElem GitAnnexBackend] -> Widget
-renderListing s (limit, page) fps xs = do
-    let sl = simpleListingSettings
-                { slSect    = gaName s
-                , slCurrent = fps
-                , slCount   = length xs
-                , slPage    = page
-                , slLimit   = limit
-                , slContent = map buildElem xs
-                }
-        buildElem (GAElem (isfile, path, _)) =
-            ( T.pack path
-            , if' isfile "file" "directory"
-            , FP.splitPath path
-            , "", "")
-    simpleListing sl (gaRoute s)
-                     (flip MediaServeR $ gaName s)
-                     ("Filename", "File size", "Modified")
+renderListing :: AnnexSec -> FPS -> MediaSource app (MElem AnnexSec) -> Widget
+renderListing s fps xs = undefined
+--    let sl = simpleListingSettings
+--                { slSect    = sArea s
+--                , slCurrent = fps
+--                , slCount   = length xs
+--                , slPage    = page
+--                , slLimit   = limit
+--                , slContent = map buildElem xs
+--                }
+--        buildElem (GAElem isfile path _) =
+--            ( T.pack path
+--            , if' isfile "file" "directory"
+--            , FP.splitPath path
+--            , "", "")
+--    simpleListing sl (sRoute s)
+--                     (flip MediaServeR $ sArea s)
+--                     ("Filename", "File size", "Modified")
 
-fetchElements :: GitAnnexBackend -> FPS -> (Int, Int) -> Source Handler (MElem GitAnnexBackend)
-fetchElements s fps (per_page, current_page) = case fps of
-    [] -> fetchRoot
-    xs -> do
-        md <- lift . runDB . getBy $ UniqueDNode (gaName s) path
-        case md of
-            Just dir -> fetchDirectory dir
-            Nothing  -> lift (fetchFile path) >>= yield
-  where
-    section         = gaName s
-    path            = FP.joinPath fps
-    fetchRoot :: Source Handler (MElem GitAnnexBackend)
-    fetchRoot       = runDBSource $ queryForRaw Nothing
-    fetchDirectory  = runDBSource . queryForRaw . Just . entityKey
-
-    fetchFile       = liftM (GAElem . map3 (const True) fNodePath fNodeDetails . entityVal)
-        . runDB . getBy404 . UniqueFNode section
-
-    queryForRaw Nothing = mapOutput toElem $ rawQuery (dirQuery True)
-        [ toPersistValue section,  toPersistValue section
-        , toPersistValue per_page, toPersistValue $ per_page * current_page ]
-
-    queryForRaw parent  = mapOutput toElem $ rawQuery (dirQuery False)
-        [ toPersistValue section,  toPersistValue parent -- dirs
-        , toPersistValue section,  toPersistValue parent -- files
-        , toPersistValue per_page, toPersistValue $ per_page * current_page ]
-
-    dirQuery isNullParent = T.pack $ unlines
-        [ "( SELECT FALSE as ts, path as paths, NULL FROM d_node"
-        , "WHERE area = ? AND parent " <> if' isNullParent "IS NULL" "= ?"
-        , ") UNION"
-        , "( SELECT TRUE as ts, path as paths, details FROM f_node"
-        , "WHERE area = ? AND parent " <> if' isNullParent "IS NULL" "= ?"
-        , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
-
-toElem :: [PersistValue] -> MElem GitAnnexBackend
-toElem [PersistBool isfile, PersistText path, PersistNull]      = GAElem (isfile, T.unpack path, Nothing)
-toElem [PersistBool isfile, PersistText path, PersistText desc] = GAElem (isfile, T.unpack path, Just desc)
+toElem :: [PersistValue] -> MElem AnnexSec
+toElem [PersistBool isfile, PersistText path, PersistNull]      = GAElem isfile (T.unpack path) Nothing
+toElem [PersistBool isfile, PersistText path, PersistText desc] = GAElem isfile (T.unpack path) (Just desc)
 toElem _ = error "Sections.BackendGitAnnex.toElem: invalid value."
 
 -- | Get pager settings.
@@ -168,35 +150,32 @@ pagerSettings = do
 
 -- * Search
 
-instance MediaSearchable App GitAnnexBackend where
-    searchableSearchT q s = searchFor s q
+instance MediaSearchable App AnnexSec where
+    searchableSearchT q s = (return . ListFlat s []) $ searchFor s q
 
-searchFor :: GitAnnexBackend -> Text -> Source Handler (MElem GitAnnexBackend)
-searchFor s q = do
+searchFor :: AnnexSec -> Text -> Source Handler (MElem AnnexSec)
+searchFor sec qtext = do
     (limit, offset) <- lift pagerSettings
     runDBSource $ mapOutput toElem $ rawQuery query
-        [ toPersistValue section, toPersistValue $ ".*" <> q <> ".*"
-        , toPersistValue section, toPersistValue $ ".*" <> q <> ".*"
-        , toPersistValue limit, toPersistValue offset
-        ]
+        $ (join . replicate 2) [ toPersistValue (sArea sec), toPersistValue $ ".*" <> qtext <> ".*" ]
+        ++ map toPersistValue [limit, offset]
   where
-      section = gaName s
       query = T.pack $ unlines
-        [ "( SELECT FALSE as ts, path as paths, NULL FROM d_node"
-        , "WHERE area = ? AND path ~* ?"
-        , ") UNION"
-        , "( SELECT TRUE as ts, path as paths, details FROM f_node"
-        , "WHERE area = ? AND path ~* ?"
-        , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
+            [ "(SELECT FALSE as ts, path as paths, NULL FROM d_node"
+            , " WHERE area = ? AND path ~* ?"
+            , ") UNION"
+            , "(SELECT TRUE as ts, path as paths, details FROM f_node"
+            , " WHERE area = ? AND path ~* ?"
+            , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
 
 
 -- * Update
 
 type UpdateTarget = Either FilePath FWrap
 
-instance MediaUpdate App GitAnnexBackend where
-  updateMedia ga = differenceSortedE unFWrap
-        (dbSource (gaName ga)) (gitGetFileList (gaPath ga) "")
+instance MediaUpdate App AnnexSec where
+  updateMedia sec = differenceSortedE unFWrap
+        (dbSource sec) (gitGetFileList (sPath sec) "")
         $$ handler [] []
     where
       handler :: [FilePath] -> [(FPS, Html)] -> Sink UpdateTarget Handler [(FPS, Html)]
@@ -209,40 +188,36 @@ instance MediaUpdate App GitAnnexBackend where
                   FFile path -> do
                       parent <- findParent path
                       -- FIXME this check shouldn't be necessary!
-                      exists <- getBy $ UniqueFNode (gaName ga) path
+                      exists <- getBy $ UniqueFNode (sArea sec) path
                       case exists of
-                          Nothing -> void $ insert $ FNode (gaName ga) (entityKey <$> parent) path Nothing
+                          Nothing -> void $ insert $ FNode (sArea sec) (entityKey <$> parent) path Nothing
                           Just _  -> return ()
                       pathToRecent path
 
                   FDir path -> do
                       parent <- findParent path
-                      exists <- getBy $ UniqueDNode (gaName ga) path
+                      exists <- getBy $ UniqueDNode (sArea sec) path
                       case exists of
-                          Nothing -> void $ insert $ DNode (gaName ga) (entityKey <$> parent) path
+                          Nothing -> void $ insert $ DNode (sArea sec) (entityKey <$> parent) path
                           Just _  -> return ()
                       pathToRecent path
 
               lift $ delete' todel -- reached a directory => delete queue (does this work always?)
               handler [] (ra' : ra)
 
-      findParent     path = getBy $ UniqueDNode (gaName ga) (FP.takeDirectory path)
-      delAll (Entity k _) = do deleteWhere [FNodeArea ==. gaName ga, FNodeParent ==. Just k]
-                               deleteWhere [DNodeArea ==. gaName ga, DNodeParent ==. Just k]
+      findParent     path = getBy $ UniqueDNode (sArea sec) (FP.takeDirectory path)
+      delAll (Entity k _) = do deleteWhere [FNodeArea ==. sArea sec, FNodeParent ==. Just k]
+                               deleteWhere [DNodeArea ==. sArea sec, DNodeParent ==. Just k]
                                delete k
       delete'          [] = return ()
       delete'       paths = runDB $ mapM_ delAll
-          =<< selectList [DNodeArea ==. gaName ga, DNodePath <-. paths] [Asc DNodePath]
+          =<< selectList [DNodeArea ==. sArea sec, DNodePath <-. paths] [Asc DNodePath]
 
---pathToRecent :: 
+pathToRecent :: Monad m => FilePath -> m (FPS, Html)
 pathToRecent path = return
     ( FP.splitPath path
     , toHtml $ last $ FP.splitPath path
     )
---addrecent time path = return $ RecentlyAdded
---    time (gaName ga) (map T.pack $ FP.splitPath path)
---    (toHtml $ last $ FP.splitPath path)
--- now <- timeNow
 
 -- | Takes the difference between two sorted sources. Output values are wrapped
 -- in Either: unique values from first source are wrapped in Left and vice
@@ -280,15 +255,16 @@ unFWrap :: FWrap -> FilePath
 unFWrap (FFile fp) = fp
 unFWrap (FDir  fp) = fp
 
-dbSource :: SectionId -> Source Handler FilePath
-dbSource section = mapM_ yield =<< lift action
+dbSource :: AnnexSec -> Source Handler FilePath
+dbSource sec = mapM_ (yield . unSingle) =<< lift action
     where
-        action :: Handler [FilePath]
-        action = liftM (map unSingle) $ runDB $ rawSql query []
+        action = runDB . rawSql query
+                       . replicate 2 $ toPersistValue (sArea sec)
+
         query = T.pack $ unlines
-            [ "SELECT path FROM f_node"
+            [ "SELECT path FROM f_node WHERE area = ?"
             , "UNION"
-            , "SELECT path FROM d_node"
+            , "SELECT path FROM d_node WHERE area = ?"
             , "ORDER BY path"
             ]
 
@@ -317,7 +293,7 @@ explodeSortPaths = explode' [] where
             handleParts pos (x:xs) (y:ys)
                 | x == y    = handleParts (pos ++ [x])     xs ys
                 | otherwise = handleParts  pos         (x:xs) []
-            handleParts pos _ _ = return () -- FIXME: ?????
+            handleParts _ _ _ = return () -- FIXME: ????? This case shouldn't be necessary
 
 gitSource :: MonadIO m
           => Maybe FilePath -- ^ Path to repository

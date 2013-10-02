@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: Sep 17 2013 [05:14:44]
+-- Last Modified: Oct 02 2013 [22:24:39]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
@@ -40,7 +40,7 @@ handleItem sitem = do
   where
     dostuff res r m l = case res of
       FormSuccess item -> do
-          iid <- runDB $ insert item
+          _iid <- runDB $ insert item
           setMessage $ toHtml $ r <> m item <> l
           redirectUltDest MarketHomeR
       FormMissing   -> setMessage "Tiedot olivat tyhjiä!" >> redirectUltDest MarketHomeR
@@ -49,7 +49,7 @@ handleItem sitem = do
     -- FIXME something more elegant than copypaste? :)
     dostuff' res r m l = case res of
       FormSuccess item -> do
-          iid <- runDB $ insert item
+          _iid <- runDB $ insert item
           setMessage $ toHtml $ r <> m item <> l
           redirectUltDest MarketHomeR
       FormMissing    -> setMessage "Tiedot olivat tyhjiä!" >> redirectUltDest MarketHomeR
@@ -100,7 +100,7 @@ sellForm muser = renderBootstrap $ SaleItem
 
 buy, sale :: Widget
 buy = do
-  xs <- liftM (groupBy $ \x y -> let f = buyItemBuyer . entityVal in f x == f x) $
+  xs <- liftM (groupBy $ \x _ -> let f = buyItemBuyer . entityVal in f x == f x) $
         liftHandlerT $ runDB $ selectList [] [Asc BuyItemBuyer, Asc BuyItemWhat]
   [whamlet|
 <table>

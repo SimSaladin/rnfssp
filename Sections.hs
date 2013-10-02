@@ -23,8 +23,10 @@ import Sections.BackendGitAnnex
 instance ToJSON (MElem MPDSec) where
     toJSON = undefined
 
-instance MyMedia App GitAnnexBackend
+instance MyMedia App AnnexSec
 instance MyMedia App MPDSec
+
+type MediaHandler a = forall s. MyMedia App s => s -> a
 
 -- | Execute an action on a section.
 onSection :: SectionId
@@ -42,16 +44,14 @@ onSections f = do
     return $ Map.mapWithKey (\s mc -> runMediaConf s mc f) secs
 
 -- | Take a MediaConf and run an action on it.
-runMediaConf :: SectionId -> MediaConf
-             -> (forall a. MyMedia App a => a -> b)
-             -> Handler b
-runMediaConf section mc f = case mcType mc of
-#define g(mk) (return $ f $ mk section mc)
-        "mpd"   -> g( mkMPDSec  )
---      "film"  -> g( mkFilmSec )
-        "annex" -> g( mkGABE    )
+runMediaConf :: SectionId -> MediaConf -> MediaHandler b -> Handler b
+#define build(mk) (return . f $ mk sec mc)
+runMediaConf sec mc f = case mcType mc of
+        "mpd"   -> build(mkMPDSec)
+--      "film"  -> build(mkFilmSec)
+        "annex" -> build(mkAnnexSec)
         x -> invalid $ "Requested section type not supported: " <> x
-#undef g
+#undef build
 
 -- * Navigation
 
