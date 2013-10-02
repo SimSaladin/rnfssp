@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Sep 15 2013 [22:41:38]
+-- Last Modified: Oct 02 2013 [23:43:12]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -21,6 +21,9 @@ import           Text.Printf (printf)
 import           Yesod.Default.Config (appExtra)
 
 -- * Combinators
+
+map3 :: (x -> a) -> (x -> b) -> (x -> c) -> x -> (a, b, c)
+map3 f g h = (,,) <$> f <*> g <*> h
 
 tryMaybe :: Monad m => m a -> Maybe a -> m a
 tryMaybe = flip maybe return
