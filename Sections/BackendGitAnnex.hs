@@ -30,13 +30,11 @@ data AnnexSec = AnnexSec
 mkAnnexSec :: SectionId -> MediaConf -> AnnexSec
 mkAnnexSec section mc = AnnexSec section (mcPath mc) (MediaContentR section)
 
-instance ToJSON (MElem AnnexSec) where
+instance ToJSON (MElem App AnnexSec) where
     toJSON = undefined -- TODO implement/derive?
 
--- * Browse
-
 instance MediaBrowsable App AnnexSec where
-    data MElem AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
+    data MElem App AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
 
     browsableBanner         s = [whamlet|<i .icon-white .icon-link>#{sArea s}|]
     browsableFetchElems       = fetchElements
@@ -47,24 +45,26 @@ instance MediaBrowsable App AnnexSec where
     browsableServerRender = renderElements
     browsableJSRender     = undefined -- TODO Haaa?
 
+-- * Query
+
 fetchElements :: FPS -> AnnexSec -> Paging -> MediaView App AnnexSec
 fetchElements fps s mpg = case fps of
-    [] -> return $ ListBlocks s fps fetchRoot
+    [] -> return $ ListMany fetchRoot ListFlat
     _  -> do
         md <- runDB . getBy $ UniqueDNode (sArea s) path
         case md of
-            Just dir -> return $ ListFlat s fps $ fetchDirectory dir
-            Nothing  -> liftM (ListSingle s fps) $ fetchFile (sArea s) path
+            Just dir -> return $ ListMany (fetchDirectory dir) ListFlat
+            Nothing  -> liftM ListSingle $ fetchFile (sArea s) path
   where
     path            = FP.joinPath fps
     fetchRoot       = fetchQuery (sArea s) mpg Nothing
     fetchDirectory  = fetchQuery (sArea s) mpg . Just . entityKey
 
-fetchFile :: SectionId -> FilePath -> Handler (MElem AnnexSec)
+fetchFile :: SectionId -> FilePath -> Handler (MElem App AnnexSec)
 fetchFile area = liftM ((GAElem <$> const True <*> fNodePath <*> fNodeDetails) . entityVal)
     . runDB . getBy404 . UniqueFNode area
 
-fetchQuery :: SectionId -> Paging -> Maybe (Key DNode) -> Source Handler (MElem AnnexSec)
+fetchQuery :: SectionId -> Paging -> Maybe (Key DNode) -> Source Handler (MElem App AnnexSec)
 fetchQuery secid paging mp = runDBSource . mapOutput toElem . rawQuery qstring $ case mp of
     Nothing ->        replicate 2 (toPersistValue secid)
     Just p  -> join $ replicate 2 [toPersistValue secid, toPersistValue p]
@@ -76,39 +76,27 @@ fetchQuery secid paging mp = runDBSource . mapOutput toElem . rawQuery qstring $
         , ") ORDER BY ts, paths" <> limits ]
 
     pval   = if' (isNothing mp) "IS NULL" "= ?"
+
     limits = case paging of
         Nothing              -> ""
         Just (offset, limit) -> " LIMIT " <> show limit <> " OFFSET " <> show offset
 
---renderElements' :: AnnexSec -> (Int, Int) -> FPS -> Source Handler (MElem AnnexSec) -> Widget
---renderElements' s pager fps source = do
---    elems <- liftHandlerT $ source $$ CL.consume
---    case elems of
---        (GAElem True path desc : []) -> renderSingle  s path desc
---        xs                           -> renderListing s pager fps xs
+-- * Render
 
-renderElements :: ListContent AnnexSec -> Widget
+renderElements :: ListContent App AnnexSec -> Widget
 renderElements (ListSingle s _   (GAElem True path desc)) = renderSingle  s path desc
 renderElements (ListFlat   s fps                  source) = renderListing s fps source
+renderElements other                                      = renderDefault other
 
 renderSingle :: AnnexSec -> FilePath -> Maybe Text -> Widget
 renderSingle s path mdesc = do
     let section = sArea s
         fps     = FP.splitPath path
-        hauto   = (MediaServeR ServeAuto          section fps, [])
-        hforce  =  MediaServeR ServeForceDownload section fps
     simpleNav section fps (sRoute s)
     [whamlet|
 <section .ym-gbox .details>
     <h1>#{path}
-    <div .text-center>
-        <div .btn-group>
-          <a .btn .btn-primary href="@?{hauto}" target="_blank">
-            \<i .icon-white .icon-play></i> Auto-open
-          <a .btn href="@{hforce}">
-            \<i .icon .icon-download-alt></i> Download
-          <a .btn onclick="window.playlist.to_playlist('#{section}', ['#{path}']); return false">
-            To playlist
+    ^{mediaSingleControls section fps}
     $maybe desc <- mdesc
         <section>
             <h1>Mediainfo
@@ -117,7 +105,7 @@ renderSingle s path mdesc = do
         <i>Details not available.
 |]
 
-renderListing :: AnnexSec -> FPS -> MediaSource app (MElem AnnexSec) -> Widget
+renderListing :: AnnexSec -> FPS -> MediaSource app (MElem App AnnexSec) -> Widget
 renderListing s fps xs = undefined
 --    let sl = simpleListingSettings
 --                { slSect    = sArea s
@@ -136,24 +124,13 @@ renderListing s fps xs = undefined
 --                     (flip MediaServeR $ sArea s)
 --                     ("Filename", "File size", "Modified")
 
-toElem :: [PersistValue] -> MElem AnnexSec
-toElem [PersistBool isfile, PersistText path, PersistNull]      = GAElem isfile (T.unpack path) Nothing
-toElem [PersistBool isfile, PersistText path, PersistText desc] = GAElem isfile (T.unpack path) (Just desc)
-toElem _ = error "Sections.BackendGitAnnex.toElem: invalid value."
-
--- | Get pager settings.
-pagerSettings :: Handler (Int, Int) -- TODO: move somewhere (browser? sections helpers?)
-pagerSettings = do
-    limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
-    page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
-    return (limit, page)
-
 -- * Search
 
 instance MediaSearchable App AnnexSec where
+    data MSearch AnnexSec = MSearch
     searchableSearchT q s = (return . ListFlat s []) $ searchFor s q
 
-searchFor :: AnnexSec -> Text -> Source Handler (MElem AnnexSec)
+searchFor :: AnnexSec -> Text -> Source Handler (MElem App AnnexSec)
 searchFor sec qtext = do
     (limit, offset) <- lift pagerSettings
     runDBSource $ mapOutput toElem $ rawQuery query
@@ -171,11 +148,20 @@ searchFor sec qtext = do
 
 -- * Update
 
+-- | File node wrapper 
+data FWrap = FFile FilePath
+           | FDir  FilePath
+        deriving (Show)
+
+unFWrap :: FWrap -> FilePath
+unFWrap (FFile fp) = fp
+unFWrap (FDir  fp) = fp
+
 type UpdateTarget = Either FilePath FWrap
 
 instance MediaUpdate App AnnexSec where
   updateMedia sec = differenceSortedE unFWrap
-        (dbSource sec) (gitGetFileList (sPath sec) "")
+        (dbSource sec) (gitGetFileList $ sPath sec)
         $$ handler [] []
     where
       handler :: [FilePath] -> [(FPS, Html)] -> Sink UpdateTarget Handler [(FPS, Html)]
@@ -244,37 +230,30 @@ differenceSortedE convert (ConduitM db0) (ConduitM git0) = ConduitM $ go db0 git
     go (Leftover left ()) right = go left right
     go left (Leftover right ()) = go left right
 
--- * Database
-
--- | File node wrapper 
-data FWrap = FFile FilePath
-           | FDir  FilePath
-        deriving (Show)
-
-unFWrap :: FWrap -> FilePath
-unFWrap (FFile fp) = fp
-unFWrap (FDir  fp) = fp
+-- ** Database
 
 dbSource :: AnnexSec -> Source Handler FilePath
-dbSource sec = mapM_ (yield . unSingle) =<< lift action
+dbSource sec = lift action >>= mapM_ (yield . unSingle)
     where
-        action = runDB . rawSql query
-                       . replicate 2 $ toPersistValue (sArea sec)
-
-        query = T.pack $ unlines
-            [ "SELECT path FROM f_node WHERE area = ?"
-            , "UNION"
-            , "SELECT path FROM d_node WHERE area = ?"
-            , "ORDER BY path"
+        action = runDB $ rawSql query [toPersistValue (sArea sec)]
+        query  = T.pack $ unlines
+            [ "SELECT path"
+            , "FROM (SELECT path, area FROM f_node"
+            , "UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
             ]
 
--- * GIT
+toElem :: [PersistValue] -> MElem App AnnexSec
+toElem [PersistBool isfile, PersistText path, PersistNull]      = GAElem isfile (T.unpack path) Nothing
+toElem [PersistBool isfile, PersistText path, PersistText desc] = GAElem isfile (T.unpack path) (Just desc)
+toElem _ = error "Sections.BackendGitAnnex.toElem: invalid value."
+
+-- ** git(-annex)
 
 gitGetFileList :: MonadIO m
                => FilePath -- ^ Path to repository
-               -> FilePath
                -> Source m FWrap
-gitGetFileList repo fp = gitSource (Just repo) ["annex", "find", fp]
+gitGetFileList repo = sourceCmdLines repo "sh"
+    ["-c", "git ls-tree -r $(git rev-parse --abbrev-ref HEAD) --name-only"]
     $= explodeSortPaths
 
 explodeSortPaths :: MonadIO m => Conduit FilePath m FWrap
@@ -295,14 +274,15 @@ explodeSortPaths = explode' [] where
                 | otherwise = handleParts  pos         (x:xs) []
             handleParts _ _ _ = return () -- FIXME: ????? This case shouldn't be necessary
 
-gitSource :: MonadIO m
-          => Maybe FilePath -- ^ Path to repository
-          -> [String] -> Source m FilePath
-gitSource repo params =
-    (git >>= sourceHandle) $= CL.concatMapAccum getOutLines BC.empty
-  where
-      git = liftIO $ liftM (\(_,h,_,_) -> h) $
-          runInteractiveProcess "git" params repo Nothing
+sourceCmdLines :: MonadIO m
+               => FilePath    -- ^ Working directory
+               -> String      -- ^ Command
+               -> [String]    -- ^ Parameters
+               -> Source m FilePath
+sourceCmdLines path cmd params =
+    (cmd' >>= sourceHandle) $= CL.concatMapAccum getOutLines BC.empty
+  where cmd' = liftM (\(_,h,_,_) -> h) . liftIO $
+                runInteractiveProcess cmd params (Just path) Nothing
 
 getOutLines :: BC.ByteString -- ^ New input
             -> BC.ByteString -- ^ Buffer. Guaranteed to not have newlines

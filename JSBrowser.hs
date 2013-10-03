@@ -1,7 +1,8 @@
+{-# LANGUAGE RankNTypes, ScopedTypeVariables #-}
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Oct 03 2013 [02:25:40]
+-- Last Modified: Oct 03 2013 [17:12:47]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -17,6 +18,7 @@ import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
 import           Control.Applicative
+import           Control.Monad
 import           Control.Arrow (second)
 import qualified Data.Text as T
 import           Text.Julius (rawJS)
@@ -25,6 +27,13 @@ import qualified System.FilePath as F (joinPath)
 
 import           Utils
 import Sections.Types
+ 
+data BrowserSettings master = BrowserSettings
+    { browserId         :: Text    -- ^ Identifier for the browser ("mybrowser")
+    , browserLinksMatch :: Text    -- ^ (JQuery) matcher for browser links, e.g. "a.browser-link"
+    , browserExtraDoms  :: [Text]  -- ^ Optional doms that can bind browser content. (DomId, )
+    , browserContent    :: WidgetT master IO () -- ^ Initial/fallback content widget
+    }
 
 -- | The core widget in which the browser lives.
 --
@@ -40,35 +49,24 @@ import Sections.Types
 --
 --  3. The loadpage() function again fetches the content, replaces links in it and
 --  injects it to the browser.
---
---  NOTE: Only one browser instance may be safely based on a single page.
-browser :: WidgetT master IO ()
-        -> [Text] -- ^ Optional doms that can bind browser content. (DomId, )
-        -> WidgetT master IO ()
-browser c extra = do
-    bId <- liftHandlerT newIdent
-    browserFrames bId c
-    browserScript bId extra
+browser :: BrowserSettings master -> WidgetT master IO ()
+browser = (>>) <$> browserFrames <*> browserScript
 
 -- | Markup
-browserFrames :: Text -- ^ Browser ID
-              -> WidgetT master IO () -- ^ Initial content
-              -> WidgetT master IO ()
-browserFrames browserId c = [whamlet|$newline never
+browserFrames :: BrowserSettings master -> WidgetT master IO ()
+browserFrames settings = [whamlet|$newline never
 <section .site-block-h>
     <h1>Browse
-    <div ##{browserId}>
-        ^{c}
+    <div ##{browserId settings}>
+        ^{browserContent settings}
 |]
 
 -- | 
-browserScript :: Text   -- ^ Browser Dom ID
-              -> [Text] -- ^ Extra Dom IDs
-              -> WidgetT master IO ()
-browserScript browserId extra = toWidget [coffee|
+browserScript :: BrowserSettings master -> WidgetT master IO ()
+browserScript settings = toWidget [coffee|
 $ ->
   ## The browser dom. ###
-  dom = $ "#%{rawJS browserId}"
+  dom = $ "#%{rawJS $ browserId settings}"
 
   ### Bind a search form to be loaded by the browser. ###
   bind_form = (selector) ->
@@ -82,11 +80,11 @@ $ ->
           return false
 
   ### Bind all extra items - assuming they are all search forms :) ###
-  bind_form s for s in %{rawJS $ show extra}
+  bind_form s for s in %{rawJS $ show $ browserExtraDoms settings}
 
   ### Bind the function loadpage() to the browser links ###
   register_links = ->
-      dom.find("a.browser-link").on "click", ->
+      dom.find("%{rawJS $ browserLinksMatch settings}").on "click", ->
           console.log encodeURI($(this).attr("href"))
           loadpage $(this).attr("href").replace("&", "%26"), true
           this.firstChild.focus()
@@ -114,6 +112,39 @@ $ ->
   ### Register links in the initial content. ###
   register_links()
 |]
+
+-- | Get pager settings.
+pagerSettings :: Handler (Int, Int) -- TODO: move somewhere (browser? sections helpers?)
+pagerSettings = do
+    limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
+    page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
+    return (limit, page)
+
+-- * Rendering
+
+renderDefault :: MediaBrowsable App e
+              => SectionId -> ListContent App e -> Widget
+renderDefault secid (ListSingle x) = let fps = browsableElemFPS x
+                                         in [whamlet|
+<section>
+    <h1>#{F.joinPath fps}
+    ^{mediaSingleControls secid fps}
+|]
+renderDefault secid (ListMany source _viewconf) = [whamlet|
+|]
+
+mediaSingleControls :: SectionId -> FPS -> Widget
+mediaSingleControls secid fps = [whamlet|
+<div .text-center>
+    <div .btn-group>
+      <a .btn .btn-primary href="@?{hauto}" target="_blank">
+        \<i .icon-white .icon-play></i> Auto-open
+      <a .btn href="@{hforce}">
+        \<i .icon .icon-download-alt></i> Download
+      <a .btn onclick="window.playlist.to_playlist('#{secid}', ['#{F.joinPath fps}']); return false">
+        To playlist
+|] where hauto  = (MediaServeR ServeAuto          secid fps, [])
+         hforce =  MediaServeR ServeForceDownload secid fps
 
 -- * Listing styles
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections/Types.hs
 -- Creation Date: Apr 15 2013 [22:38:30]
--- Last Modified: Oct 03 2013 [02:21:02]
+-- Last Modified: Oct 03 2013 [17:12:06]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -14,6 +14,13 @@ import           Data.Conduit
 import           Control.Monad
 import           Control.Applicative
 import           Yesod
+
+-- | Wrapper class for sections that are browsable, updatable and searchable
+class ( MediaBrowsable  app source
+      , MediaUpdate     app source
+      , MediaSearchable app source
+      , ToJSON (MElem app source)
+      ) => MyMedia app source where
 
 -- * Configuration API
 
@@ -38,51 +45,53 @@ instance FromJSON MediaConf where
       <*> o .: "path"
     parseJSON _ = mzero
 
--- | Wrapper class to ease type signatures
-class ( MediaBrowsable  app source
-      , MediaUpdate     app source
-      , MediaSearchable app source
-      , ToJSON (MElem source))
-      => MyMedia app source where
-
--- * Backends API
-
--- | The listing of some view
-data ListContent sec where
-    ListSingle  :: sec -> FPS ->                  MElem sec  -> ListContent sec
-    ListFlat    :: sec -> FPS -> MediaSource app (MElem sec) -> ListContent sec
-    ListBlocks  :: sec -> FPS -> MediaSource app (MElem sec) -> ListContent sec
+-- * Source implementation API
 
 type Paging            = Maybe (Int, Int)
 type MediaSource app a = Source (HandlerT app IO) a
 type MediaAForm  app a = AForm  (HandlerT app IO) a
-type MediaView   app a = HandlerT app IO (ListContent a)
+
+-- ** Browse
 
 -- | Browsable media. 
 class MediaBrowsable app source where
-    data MElem source :: *
+    data MElem app source :: *
+
+    browsableElemFPS :: MElem app source -> FPS
 
     -- | Provide a banner widget to the media.
-    browsableBanner      :: {- Bool -> -} source -> WidgetT app IO () -- XXX: Add default implemantion
+    browsableBanner         :: {- Bool -> -} source -> WidgetT app IO () -- XXX: Add default implemantion
 
     -- | Fetch elements at FPS in JSON format
-    browsableFetchElems  :: ToJSON (MElem source)
-                         => FPS -> source -> Paging -> MediaView app source
+    browsableFetchElems     :: ToJSON (MElem app source)
+                            => FPS -> source -> Paging -> MediaView app source
 
     -- | Fetch a single element. Should fail if it is not found.
-    browsableFetchPlain  :: FPS -> source -> HandlerT app IO FilePath
+    browsableFetchPlain     :: FPS -> source -> HandlerT app IO FilePath
 
     -- | Fetch plain elements recursively.
-    browsableFetchPlainR :: FPS -> source -> MediaSource app FilePath
+    browsableFetchPlainR    :: FPS -> source -> MediaSource app FilePath
+
+    -- | Rendering a view as a widget.
+    browsableServerRender   :: FPS -> source -> ListContent app source -> WidgetT app IO ()
+    -- browsableServerRender _ = [whamlet|default view!|]
 
     -- | Define the JS function used to render the content client side.
-    browsableJSRender    :: Text -> source -> WidgetT app IO () -- TODO: details?
+    browsableJSRender       :: Text -> source -> WidgetT app IO () -- TODO: details?
 
-    browsableServerRender :: ListContent source -> WidgetT app IO ()
-    browsableServerRender _ = [whamlet|default view!|]
+-- *** Content view
 
-class MediaUpdate app source where
-    updateMedia :: source -> HandlerT app IO [(FPS, Html)]
+type MediaView app a = HandlerT app IO (ListContent app a)
+
+-- | A view in the browser. One may be viewing a concrete item or a listing of
+-- items.
+data ListContent app sec where
+    ListMany    :: MediaSource app (MElem app sec) -> ListViewConf -> ListContent app sec
+    ListSingle  :: MElem app sec -> ListContent app sec
+
+data ListViewConf = ListFlat --  | ListBlocks | ListTree | ListBest
+
+-- ** Search
 
 -- | Search interface to a media source.
 class MediaBrowsable app source => MediaSearchable app source where
@@ -99,3 +108,8 @@ class MediaBrowsable app source => MediaSearchable app source where
     searchableSearch    :: MSearch source -> source -> MediaView app source
     -- | Advanced search form.
     searchableForm      ::                   source -> MediaAForm app (MSearch source)
+
+-- ** Update
+
+class MediaUpdate app source where
+    updateMedia :: source -> HandlerT app IO [(FPS, Html)]

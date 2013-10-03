@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Oct 03 2013 [02:10:56]
+-- Last Modified: Oct 03 2013 [17:13:16]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -30,8 +30,8 @@ mkMPDSec :: SectionId -> MediaConf -> MPDSec
 mkMPDSec section mc = MPDSec section (mcPath mc) (MediaContentR section)
 
 instance MediaBrowsable App MPDSec where
-    data MElem MPDSec = MESong M.Song
-                      | MEPath M.Path
+    data MElem App MPDSec = MESong M.Song
+                          | MEPath M.Path
 
     browsableBanner          s   = [whamlet|<i .icon-white .icon-music>#{sName s}|]
     browsableFetchElems  fps s _ = toListing s fps (musicFetch s fps)       -- TODO apply paging
@@ -54,16 +54,16 @@ instance MediaSearchable App MPDSec where
 instance MediaUpdate App MPDSec where
     updateMedia _  = return [] -- TODO: mpd update?
 
-musicFetch :: MPDSec -> FPS -> Source Handler (MElem MPDSec)
+musicFetch :: MPDSec -> FPS -> Source Handler (MElem App MPDSec)
 musicFetch _ fps = lift (liftHandlerT (M.pathContents fps))
     >>= mapOutputMaybe go . CL.sourceList 
         where
-            --go :: M.LsResult -> ConduitM () (MElem MPDSec) Handler ()
+            --go :: M.LsResult -> ConduitM () (MElem App MPDSec) Handler ()
             go (M.LsSong      song) = Just (MESong song)
             go (M.LsDirectory path) = Just (MEPath path)
             go                   _  = Nothing
 
-toListing :: MPDSec -> FPS -> Source Handler (MElem MPDSec) -> MediaView App MPDSec
+toListing :: MPDSec -> FPS -> Source Handler (MElem App MPDSec) -> MediaView App MPDSec
 toListing sec fps source = do
     contents <- source $$ CL.consume -- TODO direct peek at the conduit (instead of intermediate list)
     return $ case contents of
@@ -76,8 +76,8 @@ mpdSearch :: MPDSec -> Text -> Handler [M.Song]
 mpdSearch _s q = let dosearch val = M.search $ val M.=? (M.Value $ encodeUtf8 q)
     in liftM (take 100 . foldl union []) . M.execMpd $ mapM dosearch [M.Artist, M.Album, M.Title]
 
-musicRender :: ListContent MPDSec -> Widget
-musicRender (ListSingle MPDSec{sName = name, sRoute = route} fps (MESong song)) =
+musicRender :: FPS -> MPDSec -> ListContent App MPDSec -> Widget
+musicRender fps MPDSec{sName = name, sRoute = route} (ListSingle (MESong song)) =
     let seconds   = M.sgLength song
         M.Path bs = M.sgFilePath song
         path      = decodeUtf8 bs
@@ -104,7 +104,9 @@ musicRender (ListSingle MPDSec{sName = name, sRoute = route} fps (MESong song)) 
           <th>Length
           <td>#{seconds} seconds
 |]
-musicRender (ListFlat _s _fps _source) = undefined
+musicRender fps s x = renderDefault (sName s) x
+
+-- musicRender _fps _s (ListMany _ ) = undefined
 --            sl = SimpleListingSettings
 --                { slSect       = sName sec
 --                , slCurrent    = fps

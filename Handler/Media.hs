@@ -18,7 +18,7 @@ import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 import qualified Data.Map as Map
 import qualified System.FilePath as FP
 import           Handler.Playlists (userPlaylistWidget)
-import           JSBrowser (browser)
+import           JSBrowser (browser, BrowserSettings(..))
 import           Sections
 
 -- | Maximum time a file can be accessed via a temporary url.
@@ -31,6 +31,10 @@ topNavigator current = [whamlet|
     ^{renderBrowsable current}
     ^{renderSearch current}
     |]
+
+myBrowser :: WidgetT master IO () -> WidgetT master IO ()
+myBrowser = browser . BrowserSettings
+        "mybrowser" "a.browser-link" [".input-search + button"]
 
 getMediaHomeR :: Handler Html
 getMediaHomeR = do
@@ -49,7 +53,7 @@ getMediaContentR section fps = do
         setTitle "Media"
         wrapMain $ do
             topNavigator section
-            layoutSplitH (browser content [".input-search + button"])
+            layoutSplitH (myBrowser content)
                          (userPlaylistWidget ent)
   where content = sectionWidget section fps
 
@@ -73,7 +77,7 @@ getMediaSearchAllR = do
                 setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
                     topNavigator ""
-                    layoutSplitH (browser rs [".input-search + button"])
+                    layoutSplitH (myBrowser rs)
                                  (userPlaylistWidget ent)
         in maybe (redirect MediaHomeR) doSearch mq
   where
@@ -100,7 +104,7 @@ getMediaSearchR section = do
                 setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
                     topNavigator section
-                    layoutSplitH (browser results [".input-search + button"])
+                    layoutSplitH (myBrowser results)
                                  (userPlaylistWidget ent)
     maybe (redirect $ MediaContentR section []) doSearch mq
 
@@ -161,10 +165,6 @@ getMediaServeR stype section path = case stype of
         t   <- timeNow
         _   <- runDB $ insert $ LogDownload t uid section path -- TODO: use a log file?
         return fp
-
--- * Sections
-
-
 
 -- * Adminspace
 

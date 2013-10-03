@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Oct 02 2013 [23:43:12]
+-- Last Modified: Oct 03 2013 [16:49:04]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -19,6 +19,8 @@ import           System.Locale (defaultTimeLocale)
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
 import           Yesod.Default.Config (appExtra)
+
+import Sections.Types
 
 -- * Combinators
 
@@ -103,8 +105,8 @@ prettyFilesize off = T.pack $ toprint off
 
 guessFiletype :: FilePath -> Text
 guessFiletype fp
-    | ext `elem` (map ('.':) ["mkv","avi","sfv","ogm","mp4"]) = "video"
-    | ext `elem` (map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"]) = "audio"
+    | ext `elem` map ('.':) ["mkv","avi","sfv","ogm","mp4"] = "video"
+    | ext `elem` map ('.':) ["flac","mid","mp3","ogg","tak","tif","tta","wav","wma","wv"] = "audio"
     | otherwise = "unknown"
     where ext = takeExtension fp
 
@@ -202,7 +204,6 @@ renderForm' extra buttons title route res widget encType = [whamlet|
   <div .form-actions>
     ^{buttons}
 |]
-
 
 wrapMain :: Widget -> Widget
 wrapMain w = [whamlet|<main>^{w}|]
