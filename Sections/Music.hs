@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Oct 08 2013 [03:47:13]
+-- Last Modified: Oct 08 2013 [15:05:05]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -81,29 +81,14 @@ pathName = last . pathFilePath
 pathFilePath :: M.Path -> [FilePath]
 pathFilePath (M.Path p) = FP.splitPath . T.unpack $ decodeUtf8 p
 
--- TODO use section!
+-- TODO use section-specific settings!
 mpdSearch :: MPDSec -> Text -> Handler [M.Song]
 mpdSearch _s q = let dosearch val = M.search $ val M.=? (M.Value $ encodeUtf8 q)
     in liftM (take 100 . foldl union []) . M.execMpd $ mapM dosearch [M.Artist, M.Album, M.Title]
 
 musicRender :: FPS -> MPDSec -> ListContent App MPDSec -> Widget
-musicRender fps s = renderDefault (sName s) fps
+musicRender fps s content = renderDefault (sName s) fps content MediaContentR MediaServeR
 
 instance MediaRenderDefault App MPDSec where
-    melemToContent (MESong _) = ("song", [])
+    melemToContent (MESong s) = ("song", [("length", T.pack . show $ M.sgLength s)])
     melemToContent (MEPath _) = ("directory", [])
-
---musicRender fps MPDSec{sName = name, sRoute = route} (ListSingle (MESong song)) = do
--- <section>
---      <h1>Details
---      <table>
---        <tr>
---          <th>Filename
---          <td>#{path}
---        <tr>
---          <th>Length
---          <td>#{seconds} seconds
---    where
---        seconds   = M.sgLength song
---        M.Path bs = M.sgFilePath song
---        path      = decodeUtf8 bs

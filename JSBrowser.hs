@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Oct 08 2013 [03:51:59]
+-- Last Modified: Oct 08 2013 [14:44:19]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -13,7 +13,7 @@
 module JSBrowser where
 
 import           Prelude
-import           Foundation
+import           Foundation (ServeType(..))
 import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
@@ -29,6 +29,8 @@ import qualified System.FilePath as F (joinPath)
 
 import           Utils
 import Sections.Types
+
+-- * Browser
  
 data BrowserSettings master = BrowserSettings
     { browserId         :: Text    -- ^ Identifier for the browser ("mybrowser")
@@ -115,30 +117,30 @@ $ ->
   register_links()
 |]
 
--- | Get pager config.
-pagerSettings :: HandlerT master IO Paging -- TODO: move somewhere (browser? sections helpers?)
-pagerSettings = do
-    limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
-    page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
-    return (limit, page)
-
 -- * Rendering
 
-renderDefault :: MediaRenderDefault App section
-              => SectionId -> FPS -> ListContent App section
-              -> WidgetT App IO ()
-renderDefault secid fps (ListSingle _huh) = [whamlet|
+renderDefault :: MediaRenderDefault master section
+              => SectionId -> FPS 
+              -> ListContent master section -- ^ Content
+              -> (             SectionId -> FPS -> Route master) -- ^ ContentR
+              -> (ServeType -> SectionId -> FPS -> Route master) -- ^ ServeR
+              -> WidgetT master IO ()
+renderDefault secid fps (ListSingle _huh) _contentR serveR = [whamlet|
 <section>
     <h1>#{F.joinPath fps}
-    ^{mediaSingleControls secid fps}
+    ^{mediaSingleControls secid fps serveR}
 |]
 -- many: just flat listing
-renderDefault secid fps (ListMany source (ListFlat paging numof)) = listFlat
-    $ FlatListSettings (MediaContentR secid) (flip MediaServeR secid) -- TODO factor contentR/serveR for app polymorphism
-                       secid fps paging (maybe 1 (flip div $ fst paging) numof) source
+renderDefault secid fps (ListMany source (ListFlat paging numof)) contentR serveR = listFlat
+    $ FlatListSettings (contentR secid) (flip serveR secid)
+                       secid fps paging
+                       (maybe 1 (\x -> ceiling $ (fromIntegral x :: Double) / fromIntegral (fst paging)) numof)
+                       source
 
-mediaSingleControls :: SectionId -> FPS -> Widget
-mediaSingleControls secid fps = [whamlet|
+mediaSingleControls :: SectionId -> FPS
+                    -> (ServeType -> SectionId -> FPS -> Route master) -- ^ ServeR
+                    -> WidgetT master IO ()
+mediaSingleControls secid fps serveR = [whamlet|
 <div .text-center>
     <div .btn-group>
       <a .btn .btn-primary href="@?{hauto}" target="_blank"><i .icon-white .icon-play></i>
@@ -147,8 +149,8 @@ mediaSingleControls secid fps = [whamlet|
           Download
       <a .btn onclick="window.playlist.to_playlist('#{secid}', ['#{F.joinPath fps}']); return false">
           To playlist
-|] where hauto  = (MediaServeR ServeAuto          secid fps, [])
-         hforce =  MediaServeR ServeForceDownload secid fps
+|] where hauto  = (serveR ServeAuto          secid fps, [])
+         hforce =  serveR ServeForceDownload secid fps
 
 -- * Listing styles
 
@@ -167,17 +169,11 @@ data FlatListSettings master section = FlatListSettings
 listFlat :: MediaRenderDefault master section
          => FlatListSettings master section -> WidgetT master IO ()
 listFlat config = do
-
-    elements <- liftHandlerT $ mapOutput (second melemToContent) (lfContent config) $$ CL.consume
-    let (browseSettings, browseNavigation) = (pagerRender <$> lfPaging
-                                                          <*> lfNumPages
-                                                          <*> (lfViewR <$> id <*> lfCurrentFPS) ) config
-    browseSettings >> playlistAddAll
+    browseSettings
+    playlistAddAll
     browseNavigation
     (simpleBreadcrumbs <$> lfSec <*> lfCurrentFPS <*> lfViewR) config
-
-
-    -- browser
+    elements <- liftHandlerT $ mapOutput (second melemToContent) (lfContent config) $$ CL.consume
     [whamlet|$newline never
 <div .browser>
   $forall (fps, (ftype, xs)) <- elements
@@ -203,6 +199,9 @@ listFlat config = do
         title="Adds all files in this folder.">
           Add all files
     |]
+    (browseSettings, browseNavigation) = (pagerRender <$> lfPaging
+                                                      <*> lfNumPages
+                                                      <*> (lfViewR <$> id <*> lfCurrentFPS) ) config
 
 -- | Construct breadcrumbs into a widget.
 simpleBreadcrumbs :: SectionId -> FPS -> (FPS -> Route master) -> WidgetT master IO ()
@@ -223,7 +222,7 @@ simpleBreadcrumbs home fps f = [whamlet|
 
 -- | @pagerRender paging current@
 pagerRender :: Paging -> Int -> Route master -> (WidgetT master IO (), WidgetT master IO ()) -- ^ (config, navigation)
-pagerRender (perpage, n) nOfPages r2c' =
+pagerRender (perpage, curpage) pagecount r2c' =
     (,) [whamlet|$newline never
 <nav .text-center>Per page: #
   <span .btn-toolbar>
@@ -232,26 +231,29 @@ pagerRender (perpage, n) nOfPages r2c' =
         <a .btn .btn-small .disabled>#{opt}
       $else
         <a .btn .btn-small .browser-link href="?limit_to=#{opt}&page=0">#{opt} #
-<span>
-    #{perpage}, #{n}, #{nOfPages}, #{length pages}
-
-|] $ if' (length pages == 1) mempty [whamlet|$newline never
+|] $
+    if' (length pages == 1) mempty [whamlet|$newline never
 <div .text-center .browser-pagenav>
   <span .btn-toolbar>
-    $if n > 0
-        <a .btn .btn-hl .btn-small .browser-link href="@?{r2c}&page=#{n - 1}">Previous
-
+    $if curpage > 0
+        <a .btn .btn-hl .btn-small .browser-link href="@?{r2c}&page=#{curpage - 1}">Previous
     $forall page <- pages
-        $if (/=) page (n + 1)
-            <a .btn .btn-small .browser-link href="@?{r2c}&page=#{page - 1}" > #{page}
-        $else
+        $if (==) page (curpage + 1)
             <a .btn .btn-small .disabled>#{page}
-
-    $if n < length pages
-        <a .btn .btn-small .btn-hl .browser-link href="@?{r2c}&page=#{n + 1}">Next
+        $else
+            <a .btn .btn-small .browser-link href="@?{r2c}&page=#{page - 1}" > #{page}
+    $if curpage < length pages
+        <a .btn .btn-small .btn-hl .browser-link href="@?{r2c}&page=#{curpage + 1}">Next
     $else
         <a .btn .btn-small .disabled>Next
 |] where
     r2c         = (r2c', [ ("limit_to", T.pack $ show perpage) ])
     options     = [20, 50, 100, 200]
-    pages       = [1 .. nOfPages]  -- ceiling (div num perPage)
+    pages       = [1 .. pagecount]
+
+-- | Get pager config.
+pagerSettings :: HandlerT master IO Paging -- TODO: move somewhere (browser? sections helpers?)
+pagerSettings = do
+    limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
+    page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
+    return (limit, page)

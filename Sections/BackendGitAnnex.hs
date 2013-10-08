@@ -71,38 +71,31 @@ fetchFile area = liftM ( ((,) <$> FP.splitPath . fNodePath <*> toGAElem) . entit
                             <*> fNodePath
                             <*> fNodeDetails
 
-fetchQuery :: SectionId -> Paging -> Maybe (Key DNode) -> Handler (Source Handler (FPS, MElem App AnnexSec), Int)
-fetchQuery secid paging mp = liftM ( (,) getSource ) . liftM length . runDB $ myquery $$ CL.consume
-    
+fetchQuery :: SectionId -> Paging -> Maybe (Key DNode)
+           -> Handler (Source Handler (FPS, MElem App AnnexSec), Int)
+fetchQuery secid (limit,offset) mp = liftM ((,) getSource) myCountQuery
   where
     getSource = runDBSource . mapOutput toElem $ myquery
-        
-    myquery = rawQuery qstring $ case mp of
-        Nothing ->        replicate 2 (toPersistValue secid)
-        Just p  -> join $ replicate 2 [toPersistValue secid, toPersistValue p]
+
+    myquery   = rawQuery qstring $ toPersistValue secid : case mp of
+        Nothing -> []
+        Just p  -> [toPersistValue p]
+
+    myCountQuery = runDB $ liftM2 (+) ( count [FNodeArea ==. secid, FNodeParent ==. mp] )
+                                      ( count [DNodeArea ==. secid, DNodeParent ==. mp] )
 
     qstring = T.pack $ unlines
-        [ "( SELECT FALSE as ts, path as paths, NULL    FROM d_node WHERE area = ? AND parent " <> pval
-        , ") UNION"
-        , "( SELECT TRUE  as ts, path as paths, details FROM f_node WHERE area = ? AND parent " <> pval
-        , ") ORDER BY ts, paths" <> limits ]
-
-    pval   = if' (isNothing mp) "IS NULL" "= ?"
-
-    limits = case paging of
-        (limit, offset) -> " LIMIT " <> show limit <> " OFFSET " <> show (limit * offset)
+        [ "SELECT isfile, path, details FROM (SELECT FALSE as isfile, area, path, parent, NULL    as details FROM d_node"
+        ,                              "UNION SELECT TRUE  as isfile, area, path, parent, details as details FROM f_node)"
+        , "_ WHERE area = ? AND parent " <> parentval <> " ORDER BY isfile, path" <> limits
+        ]
+    parentval   = if' (isNothing mp) "IS NULL" "= ?"
+    limits      = " LIMIT " <> show limit <> " OFFSET " <> show (limit * offset)
 
 -- * Render
 
 renderElements :: FPS -> AnnexSec -> ListContent App AnnexSec -> Widget
--- renderElements fps s (ListSingle (GAElem True path desc)) = renderSingle  s path desc
-renderElements fps s = renderDefault (sArea s) fps
---    $maybe desc <- mdesc
---        <section>
---            <h1>Mediainfo
---            <pre>#{desc}
---    $nothing
---        <i>Details not available.
+renderElements fps s content = renderDefault (sArea s) fps content MediaContentR MediaServeR
 
 instance MediaRenderDefault App AnnexSec where
     melemToContent (GAElem isdir _fp _mdesc) = (if' isdir "directory" "file", [])
@@ -114,19 +107,18 @@ instance MediaSearchable App AnnexSec where
     searchableSearchT q s = return . flip ListMany (ListFlat (500, 1) Nothing) $ searchFor s q
 
 searchFor :: AnnexSec -> Text -> Source Handler (FPS, MElem App AnnexSec)
-searchFor sec qtext = do
-    (limit, offset) <- lift pagerSettings
-    runDBSource $ mapOutput toElem $ rawQuery query
-        $ (join . replicate 2) [ toPersistValue (sArea sec), toPersistValue $ ".*" <> qtext <> ".*" ]
-        -- ++ map toPersistValue [limit, limit * offset] -- TODO
-  where
-      query = T.pack $ unlines
-            [ "(SELECT FALSE as ts, path as paths, NULL FROM d_node"
-            , " WHERE area = ? AND path ~* ?"
-            , ") UNION"
-            , "(SELECT TRUE as ts, path as paths, details FROM f_node"
-            -- , " WHERE area = ? AND path ~* ?" -- TODO implement
-            , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
+searchFor sec qtext = runDBSource . mapOutput toElem $ rawQuery (query "")
+        [ toPersistValue (sArea sec)
+        , toPersistValue $ ".*" <> qtext <> ".*"
+        ] where
+      query limits = T.pack $ unlines
+            [ "SELECT isfile, path, details"
+            , "FROM (SELECT FALSE as isfile, path, area, NULL    as details FROM d_node"
+            , "UNION SELECT TRUE  as isfile, path, area, details as details FROM f_node)"
+            , "_ WHERE area = ? AND path ~* ?"
+            , "ORDER BY isfile, path" <> limits
+            ] --  LIMIT ? OFFSET ? " ]
+     
 
 
 -- * Update
@@ -225,6 +217,7 @@ dbSource sec = lift action >>= mapM_ (yield . unSingle)
             , "UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
             ]
 
+-- | three fields: 'isfile', 'path', 'maybe desc'
 toElem :: [PersistValue] -> (FPS, MElem App AnnexSec)
 toElem [PersistBool isfile, PersistText path, PersistNull]      = (FP.splitPath $ T.unpack path, GAElem isfile (T.unpack path) Nothing)
 toElem [PersistBool isfile, PersistText path, PersistText desc] = (FP.splitPath $ T.unpack path, GAElem isfile (T.unpack path) (Just desc))
