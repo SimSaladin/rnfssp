@@ -20,7 +20,7 @@ import Sections.Music
 import Sections.BackendGitAnnex
 --import Sections.Film
 
-instance ToJSON (MElem MPDSec) where
+instance ToJSON (MElem App MPDSec) where -- TODO
     toJSON = undefined
 
 instance MyMedia App AnnexSec
@@ -29,16 +29,13 @@ instance MyMedia App MPDSec
 type MediaHandler a = forall s. MyMedia App s => s -> a
 
 -- | Execute an action on a section.
-onSection :: SectionId
-          -> (forall a. MyMedia App a => a -> b)
-          -> Handler b
+onSection :: SectionId -> MediaHandler b -> Handler b
 onSection section f = do
     mmc <- liftM (Map.lookup section) getSections
     maybe failed (\mc -> runMediaConf section mc f) mmc
   where failed = invalid $ "Requested content not found: " <> section
 
-onSections :: (forall s. MyMedia App s => s -> a)
-           -> Handler (Map.Map SectionId (Handler a))
+onSections :: MediaHandler a -> Handler (Map.Map SectionId (Handler a))
 onSections f = do
     secs <- getSections
     return $ Map.mapWithKey (\s mc -> runMediaConf s mc f) secs

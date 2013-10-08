@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Sections/Types.hs
 -- Creation Date: Apr 15 2013 [22:38:30]
--- Last Modified: Oct 03 2013 [17:12:06]
+-- Last Modified: Oct 08 2013 [03:44:48]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -47,7 +47,6 @@ instance FromJSON MediaConf where
 
 -- * Source implementation API
 
-type Paging            = Maybe (Int, Int)
 type MediaSource app a = Source (HandlerT app IO) a
 type MediaAForm  app a = AForm  (HandlerT app IO) a
 
@@ -57,14 +56,12 @@ type MediaAForm  app a = AForm  (HandlerT app IO) a
 class MediaBrowsable app source where
     data MElem app source :: *
 
-    browsableElemFPS :: MElem app source -> FPS
-
     -- | Provide a banner widget to the media.
     browsableBanner         :: {- Bool -> -} source -> WidgetT app IO () -- XXX: Add default implemantion
 
     -- | Fetch elements at FPS in JSON format
     browsableFetchElems     :: ToJSON (MElem app source)
-                            => FPS -> source -> Paging -> MediaView app source
+                            => FPS -> source -> ListViewConf -> MediaView app source
 
     -- | Fetch a single element. Should fail if it is not found.
     browsableFetchPlain     :: FPS -> source -> HandlerT app IO FilePath
@@ -86,10 +83,16 @@ type MediaView app a = HandlerT app IO (ListContent app a)
 -- | A view in the browser. One may be viewing a concrete item or a listing of
 -- items.
 data ListContent app sec where
-    ListMany    :: MediaSource app (MElem app sec) -> ListViewConf -> ListContent app sec
-    ListSingle  :: MElem app sec -> ListContent app sec
+    ListMany    :: MediaSource app (FPS, MElem app sec) -> ListViewConf -> ListContent app sec
+    ListSingle  ::                       MElem app sec                  -> ListContent app sec
 
-data ListViewConf = ListFlat --  | ListBlocks | ListTree | ListBest
+type Paging       = (Int, Int) -- ^ (per page, current page)
+data ListViewConf = ListFlat Paging (Maybe Int) -- ^ paging, num of entries
+
+                --  | ListBlocks | ListTree | ListBest
+
+class MediaBrowsable master section => MediaRenderDefault master section where
+    melemToContent   :: MElem master section -> (Text, [(Text, Text)]) -- ^ (filetype, other info)
 
 -- ** Search
 

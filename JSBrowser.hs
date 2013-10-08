@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Oct 03 2013 [17:12:47]
+-- Last Modified: Oct 08 2013 [03:51:59]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -17,6 +17,8 @@ import           Foundation
 import           Yesod
 import           Data.Text (Text)
 import           Data.Monoid
+import           Data.Conduit
+import qualified Data.Conduit.List as CL
 import           Control.Applicative
 import           Control.Monad
 import           Control.Arrow (second)
@@ -54,19 +56,19 @@ browser = (>>) <$> browserFrames <*> browserScript
 
 -- | Markup
 browserFrames :: BrowserSettings master -> WidgetT master IO ()
-browserFrames settings = [whamlet|$newline never
+browserFrames config = [whamlet|$newline never
 <section .site-block-h>
     <h1>Browse
-    <div ##{browserId settings}>
-        ^{browserContent settings}
+    <div ##{browserId config}>
+        ^{browserContent config}
 |]
 
 -- | 
 browserScript :: BrowserSettings master -> WidgetT master IO ()
-browserScript settings = toWidget [coffee|
+browserScript config = toWidget [coffee|
 $ ->
   ## The browser dom. ###
-  dom = $ "#%{rawJS $ browserId settings}"
+  dom = $ "#%{rawJS $ browserId config}"
 
   ### Bind a search form to be loaded by the browser. ###
   bind_form = (selector) ->
@@ -80,11 +82,11 @@ $ ->
           return false
 
   ### Bind all extra items - assuming they are all search forms :) ###
-  bind_form s for s in %{rawJS $ show $ browserExtraDoms settings}
+  bind_form s for s in %{rawJS $ show $ browserExtraDoms config}
 
   ### Bind the function loadpage() to the browser links ###
   register_links = ->
-      dom.find("%{rawJS $ browserLinksMatch settings}").on "click", ->
+      dom.find("%{rawJS $ browserLinksMatch config}").on "click", ->
           console.log encodeURI($(this).attr("href"))
           loadpage $(this).attr("href").replace("&", "%26"), true
           this.firstChild.focus()
@@ -113,8 +115,8 @@ $ ->
   register_links()
 |]
 
--- | Get pager settings.
-pagerSettings :: Handler (Int, Int) -- TODO: move somewhere (browser? sections helpers?)
+-- | Get pager config.
+pagerSettings :: HandlerT master IO Paging -- TODO: move somewhere (browser? sections helpers?)
 pagerSettings = do
     limit <- liftM (maybe 50 (read . T.unpack)) $ lookupGetParam "limit_to"
     page  <- liftM (maybe 0  (read . T.unpack)) $ lookupGetParam "page"
@@ -122,129 +124,90 @@ pagerSettings = do
 
 -- * Rendering
 
-renderDefault :: MediaBrowsable App e
-              => SectionId -> ListContent App e -> Widget
-renderDefault secid (ListSingle x) = let fps = browsableElemFPS x
-                                         in [whamlet|
+renderDefault :: MediaRenderDefault App section
+              => SectionId -> FPS -> ListContent App section
+              -> WidgetT App IO ()
+renderDefault secid fps (ListSingle _huh) = [whamlet|
 <section>
     <h1>#{F.joinPath fps}
     ^{mediaSingleControls secid fps}
 |]
-renderDefault secid (ListMany source _viewconf) = [whamlet|
-|]
+-- many: just flat listing
+renderDefault secid fps (ListMany source (ListFlat paging numof)) = listFlat
+    $ FlatListSettings (MediaContentR secid) (flip MediaServeR secid) -- TODO factor contentR/serveR for app polymorphism
+                       secid fps paging (maybe 1 (flip div $ fst paging) numof) source
 
 mediaSingleControls :: SectionId -> FPS -> Widget
 mediaSingleControls secid fps = [whamlet|
 <div .text-center>
     <div .btn-group>
-      <a .btn .btn-primary href="@?{hauto}" target="_blank">
-        \<i .icon-white .icon-play></i> Auto-open
-      <a .btn href="@{hforce}">
-        \<i .icon .icon-download-alt></i> Download
+      <a .btn .btn-primary href="@?{hauto}" target="_blank"><i .icon-white .icon-play></i>
+          Auto-open
+      <a .btn href="@{hforce}"><i .icon .icon-download-alt></i>
+          Download
       <a .btn onclick="window.playlist.to_playlist('#{secid}', ['#{F.joinPath fps}']); return false">
-        To playlist
+          To playlist
 |] where hauto  = (MediaServeR ServeAuto          secid fps, [])
          hforce =  MediaServeR ServeForceDownload secid fps
 
 -- * Listing styles
 
--- ** Old simple
+-- ** Flat
 
-data SimpleListingSettings = SimpleListingSettings
-    { slSect    :: SectionId    -- ^ Section
-    , slCurrent :: FPS          -- ^ Url parts
-    , slCount   :: Int          -- ^ Total number of elements to scroll
-    , slPage    :: Int          -- ^ Nth page
-    , slLimit   :: Int          -- ^ Elements per page
-    , slContent :: [(Text, Text, FPS, Text, Text)] -- ^ (filename, filetype, fps, size, modified)
+data FlatListSettings master section = FlatListSettings
+    { lfViewR       ::              FPS -> Route master
+    , lfServeR      :: ServeType -> FPS -> Route master
+    , lfSec         :: SectionId
+    , lfCurrentFPS  :: FPS
+    , lfPaging      :: Paging
+    , lfNumPages    :: Int
+    , lfContent     :: MediaSource master (FPS, MElem master section)
     }
 
-simpleListingSettings :: SimpleListingSettings
-simpleListingSettings = SimpleListingSettings
-    { slSect    = ""
-    , slCurrent = []
-    , slCount   = 0
-    , slPage    = 0
-    , slLimit   = 50
-    , slContent = []
-    }
+listFlat :: MediaRenderDefault master section
+         => FlatListSettings master section -> WidgetT master IO ()
+listFlat config = do
 
--- | Simple listing of content.
-simpleListing :: SimpleListingSettings
-              -> (FPS -> Route master)                -- ^ Route to content.
-              -> (ServeType -> FPS -> Route master)   -- ^ Route to file serving.
-              -> (Text, Text, Text)                   -- ^ (msgFilename, msgFileize, msgModified)
-              -> WidgetT master IO ()
-simpleListing sl routeToContent toFile (_msgFilename, msgFilesize, msgModified) = do
-    let options = [25, 50, 100, 200] :: [Int]
-        parameters = if' (slLimit sl == 0) [] [ ("limit_to", T.pack $ show $ slLimit sl) ]
+    elements <- liftHandlerT $ mapOutput (second melemToContent) (lfContent config) $$ CL.consume
+    let (browseSettings, browseNavigation) = (pagerRender <$> lfPaging
+                                                          <*> lfNumPages
+                                                          <*> (lfViewR <$> id <*> lfCurrentFPS) ) config
+    browseSettings >> playlistAddAll
+    browseNavigation
+    (simpleBreadcrumbs <$> lfSec <*> lfCurrentFPS <*> lfViewR) config
 
-    --  Pager
+
+    -- browser
     [whamlet|$newline never
-<nav .text-center>
-  Per page: #
-  <span .btn-toolbar>
-    $forall n <- options
-      $if slLimit sl == n
-        <a .btn .btn-small .disabled>#{n}
-      $else
-        <a .btn .btn-small .browser-link href="?limit_to=#{n}&page=#{slPage sl}">
-            #{n} #
-  <a .btn
-    onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{slSect sl}'); return false"
-    title="Adds all files in this folder.">
-      Add all files
-^{simpleNav (slSect sl) (slCurrent sl) routeToContent}
-^{pageNav}
 <div .browser>
-    $forall (filename, filetype, fps, size, modified) <- slContent sl
-      <div .entry .type-#{filetype}>
+  $forall (fps, (ftype, xs)) <- elements
+    <div .entry .type-#{ftype}>
         <div .data-field style="display:none">#{F.joinPath fps}
         <div .browser-controls>
-          $if (/=) filetype directory
-            <a .icon-download href=@{toFile ServeForceDownload fps} onclick="">
-            <a .icon-play     href=@{toFile ServeAuto fps}          onclick="" target="_blank">
-          <button .icon-plus .action onclick="playlist.to_playlist('#{slSect sl}', [$(this).closest('.entry').children()[0].innerText]); return false">
-        <a .browser-link .#{filetype} href=@?{(routeToContent fps, parameters)}>
-            <span .filename>#{filename}
+          $if (/=) ftype directory
+            <a .icon-download href=@{(lfServeR config) ServeForceDownload fps} onclick="">
+            <a .icon-play     href=@{(lfServeR config) ServeAuto fps}          onclick="" target="_blank">
+          <button .icon-plus .action onclick="playlist.to_playlist('#{lfSec config}', [$(this).closest('.entry').children()[0].innerText]); return false">
+        <a .browser-link .#{ftype} href=@?{ ( (lfViewR config) fps, parameters )}>
+            <span .filename>#{last fps}
             <span .misc>
-                <span><i>#{msgModified}:</i> #{modified}
-                $if (/=) filetype directory
-                  <span>#{msgFilesize}: #{size}
+              $forall (desc, value) <- xs
+                <span><i>#{desc}:</i> #{value}
     |]
-    pageNav
-        where
+  where
     directory   = "directory"
-    pages       = [1 .. (ceiling $ (fromIntegral (slCount sl) :: Double) / fromIntegral (slLimit sl) :: Int)]
-    pageNav     = if' (length pages == 1) mempty [whamlet|$newline never
-<div .text-center .browser-pagenav>
-  <span .btn-toolbar>
-    $if slPage sl > 0
-        <a .btn .btn-hl .btn-small .browser-link href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl - 1}>Previous
-    $else
-        <a .btn .btn-small .disabled>Previous
-    $forall n <- pages
-        $if n == (slPage sl + 1)
-            <a .btn .btn-small .disabled>#{n}
-        $else
-            <a .btn .btn-small .browser-link href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{n - 1}> #{n}
-    $if slPage sl < length pages
-        <a .btn .btn-hl .btn-small .browser-link href=@{routeToContent $ slCurrent sl}?limit_to=#{slLimit sl}&page=#{slPage sl + 1}>Next
-    $else
-        <a .btn .btn-small .disabled>Next
-|]
-
--- ** Blocks
-
--- * Navigation
+    parameters  = [] -- TODO:    if' (perpage == 0) [] [("limit_to", T.pack $ show perpage)]
+    playlistAddAll = [whamlet|
+      <a .btn
+        onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{lfSec config}'); return false"
+        title="Adds all files in this folder.">
+          Add all files
+    |]
 
 -- | Construct breadcrumbs into a widget.
-simpleNav :: Text
-          -> FPS
-          -> (FPS -> Route master)
-          -> WidgetT master IO ()
-simpleNav _    []  _ = mempty
-simpleNav home fps f = [whamlet|
+simpleBreadcrumbs :: SectionId -> FPS -> (FPS -> Route master) -> WidgetT master IO ()
+simpleBreadcrumbs _    []  _ = mempty
+simpleBreadcrumbs home fps f = [whamlet|
 <ul.breadcrumb>
     <li>
         <a .browser-link href=@{f mempty}>
@@ -254,7 +217,41 @@ simpleNav home fps f = [whamlet|
     <li>
       <a .browser-link href=@{route}>#{name}
     <li .divider>/
-  $with (name, _) <- last parts
-    <li.active>#{name}
+  <li.active>#{fst $ last parts}
 |] where
   parts = map (second f) $ zip fps $ foldr (\x -> (:) [x] . map ([x] ++)) [[]] fps
+
+-- | @pagerRender paging current@
+pagerRender :: Paging -> Int -> Route master -> (WidgetT master IO (), WidgetT master IO ()) -- ^ (config, navigation)
+pagerRender (perpage, n) nOfPages r2c' =
+    (,) [whamlet|$newline never
+<nav .text-center>Per page: #
+  <span .btn-toolbar>
+    $forall opt <- options
+      $if perpage == opt
+        <a .btn .btn-small .disabled>#{opt}
+      $else
+        <a .btn .btn-small .browser-link href="?limit_to=#{opt}&page=0">#{opt} #
+<span>
+    #{perpage}, #{n}, #{nOfPages}, #{length pages}
+
+|] $ if' (length pages == 1) mempty [whamlet|$newline never
+<div .text-center .browser-pagenav>
+  <span .btn-toolbar>
+    $if n > 0
+        <a .btn .btn-hl .btn-small .browser-link href="@?{r2c}&page=#{n - 1}">Previous
+
+    $forall page <- pages
+        $if (/=) page (n + 1)
+            <a .btn .btn-small .browser-link href="@?{r2c}&page=#{page - 1}" > #{page}
+        $else
+            <a .btn .btn-small .disabled>#{page}
+
+    $if n < length pages
+        <a .btn .btn-small .btn-hl .browser-link href="@?{r2c}&page=#{n + 1}">Next
+    $else
+        <a .btn .btn-small .disabled>Next
+|] where
+    r2c         = (r2c', [ ("limit_to", T.pack $ show perpage) ])
+    options     = [20, 50, 100, 200]
+    pages       = [1 .. nOfPages]  -- ceiling (div num perPage)

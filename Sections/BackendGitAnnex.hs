@@ -31,7 +31,7 @@ mkAnnexSec :: SectionId -> MediaConf -> AnnexSec
 mkAnnexSec section mc = AnnexSec section (mcPath mc) (MediaContentR section)
 
 instance ToJSON (MElem App AnnexSec) where
-    toJSON = undefined -- TODO implement/derive?
+    toJSON = error "toJSON not implemented" -- TODO implement/derive?
 
 instance MediaBrowsable App AnnexSec where
     data MElem App AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
@@ -39,36 +39,48 @@ instance MediaBrowsable App AnnexSec where
     browsableBanner         s = [whamlet|<i .icon-white .icon-link>#{sArea s}|]
     browsableFetchElems       = fetchElements
     browsableFetchPlain fps s = do
-        GAElem _ fp _ <- fetchFile (sArea s) (FP.joinPath fps)
+        (_fps, GAElem _ fp _) <- fetchFile (sArea s) (FP.joinPath fps)
         return $ sPath s FP.</> fp
-    browsableFetchPlainR  = undefined -- TODO Huh?
+    browsableFetchPlainR  = error "fetchplainR not implemented" -- TODO Huh?
     browsableServerRender = renderElements
-    browsableJSRender     = undefined -- TODO Haaa?
+    browsableJSRender     = error "js render not implemented"  -- TODO Haaa?
 
 -- * Query
 
-fetchElements :: FPS -> AnnexSec -> Paging -> MediaView App AnnexSec
-fetchElements fps s mpg = case fps of
-    [] -> return $ ListMany fetchRoot ListFlat
-    _  -> do
-        md <- runDB . getBy $ UniqueDNode (sArea s) path
-        case md of
-            Just dir -> return $ ListMany (fetchDirectory dir) ListFlat
-            Nothing  -> liftM ListSingle $ fetchFile (sArea s) path
+fetchElements :: FPS -> AnnexSec -> ListViewConf -> MediaView App AnnexSec
+fetchElements fps s (ListFlat mpg _) = case fps of
+    [] -> do
+        (source, n) <- fetchRoot
+        return $ ListMany source (ListFlat mpg $ Just n)
+
+    _  -> runDB (getBy $ UniqueDNode (sArea s) path) >>= \md -> case md of
+            Just dir -> do
+                (source, n) <- fetchDirectory dir
+                return $ ListMany source (ListFlat mpg $ Just n)
+
+            Nothing  -> liftM (ListSingle . snd) $ fetchFile (sArea s) path
   where
     path            = FP.joinPath fps
     fetchRoot       = fetchQuery (sArea s) mpg Nothing
     fetchDirectory  = fetchQuery (sArea s) mpg . Just . entityKey
 
-fetchFile :: SectionId -> FilePath -> Handler (MElem App AnnexSec)
-fetchFile area = liftM ((GAElem <$> const True <*> fNodePath <*> fNodeDetails) . entityVal)
+fetchFile :: SectionId -> FilePath -> Handler (FPS, MElem App AnnexSec)
+fetchFile area = liftM ( ((,) <$> FP.splitPath . fNodePath <*> toGAElem) . entityVal)
     . runDB . getBy404 . UniqueFNode area
+    where toGAElem = GAElem <$> const True
+                            <*> fNodePath
+                            <*> fNodeDetails
 
-fetchQuery :: SectionId -> Paging -> Maybe (Key DNode) -> Source Handler (MElem App AnnexSec)
-fetchQuery secid paging mp = runDBSource . mapOutput toElem . rawQuery qstring $ case mp of
-    Nothing ->        replicate 2 (toPersistValue secid)
-    Just p  -> join $ replicate 2 [toPersistValue secid, toPersistValue p]
+fetchQuery :: SectionId -> Paging -> Maybe (Key DNode) -> Handler (Source Handler (FPS, MElem App AnnexSec), Int)
+fetchQuery secid paging mp = liftM ( (,) getSource ) . liftM length . runDB $ myquery $$ CL.consume
+    
   where
+    getSource = runDBSource . mapOutput toElem $ myquery
+        
+    myquery = rawQuery qstring $ case mp of
+        Nothing ->        replicate 2 (toPersistValue secid)
+        Just p  -> join $ replicate 2 [toPersistValue secid, toPersistValue p]
+
     qstring = T.pack $ unlines
         [ "( SELECT FALSE as ts, path as paths, NULL    FROM d_node WHERE area = ? AND parent " <> pval
         , ") UNION"
@@ -78,71 +90,42 @@ fetchQuery secid paging mp = runDBSource . mapOutput toElem . rawQuery qstring $
     pval   = if' (isNothing mp) "IS NULL" "= ?"
 
     limits = case paging of
-        Nothing              -> ""
-        Just (offset, limit) -> " LIMIT " <> show limit <> " OFFSET " <> show offset
+        (limit, offset) -> " LIMIT " <> show limit <> " OFFSET " <> show (limit * offset)
 
 -- * Render
 
-renderElements :: ListContent App AnnexSec -> Widget
-renderElements (ListSingle s _   (GAElem True path desc)) = renderSingle  s path desc
-renderElements (ListFlat   s fps                  source) = renderListing s fps source
-renderElements other                                      = renderDefault other
+renderElements :: FPS -> AnnexSec -> ListContent App AnnexSec -> Widget
+-- renderElements fps s (ListSingle (GAElem True path desc)) = renderSingle  s path desc
+renderElements fps s = renderDefault (sArea s) fps
+--    $maybe desc <- mdesc
+--        <section>
+--            <h1>Mediainfo
+--            <pre>#{desc}
+--    $nothing
+--        <i>Details not available.
 
-renderSingle :: AnnexSec -> FilePath -> Maybe Text -> Widget
-renderSingle s path mdesc = do
-    let section = sArea s
-        fps     = FP.splitPath path
-    simpleNav section fps (sRoute s)
-    [whamlet|
-<section .ym-gbox .details>
-    <h1>#{path}
-    ^{mediaSingleControls section fps}
-    $maybe desc <- mdesc
-        <section>
-            <h1>Mediainfo
-            <pre>#{desc}
-    $nothing
-        <i>Details not available.
-|]
-
-renderListing :: AnnexSec -> FPS -> MediaSource app (MElem App AnnexSec) -> Widget
-renderListing s fps xs = undefined
---    let sl = simpleListingSettings
---                { slSect    = sArea s
---                , slCurrent = fps
---                , slCount   = length xs
---                , slPage    = page
---                , slLimit   = limit
---                , slContent = map buildElem xs
---                }
---        buildElem (GAElem isfile path _) =
---            ( T.pack path
---            , if' isfile "file" "directory"
---            , FP.splitPath path
---            , "", "")
---    simpleListing sl (sRoute s)
---                     (flip MediaServeR $ sArea s)
---                     ("Filename", "File size", "Modified")
+instance MediaRenderDefault App AnnexSec where
+    melemToContent (GAElem isdir _fp _mdesc) = (if' isdir "directory" "file", [])
 
 -- * Search
 
 instance MediaSearchable App AnnexSec where
     data MSearch AnnexSec = MSearch
-    searchableSearchT q s = (return . ListFlat s []) $ searchFor s q
+    searchableSearchT q s = return . flip ListMany (ListFlat (500, 1) Nothing) $ searchFor s q
 
-searchFor :: AnnexSec -> Text -> Source Handler (MElem App AnnexSec)
+searchFor :: AnnexSec -> Text -> Source Handler (FPS, MElem App AnnexSec)
 searchFor sec qtext = do
     (limit, offset) <- lift pagerSettings
     runDBSource $ mapOutput toElem $ rawQuery query
         $ (join . replicate 2) [ toPersistValue (sArea sec), toPersistValue $ ".*" <> qtext <> ".*" ]
-        ++ map toPersistValue [limit, offset]
+        -- ++ map toPersistValue [limit, limit * offset] -- TODO
   where
       query = T.pack $ unlines
             [ "(SELECT FALSE as ts, path as paths, NULL FROM d_node"
             , " WHERE area = ? AND path ~* ?"
             , ") UNION"
             , "(SELECT TRUE as ts, path as paths, details FROM f_node"
-            , " WHERE area = ? AND path ~* ?"
+            -- , " WHERE area = ? AND path ~* ?" -- TODO implement
             , ") ORDER BY ts, paths LIMIT ? OFFSET ? " ]
 
 
@@ -242,9 +225,9 @@ dbSource sec = lift action >>= mapM_ (yield . unSingle)
             , "UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
             ]
 
-toElem :: [PersistValue] -> MElem App AnnexSec
-toElem [PersistBool isfile, PersistText path, PersistNull]      = GAElem isfile (T.unpack path) Nothing
-toElem [PersistBool isfile, PersistText path, PersistText desc] = GAElem isfile (T.unpack path) (Just desc)
+toElem :: [PersistValue] -> (FPS, MElem App AnnexSec)
+toElem [PersistBool isfile, PersistText path, PersistNull]      = (FP.splitPath $ T.unpack path, GAElem isfile (T.unpack path) Nothing)
+toElem [PersistBool isfile, PersistText path, PersistText desc] = (FP.splitPath $ T.unpack path, GAElem isfile (T.unpack path) (Just desc))
 toElem _ = error "Sections.BackendGitAnnex.toElem: invalid value."
 
 -- ** git(-annex)

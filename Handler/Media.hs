@@ -18,7 +18,7 @@ import           Data.Time.Clock (diffUTCTime, NominalDiffTime)
 import qualified Data.Map as Map
 import qualified System.FilePath as FP
 import           Handler.Playlists (userPlaylistWidget)
-import           JSBrowser (browser, BrowserSettings(..))
+import           JSBrowser (browser, BrowserSettings(..), pagerSettings)
 import           Sections
 
 -- | Maximum time a file can be accessed via a temporary url.
@@ -69,10 +69,8 @@ getMediaSearchAllR = do
                 redirect MediaHomeR
 
           | otherwise = do
-            rs' <- onSections (liftHandlerT . searchableSearchT q >=> browsableServerRender)
-                {- ( \source -> browsableServerRender ["Search results for \n" <> T.unpack q <>"\n"] s) -}
+            rs' <- onSections (\sec -> liftHandlerT (searchableSearchT q sec) >>= browsableServerRender [] sec)
             rs  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f rs'
-            --results  <- liftM mconcat $ sequence $ Map.elems $ Map.mapWithKey f results'
             renderMaybeBare rs $ do
                 setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
@@ -99,7 +97,8 @@ getMediaSearchR section = do
                 redirect $ MediaContentR section []
 
           | otherwise = do
-            results <- onSection section (liftHandlerT . searchableSearchT q >=> browsableServerRender)
+            results <- onSection section
+                (\sec -> liftHandlerT (searchableSearchT q sec) >>= browsableServerRender [] sec)
             renderMaybeBare results $ do
                 setTitle $ toHtml $ "Results for: " <> q
                 wrapMain $ do
@@ -121,8 +120,11 @@ renderMaybeBare bareContents nonBareContents = do
 
 -- | Generate content based on section and path.
 sectionWidget :: Text -> FPS -> Widget
-sectionWidget s fps = join $ liftHandlerT $ onSection s
-    (liftHandlerT . flip (browsableFetchElems fps) Nothing >=> browsableServerRender) -- FIXME paging, not Nothing (or no paging)
+sectionWidget s fps = do
+    paging <- liftHandlerT pagerSettings
+    join $ liftHandlerT $ onSection s $
+        \sec -> liftHandlerT (browsableFetchElems fps sec $ ListFlat paging Nothing)
+            >>= browsableServerRender fps sec
 
 renderSearch :: SectionId -> Widget
 renderSearch      "" = renderSearchAll
