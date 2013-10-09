@@ -22,9 +22,9 @@ main {
       position:absolute;
       bottom:0;
       width:100%;
-      font-size:3em;
       text-align:center;
       line-height:2em;
+      b { font-size:3em; }
    }
 }
 .ym-wbox { padding:10px; }
@@ -367,12 +367,24 @@ html[xmlns] .clearfix {
 }
 /*}}}*/
 /*}}}*/
+/* {{{ Media :: Navigation */
+.subnavbar {
+   text-align:center;
+}
+/* }}} */
 /* {{{ Media :: Browser */
 .browser {
-   margin:0.5em 0.5em 0 0.5em;
-
+   margin:0 0.5em;
    .entry {
       padding:0 0 0 0.3em;
+
+      position:relative;
+      .browser-controls {
+         position:absolute;
+         margin:auto;
+         font-size:2em;
+         right:0; top:0;
+      }
    }
    .browser-link > span {
       display:block;
@@ -381,13 +393,6 @@ html[xmlns] .clearfix {
       overflow:hidden;
    }
    .icon { width:40px; height:100%; float:left; }
-      
-   .browser-controls {
-      float:right;
-      padding:0;
-      *            { font-size:120%; }
-      *:last-child { font-size:160%; }
-   }
 
    .misc { margin:0; }
    .misc span { padding:0 1em; }
@@ -425,7 +430,7 @@ html[xmlns] .clearfix {
    }
    .entry > .controls {
       float:right;
-      font-size:140%;
+      font-size:2em;
    }
 }
 .details { margin-top:1em; }

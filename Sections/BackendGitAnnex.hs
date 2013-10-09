@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 module Sections.BackendGitAnnex 
-    ( AnnexSec, mkAnnexSec
-    ) where
+    --( AnnexSec, mkAnnexSec )
+        where
 
 import           Import
 import           Utils
@@ -35,14 +35,13 @@ instance ToJSON (MElem App AnnexSec) where
 
 instance MediaBrowsable App AnnexSec where
     data MElem App AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
-
     browsableBanner         s = [whamlet|<i .icon-white .icon-link>#{sArea s}|]
+    browsableServerRender     = renderElements
     browsableFetchElems       = fetchElements
     browsableFetchPlain fps s = do
         (_fps, GAElem _ fp _) <- fetchFile (sArea s) (FP.joinPath fps)
         return $ sPath s FP.</> fp
-    browsableFetchPlainR  = error "fetchplainR not implemented" -- TODO Huh?
-    browsableServerRender = renderElements
+    browsableFetchPlainR  = fetchFiles
     browsableJSRender     = error "js render not implemented"  -- TODO Haaa?
 
 -- * Query
@@ -52,45 +51,54 @@ fetchElements fps s (ListFlat mpg _) = case fps of
     [] -> do
         (source, n) <- fetchRoot
         return $ ListMany source (ListFlat mpg $ Just n)
-
     _  -> runDB (getBy $ UniqueDNode (sArea s) path) >>= \md -> case md of
             Just dir -> do
                 (source, n) <- fetchDirectory dir
                 return $ ListMany source (ListFlat mpg $ Just n)
-
             Nothing  -> liftM (ListSingle . snd) $ fetchFile (sArea s) path
   where
     path            = FP.joinPath fps
-    fetchRoot       = fetchQuery (sArea s) mpg Nothing
-    fetchDirectory  = fetchQuery (sArea s) mpg . Just . entityKey
+    fetchRoot       = pagingQuery (sArea s) mpg Nothing
+    fetchDirectory  = pagingQuery (sArea s) mpg . Just . entityKey
 
 fetchFile :: SectionId -> FilePath -> Handler (FPS, MElem App AnnexSec)
-fetchFile area = liftM ( ((,) <$> FP.splitPath . fNodePath <*> toGAElem) . entityVal)
+fetchFile area = liftM (((,) <$> FP.splitDirectories . fNodePath <*> toGAElem) . entityVal)
     . runDB . getBy404 . UniqueFNode area
     where toGAElem = GAElem <$> const True
                             <*> fNodePath
                             <*> fNodeDetails
 
-fetchQuery :: SectionId -> Paging -> Maybe (Key DNode)
+pagingQuery :: SectionId -> Paging -> Maybe (Key DNode)
            -> Handler (Source Handler (FPS, MElem App AnnexSec), Int)
-fetchQuery secid (limit,offset) mp = liftM ((,) getSource) myCountQuery
+pagingQuery secid (limit, offset) mp = liftM ((,) getSource) countQuery
   where
     getSource = runDBSource . mapOutput toElem $ myquery
-
-    myquery   = rawQuery qstring $ toPersistValue secid : case mp of
-        Nothing -> []
-        Just p  -> [toPersistValue p]
-
-    myCountQuery = runDB $ liftM2 (+) ( count [FNodeArea ==. secid, FNodeParent ==. mp] )
-                                      ( count [DNodeArea ==. secid, DNodeParent ==. mp] )
-
-    qstring = T.pack $ unlines
+    myquery   = rawQuery qstring $ toPersistValue secid : maybe [] (\x -> [toPersistValue x]) mp
+                                   ++ [ toPersistValue limit, toPersistValue $ limit * offset ]
+    qstring   = T.unlines
         [ "SELECT isfile, path, details FROM (SELECT FALSE as isfile, area, path, parent, NULL    as details FROM d_node"
         ,                              "UNION SELECT TRUE  as isfile, area, path, parent, details as details FROM f_node)"
-        , "_ WHERE area = ? AND parent " <> parentval <> " ORDER BY isfile, path" <> limits
+        , "_ WHERE area = ? AND parent "  <> if' (isNothing mp) "IS NULL" "= ?"
+        , "ORDER BY isfile, path LIMIT ? OFFSET ?"
         ]
-    parentval   = if' (isNothing mp) "IS NULL" "= ?"
-    limits      = " LIMIT " <> show limit <> " OFFSET " <> show (limit * offset)
+    countQuery = runDB $ liftM2 (+) ( count [FNodeArea ==. secid, FNodeParent ==. mp] )
+                                    ( count [DNodeArea ==. secid, DNodeParent ==. mp] )
+
+fetchFiles :: FPS -> AnnexSec -> MediaSource App FilePath
+fetchFiles fps s = runDBSource . mapOutput toFilePath $ rawQuery qstring
+    [ toPersistValue secid, toPersistValue secid, toPersistValue $ FP.joinPath fps ]
+        where
+            secid = sArea s
+            qstring = "WITH RECURSIVE tr_nodes(isdir, id, parent, path) AS ( "
+                   <> "WITH nodes AS ( SELECT TRUE as isdir,  d.id, d.parent, d.path FROM d_node d WHERE area = ? "
+                   <>           "UNION SELECT FALSE as isdir, f.id, f.parent, f.path FROM f_node f WHERE area = ?) "
+                   <> "SELECT * FROM nodes WHERE path = ? "
+                   <> "UNION ALL "
+                      <> "SELECT n.isdir, n.id, n.parent, n.path "
+                      <> "FROM tr_nodes nr, nodes n "
+                      <> "WHERE n.parent = nr.id "
+                   <> ") SELECT path FROM tr_nodes WHERE isdir = FALSE"
+
 
 -- * Render
 
@@ -107,19 +115,14 @@ instance MediaSearchable App AnnexSec where
     searchableSearchT q s = return . flip ListMany (ListFlat (500, 1) Nothing) $ searchFor s q
 
 searchFor :: AnnexSec -> Text -> Source Handler (FPS, MElem App AnnexSec)
-searchFor sec qtext = runDBSource . mapOutput toElem $ rawQuery (query "")
+searchFor sec qtext = runDBSource . mapOutput toElem $ rawQuery (query "") -- TODO limits
         [ toPersistValue (sArea sec)
         , toPersistValue $ ".*" <> qtext <> ".*"
         ] where
-      query limits = T.pack $ unlines
-            [ "SELECT isfile, path, details"
-            , "FROM (SELECT FALSE as isfile, path, area, NULL    as details FROM d_node"
-            , "UNION SELECT TRUE  as isfile, path, area, details as details FROM f_node)"
-            , "_ WHERE area = ? AND path ~* ?"
-            , "ORDER BY isfile, path" <> limits
-            ] --  LIMIT ? OFFSET ? " ]
-     
-
+      query limits = T.unlines
+            [ "SELECT isfile, path, details FROM (SELECT FALSE as isfile, path, area, NULL    as details FROM d_node"
+            ,                              "UNION SELECT TRUE  as isfile, path, area, details as details FROM f_node)"
+            , "_ WHERE area = ? AND path ~* ? ORDER BY isfile, path" <> limits ]
 
 -- * Update
 
@@ -176,8 +179,8 @@ instance MediaUpdate App AnnexSec where
 
 pathToRecent :: Monad m => FilePath -> m (FPS, Html)
 pathToRecent path = return
-    ( FP.splitPath path
-    , toHtml $ last $ FP.splitPath path
+    ( FP.splitDirectories path
+    , toHtml $ last $ FP.splitDirectories path
     )
 
 -- | Takes the difference between two sorted sources. Output values are wrapped
@@ -208,68 +211,76 @@ differenceSortedE convert (ConduitM db0) (ConduitM git0) = ConduitM $ go db0 git
 -- ** Database
 
 dbSource :: AnnexSec -> Source Handler FilePath
-dbSource sec = lift action >>= mapM_ (yield . unSingle)
-    where
-        action = runDB $ rawSql query [toPersistValue (sArea sec)]
-        query  = T.pack $ unlines
-            [ "SELECT path"
-            , "FROM (SELECT path, area FROM f_node"
-            , "UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
-            ]
+dbSource sec = lift action >>= mapM_ (yield . unSingle) where
+    action = runDB $ rawSql query [toPersistValue (sArea sec)]
+    query  =  "SELECT path FROM (SELECT path, area FROM f_node"
+              <>         " UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
 
 -- | three fields: 'isfile', 'path', 'maybe desc'
 toElem :: [PersistValue] -> (FPS, MElem App AnnexSec)
-toElem [PersistBool isfile, PersistText path, PersistNull]      = (FP.splitPath $ T.unpack path, GAElem isfile (T.unpack path) Nothing)
-toElem [PersistBool isfile, PersistText path, PersistText desc] = (FP.splitPath $ T.unpack path, GAElem isfile (T.unpack path) (Just desc))
-toElem _ = error "Sections.BackendGitAnnex.toElem: invalid value."
+toElem [PersistBool isfile, PersistText path, PersistNull]      = (FP.splitDirectories $ T.unpack path, GAElem isfile (T.unpack path) Nothing)
+toElem [PersistBool isfile, PersistText path, PersistText desc] = (FP.splitDirectories $ T.unpack path, GAElem isfile (T.unpack path) (Just desc))
+toElem _ = error "Sections.BackendGitAnnex.toElem: no parse"
+
+toFilePath :: [PersistValue] -> FilePath
+toFilePath [PersistText path] = T.unpack path
+toFilePath _ = error "toFilePath: no parse"
 
 -- ** git(-annex)
 
 gitGetFileList :: MonadIO m
                => FilePath -- ^ Path to repository
                -> Source m FWrap
-gitGetFileList repo = sourceCmdLines repo "sh"
-    ["-c", "git ls-tree -r $(git rev-parse --abbrev-ref HEAD) --name-only"]
-    $= explodeSortPaths
+gitGetFileList repo = sourceCmdLinesNull repo
+    "sh" ["-c", "git ls-tree -r $(git rev-parse --abbrev-ref HEAD) --name-only -t -z"]
+    $= undefined
+    -- XXX: run git again without -t, and compare results for dir/file status?
 
-explodeSortPaths :: MonadIO m => Conduit FilePath m FWrap
-explodeSortPaths = explode' [] where
-    explode' fs = do
-        mpath <- await
-        case mpath of
-            Nothing   -> mempty
-            Just path -> handleParts [] (FP.splitDirectories path) fs
-        where
-            -- (yielded already) (git) (stack)
-            handleParts pos  xs     []  = do
-                mapM_ yield $ composeSubPaths pos xs
-                explode' $ init (pos ++ xs)
+-- -- | Wrap to FWrap
+-- doStuff :: MonadIO m => Conduit FilePath m FWrap
+-- doStuff = maybe mempty doStuff' =<< await
+--     where doStuff' a = 
+--             mb <- await
+--             case mb of
+--                 Nothing -> yield $ FFile a
+--                 Just b  -> if (a <> "/") `isPrefixOf` b
+--                                 then yield (FDir a) >> 
+--                                 else 
 
-            handleParts pos (x:xs) (y:ys)
-                | x == y    = handleParts (pos ++ [x])     xs ys
-                | otherwise = handleParts  pos         (x:xs) []
-            handleParts _ _ _ = return () -- FIXME: ????? This case shouldn't be necessary
-
-sourceCmdLines :: MonadIO m
-               => FilePath    -- ^ Working directory
-               -> String      -- ^ Command
-               -> [String]    -- ^ Parameters
-               -> Source m FilePath
-sourceCmdLines path cmd params =
-    (cmd' >>= sourceHandle) $= CL.concatMapAccum getOutLines BC.empty
+sourceCmdLinesNull :: MonadIO m
+                   => FilePath    -- ^ Working directory
+                   -> String      -- ^ Command
+                   -> [String]    -- ^ Parameters
+                   -> Source m FilePath
+sourceCmdLinesNull path cmd params =
+    (cmd' >>= sourceHandle) $= CL.concatMapAccum getOutLinesNull BC.empty
   where cmd' = liftM (\(_,h,_,_) -> h) . liftIO $
                 runInteractiveProcess cmd params (Just path) Nothing
 
-getOutLines :: BC.ByteString -- ^ New input
-            -> BC.ByteString -- ^ Buffer. Guaranteed to not have newlines
-            -> (BC.ByteString, [FilePath])
-getOutLines bs buffer = let
-    (x:xs) = BC.split '\n' bs
+getOutLinesNull :: BC.ByteString -- ^ New input
+                -> BC.ByteString -- ^ Buffer. Guaranteed to not have newlines
+                -> (BC.ByteString, [FilePath])
+getOutLinesNull bs buffer = let
+    (x:xs) = BC.split '\0' bs
     in (last xs, map (T.unpack . decodeUtf8) $ (buffer <> x) : init xs)
 
-composeSubPaths :: [FilePath] -> [FilePath] -> [FWrap]
-composeSubPaths xs ys = let
-    paths = tail $ inits ys
-    dirs  = init paths
-    file  = last paths
-    in map (FDir . FP.joinPath . (++) xs) dirs ++ [FFile $ FP.joinPath $ xs ++ file]
+-- I think this does work?
+-- composeSubPaths :: [FilePath] -> [FilePath] -> [FWrap]
+-- composeSubPaths xs ys = let
+--     paths = tail $ inits ys
+--     dirs  = init paths
+--     file  = last paths
+--     in map (FDir . FP.joinPath . (++) xs) dirs ++ [FFile $ FP.joinPath $ xs ++ file]
+
+-- explodeSortPaths :: MonadIO m => Conduit FilePath m FWrap
+-- explodeSortPaths = explode' [] where
+--     explode' fs  = await >>= maybe mempty (\path -> handleParts [] (FP.splitDirectories path) fs)
+--         where -- (yielded already) (git) (stack)
+--               handleParts pos  xs     []  = do
+--                   mapM_ yield $ composeSubPaths pos xs
+--                   explode' $ init (pos ++ xs)
+-- 
+--               handleParts pos (x:xs) (y:ys)
+--                   | x == y    = handleParts (pos ++ [x])     xs ys
+--                   | otherwise = handleParts  pos         (x:xs) []
+--               handleParts _ _ _ = return () -- FIXME: ????? This case shouldn't be necessary

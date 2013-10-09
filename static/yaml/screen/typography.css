@@ -357,13 +357,11 @@
 	.float-left {
 		float:left;
 		display:inline;
-		margin: 1.5em 1em 0 0;
 	}
 
 	.float-right {
 		float:right;
 		display:inline;
-		margin: 1.5em 0 0 1em;
 	}
 
 	.center {

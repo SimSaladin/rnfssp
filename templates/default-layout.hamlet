@@ -2,4 +2,8 @@
  ^{widget}
  <footer>
    <div>
-      <b>Nyan nyan nyan!
+      <b>Bugs for Hugs
+      <br>
+      Jos löydät bugin, jota ei vielä ole listattu esim.
+      <a href="http://github.com/SimSaladin/rnfssp/issues">täällä
+      &mdash; raportoi se

@@ -134,6 +134,7 @@ library
                  , network
                  , random
                  , transformers
+                 , haikubot
 
 
 executable         rnfssp

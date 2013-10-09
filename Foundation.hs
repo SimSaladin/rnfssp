@@ -298,11 +298,11 @@ navigation active = do
     boards <- liftM boards2widget $ liftHandlerT $ runDB $ selectList [] []
     mmsg <- liftHandlerT getMessage
     let es =
-          [ ("SS", Right HomePageR)
-          , ("Blog" :: Text, Right BlogHomeR)
+          [ ("Animu", Right HomePageR)
+          , ("Blog",  Right BlogHomeR)
           , ("Lauta", Left (BoardHomeR, boards))
           , ("Media", Right MediaHomeR)
-          , ("Market", Right MarketHomeR)
+          , ("Market",Right MarketHomeR)
           ]
 
     let es' = [ ("Kemia",    "http://kemia.ssdesk.paivola.fi")

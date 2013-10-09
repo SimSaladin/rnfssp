@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Oct 08 2013 [15:05:05]
+-- Last Modified: Oct 08 2013 [15:12:13]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -55,6 +55,8 @@ instance MediaSearchable App MPDSec where
 
 instance MediaUpdate App MPDSec where
     updateMedia _  = return [] -- TODO: mpd update?
+
+-- * Fetch/Util
 
 musicFetch :: MPDSec -> FPS -> Source Handler (FPS, MElem App MPDSec)
 musicFetch _ fps = lift (liftHandlerT (M.pathContents fps))

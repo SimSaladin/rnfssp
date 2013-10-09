@@ -1,4 +1,13 @@
-<blockquote #haiku-quote>#{haiku}
+<blockquote #haiku-quote>
+   $case haiku
+      $of [x]
+         #{haikuf x}
+      $of _
+         <b>#{head haiku}
+         <br>
+         $forall x <- tail haiku
+            #{haikuf x}
+            <br>
 <main .ym-grid .ym-equalize .linearize-level-1>
    <div .ym-g62 .ym-gl>
       <section .site-block-h>

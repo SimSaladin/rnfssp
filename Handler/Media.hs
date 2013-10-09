@@ -25,13 +25,6 @@ import           Sections
 maxTempUrlAlive :: NominalDiffTime
 maxTempUrlAlive = 60 * 60 * 24
 
-topNavigator :: SectionId -> Widget
-topNavigator current = [whamlet|
-<section>
-    ^{renderBrowsable current}
-    ^{renderSearch current}
-    |]
-
 myBrowser :: WidgetT master IO () -> WidgetT master IO ()
 myBrowser = browser . BrowserSettings
         "mybrowser" "a.browser-link" [".input-search + button"]
@@ -108,6 +101,9 @@ getMediaSearchR section = do
     maybe (redirect $ MediaContentR section []) doSearch mq
 
 -- * Widgets
+
+topNavigator :: SectionId -> Widget
+topNavigator = (>>) <$> renderBrowsable <*> renderSearch
 
 renderMaybeBare :: Widget -> Widget -> Handler Html
 renderMaybeBare bareContents nonBareContents = do

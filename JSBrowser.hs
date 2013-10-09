@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          JSBrowser.hs
 -- Creation Date: Dec 18 2012 [02:04:15]
--- Last Modified: Oct 08 2013 [14:44:19]
+-- Last Modified: Oct 09 2013 [05:15:14]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -125,14 +125,15 @@ renderDefault :: MediaRenderDefault master section
               -> (             SectionId -> FPS -> Route master) -- ^ ContentR
               -> (ServeType -> SectionId -> FPS -> Route master) -- ^ ServeR
               -> WidgetT master IO ()
-renderDefault secid fps (ListSingle _huh) _contentR serveR = [whamlet|
+renderDefault secid fps (ListSingle _huh) contentR serveR = [whamlet|
 <section>
+    ^{simpleBreadcrumbs secid fps (contentR secid)}
     <h1>#{F.joinPath fps}
     ^{mediaSingleControls secid fps serveR}
 |]
 -- many: just flat listing
 renderDefault secid fps (ListMany source (ListFlat paging numof)) contentR serveR = listFlat
-    $ FlatListSettings (contentR secid) (flip serveR secid)
+    $ FlatListSettings (contentR secid) (`serveR` secid)
                        secid fps paging
                        (maybe 1 (\x -> ceiling $ (fromIntegral x :: Double) / fromIntegral (fst paging)) numof)
                        source
@@ -169,13 +170,17 @@ data FlatListSettings master section = FlatListSettings
 listFlat :: MediaRenderDefault master section
          => FlatListSettings master section -> WidgetT master IO ()
 listFlat config = do
-    browseSettings
-    playlistAddAll
-    browseNavigation
-    (simpleBreadcrumbs <$> lfSec <*> lfCurrentFPS <*> lfViewR) config
+    [whamlet|
+^{brwidget}
+<div .clearfix .hl-on-hover style="width:100%">
+    <div .float-left>^{browseSettings}
+    <div .float-right>^{playlistAddAll}
+    |]
     elements <- liftHandlerT $ mapOutput (second melemToContent) (lfContent config) $$ CL.consume
+    -- TODO data-field to a custom data-path attribute of .entry.
     [whamlet|$newline never
 <div .browser>
+  <div .text-center .hl-on-hover>^{browseNavigation}
   $forall (fps, (ftype, xs)) <- elements
     <div .entry .type-#{ftype}>
         <div .data-field style="display:none">#{F.joinPath fps}
@@ -189,52 +194,53 @@ listFlat config = do
             <span .misc>
               $forall (desc, value) <- xs
                 <span><i>#{desc}:</i> #{value}
+  <div .text-center .hl-on-hover style="margin-top:0.5em;">^{browseNavigation}
     |]
   where
     directory   = "directory"
     parameters  = [] -- TODO:    if' (perpage == 0) [] [("limit_to", T.pack $ show perpage)]
     playlistAddAll = [whamlet|
-      <a .btn
-        onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{lfSec config}'); return false"
-        title="Adds all files in this folder.">
-          Add all files
+<a .btn
+    onclick="playlist.add_from_element_contents($('.browser .type-file .data-field'), '#{lfSec config}'); return false"
+    title="Adds all files in this folder.">Add all
     |]
     (browseSettings, browseNavigation) = (pagerRender <$> lfPaging
                                                       <*> lfNumPages
                                                       <*> (lfViewR <$> id <*> lfCurrentFPS) ) config
+    brwidget = (simpleBreadcrumbs <$> lfSec
+                                  <*> lfCurrentFPS
+                                  <*> lfViewR) config
 
 -- | Construct breadcrumbs into a widget.
 simpleBreadcrumbs :: SectionId -> FPS -> (FPS -> Route master) -> WidgetT master IO ()
 simpleBreadcrumbs _    []  _ = mempty
 simpleBreadcrumbs home fps f = [whamlet|
 <ul.breadcrumb>
-    <li>
-        <a .browser-link href=@{f mempty}>
-            <i>#{home}
-    <li .divider>/
+  <li>
+    <a .browser-link href=@{f mempty}><i>#{home}</i>
+  <li .divider>&nbsp;&#x25B8;&nbsp;
   $forall (name, route) <- init parts
     <li>
       <a .browser-link href=@{route}>#{name}
-    <li .divider>/
+    <li .divider>&nbsp;&#x25B8;&nbsp;
   <li.active>#{fst $ last parts}
 |] where
   parts = map (second f) $ zip fps $ foldr (\x -> (:) [x] . map ([x] ++)) [[]] fps
 
 -- | @pagerRender paging current@
-pagerRender :: Paging -> Int -> Route master -> (WidgetT master IO (), WidgetT master IO ()) -- ^ (config, navigation)
+pagerRender :: Paging -> Int -> Route master
+            -> (WidgetT master IO (), WidgetT master IO ()) -- ^ (config, navigation)
 pagerRender (perpage, curpage) pagecount r2c' =
     (,) [whamlet|$newline never
-<nav .text-center>Per page: #
-  <span .btn-toolbar>
-    $forall opt <- options
+<span .btn-toolbar>
+  $forall opt <- options
       $if perpage == opt
         <a .btn .btn-small .disabled>#{opt}
       $else
         <a .btn .btn-small .browser-link href="?limit_to=#{opt}&page=0">#{opt} #
 |] $
     if' (length pages == 1) mempty [whamlet|$newline never
-<div .text-center .browser-pagenav>
-  <span .btn-toolbar>
+<span .btn-toolbar>
     $if curpage > 0
         <a .btn .btn-hl .btn-small .browser-link href="@?{r2c}&page=#{curpage - 1}">Previous
     $forall page <- pages
