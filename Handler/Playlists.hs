@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Sep 16 2013 [01:14:03]
+-- Last Modified: Oct 10 2013 [03:29:57]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -173,7 +173,7 @@ plInsert pl section paths = do
     elemSource <- onSection section (browsableFetchPlainR paths)
     these'     <- elemSource $$ CL.consume
     return $ case these' of
-        [] -> (False, pl)
+        []    -> (False, pl)
         these -> (True, pl{ playlistElems = playlistElems pl ++ map ((,) section) these
                      , playlistModified = t 
                      })

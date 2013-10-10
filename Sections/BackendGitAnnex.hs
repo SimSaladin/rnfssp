@@ -9,6 +9,7 @@ import           Sections.Types
 import           JSBrowser
 import qualified Data.ByteString.Char8  as BC
 import           Data.Maybe (isNothing)
+import           Data.Ord (comparing)
 import           Data.Conduit
 import           Data.Conduit.Binary
 import           Data.Conduit.Internal          (Pipe(..), ConduitM(..))
@@ -89,15 +90,13 @@ fetchFiles fps s = runDBSource . mapOutput toFilePath $ rawQuery qstring
     [ toPersistValue secid, toPersistValue secid, toPersistValue $ FP.joinPath fps ]
         where
             secid = sArea s
-            qstring = "WITH RECURSIVE tr_nodes(isdir, id, parent, path) AS ( "
-                   <> "WITH nodes AS ( SELECT TRUE as isdir,  d.id, d.parent, d.path FROM d_node d WHERE area = ? "
-                   <>           "UNION SELECT FALSE as isdir, f.id, f.parent, f.path FROM f_node f WHERE area = ?) "
-                   <> "SELECT * FROM nodes WHERE path = ? "
-                   <> "UNION ALL "
-                      <> "SELECT n.isdir, n.id, n.parent, n.path "
-                      <> "FROM tr_nodes nr, nodes n "
-                      <> "WHERE n.parent = nr.id "
-                   <> ") SELECT path FROM tr_nodes WHERE isdir = FALSE"
+            qstring =
+               "WITH RECURSIVE tr_nodes(id, parent, path) AS ( "
+                   <> "WITH nodes AS ( SELECT d.id, d.parent, d.path FROM d_node d WHERE area = ? "
+                             <> "UNION SELECT NULL, f.parent, f.path FROM f_node f WHERE area = ? "
+                   <> ") SELECT * FROM nodes WHERE path = ? "
+                   <> "UNION ALL SELECT n.* FROM tr_nodes nr, nodes n WHERE n.parent = nr.id "
+                 <> ") SELECT path FROM tr_nodes WHERE id IS NULL ORDER BY path"
 
 
 -- * Render
@@ -126,30 +125,28 @@ searchFor sec qtext = runDBSource . mapOutput toElem $ rawQuery (query "") -- TO
 
 -- * Update
 
--- | File node wrapper 
-data FWrap = FFile FilePath
-           | FDir  FilePath
-        deriving (Show)
+type FWrap = (Bool, FilePath) -- ^ (Is dir?, relative path)
 
-unFWrap :: FWrap -> FilePath
-unFWrap (FFile fp) = fp
-unFWrap (FDir  fp) = fp
+type UpdateTarget = Either FilePath FWrap -- ^ Right delete_this, Left add_this
 
-type UpdateTarget = Either FilePath FWrap
+cdebug fp x = do liftIO $ appendFile fp $ '\n' : show x
+                 return x
 
 instance MediaUpdate App AnnexSec where
-  updateMedia sec = differenceSortedE unFWrap
-        (dbSource sec) (gitGetFileList $ sPath sec)
-        $$ handler [] []
+  updateMedia sec = differenceSortedE snd
+        ( (CL.sourceList . sort =<< lift (dbSource sec $$ CL.consume)) $= CL.mapM (cdebug "dbsource.log"))
+        (sourceGitFiles (sPath sec) $= CL.mapM (cdebug "gitsource.log"))
+        $$ handler [] [] -- elements to delete, new elements
     where
       handler :: [FilePath] -> [(FPS, Html)] -> Sink UpdateTarget Handler [(FPS, Html)]
       handler todel ra = await >>= maybe (lift (delete' todel) >> return ra) handleElement
         where
-            handleElement (Left fp) = handler (todel ++ [fp]) ra
+            handleElement (Left fp) = (liftIO $ appendFile "my_log.log" (show fp ++ "\n")) >> handler (todel ++ [fp]) ra
             handleElement (Right e) = do
-              ra' <- lift $ runDB $ case e of
+                liftIO $ appendFile "my_log.log" (show e ++ "\n")
+                new_elem <- lift $ runDB $ case e of
 
-                  FFile path -> do
+                  (False, path) -> do
                       parent <- findParent path
                       -- FIXME this check shouldn't be necessary!
                       exists <- getBy $ UniqueFNode (sArea sec) path
@@ -158,7 +155,7 @@ instance MediaUpdate App AnnexSec where
                           Just _  -> return ()
                       pathToRecent path
 
-                  FDir path -> do
+                  (True, path) -> do
                       parent <- findParent path
                       exists <- getBy $ UniqueDNode (sArea sec) path
                       case exists of
@@ -166,22 +163,26 @@ instance MediaUpdate App AnnexSec where
                           Just _  -> return ()
                       pathToRecent path
 
-              lift $ delete' todel -- reached a directory => delete queue (does this work always?)
-              handler [] (ra' : ra)
+                -- reached a directory => delete queue (does this work always?)
+                lift $ delete' todel
+                handler [] (new_elem : ra)
 
       findParent     path = getBy $ UniqueDNode (sArea sec) (FP.takeDirectory path)
+
+      delete'          [] = return ()
+      delete'       paths = runDB $ mapM_ delAll
+          =<< selectList [DNodeArea ==. sArea sec, DNodePath <-. paths] [Desc DNodePath]
+
       delAll (Entity k _) = do deleteWhere [FNodeArea ==. sArea sec, FNodeParent ==. Just k]
                                deleteWhere [DNodeArea ==. sArea sec, DNodeParent ==. Just k]
                                delete k
-      delete'          [] = return ()
-      delete'       paths = runDB $ mapM_ delAll
-          =<< selectList [DNodeArea ==. sArea sec, DNodePath <-. paths] [Asc DNodePath]
 
 pathToRecent :: Monad m => FilePath -> m (FPS, Html)
 pathToRecent path = return
     ( FP.splitDirectories path
-    , toHtml $ last $ FP.splitDirectories path
-    )
+    , toHtml . f $ FP.splitDirectories path
+    ) where f [] = "(empty? this shouldn't be possible)" ++ path
+            f xs = last xs
 
 -- | Takes the difference between two sorted sources. Output values are wrapped
 -- in Either: unique values from first source are wrapped in Left and vice
@@ -211,10 +212,11 @@ differenceSortedE convert (ConduitM db0) (ConduitM git0) = ConduitM $ go db0 git
 -- ** Database
 
 dbSource :: AnnexSec -> Source Handler FilePath
-dbSource sec = lift action >>= mapM_ (yield . unSingle) where
-    action = runDB $ rawSql query [toPersistValue (sArea sec)]
-    query  =  "SELECT path FROM (SELECT path, area FROM f_node"
-              <>         " UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
+dbSource sec = lift action >>= mapM_ (yield . unSingle)
+    where
+        action = runDB $ rawSql query [toPersistValue (sArea sec)]
+        query  =  "SELECT path FROM (SELECT path, area FROM f_node"
+                  <>         " UNION SELECT path, area FROM d_node) _ WHERE area = ? ORDER BY path"
 
 -- | three fields: 'isfile', 'path', 'maybe desc'
 toElem :: [PersistValue] -> (FPS, MElem App AnnexSec)
@@ -228,59 +230,28 @@ toFilePath _ = error "toFilePath: no parse"
 
 -- ** git(-annex)
 
-gitGetFileList :: MonadIO m
+sourceGitFiles :: MonadIO m
                => FilePath -- ^ Path to repository
-               -> Source m FWrap
-gitGetFileList repo = sourceCmdLinesNull repo
-    "sh" ["-c", "git ls-tree -r $(git rev-parse --abbrev-ref HEAD) --name-only -t -z"]
-    $= undefined
-    -- XXX: run git again without -t, and compare results for dir/file status?
+               -> Source m (Bool, FilePath)
+sourceGitFiles repo = CL.sourceList . sortBy (comparing snd) =<<
+    (sourceStdoutOf repo "sh" ["-c", "git ls-tree $(git rev-parse --abbrev-ref HEAD) -rtz"]
+                      $= sepOnNull $= toGitElem $$ CL.consume
+                      )
 
--- -- | Wrap to FWrap
--- doStuff :: MonadIO m => Conduit FilePath m FWrap
--- doStuff = maybe mempty doStuff' =<< await
---     where doStuff' a = 
---             mb <- await
---             case mb of
---                 Nothing -> yield $ FFile a
---                 Just b  -> if (a <> "/") `isPrefixOf` b
---                                 then yield (FDir a) >> 
---                                 else 
+toGitElem :: Monad m => Conduit Text m (Bool, FilePath)
+toGitElem = CL.map $ f . T.words
+    where f (_:t:_:xs) = ("t" `T.isPrefixOf` t, T.unpack $ T.unwords xs)
+          f          _ = error "toGitElem: invalid input"
 
-sourceCmdLinesNull :: MonadIO m
-                   => FilePath    -- ^ Working directory
-                   -> String      -- ^ Command
-                   -> [String]    -- ^ Parameters
-                   -> Source m FilePath
-sourceCmdLinesNull path cmd params =
-    (cmd' >>= sourceHandle) $= CL.concatMapAccum getOutLinesNull BC.empty
-  where cmd' = liftM (\(_,h,_,_) -> h) . liftIO $
-                runInteractiveProcess cmd params (Just path) Nothing
+sepOnNull :: Monad m => Conduit BC.ByteString m Text
+sepOnNull = CL.concatMapAccum f BC.empty
+    where f bs buffer = case BC.split '\0' bs of
+            (x : [])        -> (BC.empty, [decodeUtf8 $ buffer <> x])
+            (x : xs@(_:_) ) ->
+                (last xs, map decodeUtf8 $ (buffer <> x) : init xs)
 
-getOutLinesNull :: BC.ByteString -- ^ New input
-                -> BC.ByteString -- ^ Buffer. Guaranteed to not have newlines
-                -> (BC.ByteString, [FilePath])
-getOutLinesNull bs buffer = let
-    (x:xs) = BC.split '\0' bs
-    in (last xs, map (T.unpack . decodeUtf8) $ (buffer <> x) : init xs)
-
--- I think this does work?
--- composeSubPaths :: [FilePath] -> [FilePath] -> [FWrap]
--- composeSubPaths xs ys = let
---     paths = tail $ inits ys
---     dirs  = init paths
---     file  = last paths
---     in map (FDir . FP.joinPath . (++) xs) dirs ++ [FFile $ FP.joinPath $ xs ++ file]
-
--- explodeSortPaths :: MonadIO m => Conduit FilePath m FWrap
--- explodeSortPaths = explode' [] where
---     explode' fs  = await >>= maybe mempty (\path -> handleParts [] (FP.splitDirectories path) fs)
---         where -- (yielded already) (git) (stack)
---               handleParts pos  xs     []  = do
---                   mapM_ yield $ composeSubPaths pos xs
---                   explode' $ init (pos ++ xs)
--- 
---               handleParts pos (x:xs) (y:ys)
---                   | x == y    = handleParts (pos ++ [x])     xs ys
---                   | otherwise = handleParts  pos         (x:xs) []
---               handleParts _ _ _ = return () -- FIXME: ????? This case shouldn't be necessary
+sourceStdoutOf :: MonadIO m
+               => FilePath -> String -> [String]
+               -> Source m BC.ByteString
+sourceStdoutOf wdir cmd params = cmd' >>= \(_,h,_,_) -> sourceHandle h
+  where cmd' = liftIO $ runInteractiveProcess cmd params (Just wdir) Nothing
