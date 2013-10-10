@@ -7,6 +7,7 @@ import           Import
 import           Utils
 import           Sections.Types
 import           JSBrowser
+import           Control.Arrow (second)
 import qualified Data.ByteString.Char8  as BC
 import           Data.Maybe (isNothing)
 import           Data.Ord (comparing)
@@ -26,17 +27,24 @@ data AnnexSec = AnnexSec
     { sArea  :: Text
     , sPath  :: FilePath
     , sRoute :: FPS -> Route App
+    , sScreenname :: Text
     }
 
 mkAnnexSec :: SectionId -> MediaConf -> AnnexSec
-mkAnnexSec section mc = AnnexSec section (mcPath mc) (MediaContentR section)
+mkAnnexSec section mc = AnnexSec section
+            (mcPath mc)
+            (MediaContentR section)
+            section
 
 instance ToJSON (MElem App AnnexSec) where
     toJSON = error "toJSON not implemented" -- TODO implement/derive?
 
 instance MediaBrowsable App AnnexSec where
     data MElem App AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
-    browsableBanner         s = [whamlet|<i .icon-white .icon-link>#{sArea s}|]
+    browsableBanner         s = [whamlet|
+<i .icon-white .icon-link>&nbsp;
+&nbsp;#{sScreenname s}
+|]
     browsableServerRender     = renderElements
     browsableFetchElems       = fetchElements
     browsableFetchPlain fps s = do
@@ -65,7 +73,7 @@ fetchElements fps s (ListFlat mpg _) = case fps of
 fetchFile :: SectionId -> FilePath -> Handler (FPS, MElem App AnnexSec)
 fetchFile area = liftM (((,) <$> FP.splitDirectories . fNodePath <*> toGAElem) . entityVal)
     . runDB . getBy404 . UniqueFNode area
-    where toGAElem = GAElem <$> const True
+    where toGAElem = GAElem <$> const False
                             <*> fNodePath
                             <*> fNodeDetails
 
@@ -101,11 +109,11 @@ fetchFiles fps s = runDBSource . mapOutput toFilePath $ rawQuery qstring
 
 -- * Render
 
-renderElements :: FPS -> AnnexSec -> ListContent App AnnexSec -> Widget
-renderElements fps s content = renderDefault (sArea s) fps content MediaContentR MediaServeR
-
 instance MediaRenderDefault App AnnexSec where
     melemToContent (GAElem isdir _fp _mdesc) = (if' isdir "directory" "file", [])
+
+renderElements :: FPS -> AnnexSec -> ListContent App AnnexSec -> Widget
+renderElements fps s content = renderDefault (sArea s) fps content MediaContentR MediaServeR
 
 -- * Search
 
@@ -129,23 +137,18 @@ type FWrap = (Bool, FilePath) -- ^ (Is dir?, relative path)
 
 type UpdateTarget = Either FilePath FWrap -- ^ Right delete_this, Left add_this
 
-cdebug fp x = do liftIO $ appendFile fp $ '\n' : show x
-                 return x
-
 instance MediaUpdate App AnnexSec where
   updateMedia sec = differenceSortedE snd
-        ( (CL.sourceList . sort =<< lift (dbSource sec $$ CL.consume)) $= CL.mapM (cdebug "dbsource.log"))
-        (sourceGitFiles (sPath sec) $= CL.mapM (cdebug "gitsource.log"))
+        (lift (dbSource sec $$ CL.consume) >>= CL.sourceList . sort)
+        (sourceGitFiles $ sPath sec)
         $$ handler [] [] -- elements to delete, new elements
     where
       handler :: [FilePath] -> [(FPS, Html)] -> Sink UpdateTarget Handler [(FPS, Html)]
       handler todel ra = await >>= maybe (lift (delete' todel) >> return ra) handleElement
         where
-            handleElement (Left fp) = (liftIO $ appendFile "my_log.log" (show fp ++ "\n")) >> handler (todel ++ [fp]) ra
+            handleElement (Left fp) = handler (todel ++ [fp]) ra
             handleElement (Right e) = do
-                liftIO $ appendFile "my_log.log" (show e ++ "\n")
                 new_elem <- lift $ runDB $ case e of
-
                   (False, path) -> do
                       parent <- findParent path
                       -- FIXME this check shouldn't be necessary!
@@ -220,8 +223,8 @@ dbSource sec = lift action >>= mapM_ (yield . unSingle)
 
 -- | three fields: 'isfile', 'path', 'maybe desc'
 toElem :: [PersistValue] -> (FPS, MElem App AnnexSec)
-toElem [PersistBool isfile, PersistText path, PersistNull]      = (FP.splitDirectories $ T.unpack path, GAElem isfile (T.unpack path) Nothing)
-toElem [PersistBool isfile, PersistText path, PersistText desc] = (FP.splitDirectories $ T.unpack path, GAElem isfile (T.unpack path) (Just desc))
+toElem [PersistBool isfile, PersistText path, PersistNull]      = (FP.splitDirectories $ T.unpack path, GAElem (not isfile) (T.unpack path) Nothing)
+toElem [PersistBool isfile, PersistText path, PersistText desc] = (FP.splitDirectories $ T.unpack path, GAElem (not isfile) (T.unpack path) (Just desc))
 toElem _ = error "Sections.BackendGitAnnex.toElem: no parse"
 
 toFilePath :: [PersistValue] -> FilePath
@@ -239,16 +242,17 @@ sourceGitFiles repo = CL.sourceList . sortBy (comparing snd) =<<
                       )
 
 toGitElem :: Monad m => Conduit Text m (Bool, FilePath)
-toGitElem = CL.map $ f . T.words
-    where f (_:t:_:xs) = ("t" `T.isPrefixOf` t, T.unpack $ T.unwords xs)
-          f          _ = error "toGitElem: invalid input"
+toGitElem = CL.mapMaybe $ f . T.words
+    where f (_:t:_:xs) = Just ("t" `T.isPrefixOf` t, T.unpack $ T.unwords xs)
+          f         [] = Nothing
+          f         xs = error $ T.unpack $ "toGitElem: invalid input: " <> T.unwords xs
 
 sepOnNull :: Monad m => Conduit BC.ByteString m Text
-sepOnNull = CL.concatMapAccum f BC.empty
-    where f bs buffer = case BC.split '\0' bs of
-            (x : [])        -> (BC.empty, [decodeUtf8 $ buffer <> x])
-            (x : xs@(_:_) ) ->
-                (last xs, map decodeUtf8 $ (buffer <> x) : init xs)
+sepOnNull = CL.concatMapAccum f BC.empty where
+    f bs buffer = second (map decodeUtf8) $ case BC.split '\0' bs of
+            []              -> (buffer,   [])
+            (x : [])        -> (BC.empty, [buffer <> x])
+            (x : xs@(_:_) ) -> (last xs,  (buffer <> x) : init xs)
 
 sourceStdoutOf :: MonadIO m
                => FilePath -> String -> [String]

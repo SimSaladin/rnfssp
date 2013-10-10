@@ -171,10 +171,9 @@ getMediaServeR stype section path = case stype of
 adminWidget :: Widget
 adminWidget = do
     ((result, widget), encType) <- liftHandlerT $ runFormPost adminForm
-    renderFormH (submitButton "Execute actions")
-                MsgMediaActions
-                MediaAdminR
-                result widget encType
+    renderFormH $ myForm
+                MsgMediaActions encType MediaAdminR
+                widget (submitButton "Execute actions") result
 
 -- | Admin operations in Media.
 postMediaAdminR :: Handler Html
@@ -194,29 +193,31 @@ mediaUpdateR = do
 
 mediaRecent :: Int -> Widget
 mediaRecent n = do
-    recent <- liftHandlerT $ runDB $
+    recent <- liftHandlerT . runDB . liftM (map entityVal) $
         selectList [] [Desc RecentlyAddedDate, LimitTo n]
+    rdates <- liftIO $ mapM (formatTimeZoned "%d.%m" . recentlyAddedDate) recent
     [whamlet|
 <ul>
-    $forall Entity _ ra <- recent
+    $forall (ra, date) <- zip recent rdates
       <li>
         <a href=@{MediaContentR (recentlyAddedSection ra) (recentlyAddedParts ra)}>
             #{recentlyAddedDesc ra}
         <small>
-            <i>Added #{printfTime "%d.%m" $ recentlyAddedDate ra}
+            <i>Added #{date}
 |]
 
 mediaRecentDl :: Int -> Widget
 mediaRecentDl n = do
-    recent <- liftHandlerT $ runDB $ selectList [] [Desc LogDownloadTime, LimitTo n]
+    recent <- liftHandlerT . runDB . liftM (map entityVal) $
+        selectList [] [Desc LogDownloadTime, LimitTo n]
+    rdates <- liftIO $ mapM (formatTimeZoned "%d.%m %H:%M" . logDownloadTime) recent
     [whamlet|
 <ul>
-    $forall Entity _ dl <- recent
+    $forall (dl, date) <- zip recent rdates
         <li>
             <a href=@{MediaContentR (logDownloadSection dl) (logDownloadFps dl)}>
                 #{last $ logDownloadFps dl}
-            <small>
-                <i>Played #{printfTime "%d.%m %H:%M" $ logDownloadTime dl}
+            <small><i>Played #{date}</i>
 |]
 
 adminForm :: Form (Bool, Bool)

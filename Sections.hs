@@ -85,5 +85,5 @@ sectionBanners = do
     sequence $ Map.elems $ Map.mapWithKey (\k -> liftM (k,)) banners
 
 invalid :: Text -> HandlerT master IO a
-invalid how = invalidArgs $
+invalid how = invalidArgs
     [how, "If you reached this page through a link on the website, please contact the webmaster."]

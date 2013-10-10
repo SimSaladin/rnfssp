@@ -19,11 +19,9 @@ getAdminR = do
         (Just _,_) -> invalidArgs ["Unknown action!"]
         (     _,_) -> do
             (formWidget, encType) <- generateFormPost newboardForm
-            let form = renderFormH
-                  (submitButtonI MsgBoardCreate)
-                  MsgBoardCreate
-                  AdminR
-                  FormMissing formWidget encType
+            let form = renderFormH $ myForm
+                  MsgBoardCreate encType AdminR
+                  formWidget (submitButtonI MsgBoardCreate) FormMissing
 
             users <- runDB $ selectList ([] :: [Filter User]) []
             defaultLayout $ do

@@ -17,7 +17,6 @@ import qualified Database.Persist
 import           Database.Persist.Sql (SqlPersistT)
 import           System.Log.FastLogger  (Logger)
 import           Text.Hamlet            (hamletFile)
-import           Text.Lucius
 import           Text.Jasmine           (minifym)
 import           WaiAppStatic.Types     (StaticSettings(..), File(..), fromPiece)
 import           Data.Time.Format (formatTime)
@@ -41,6 +40,8 @@ import qualified Settings
 import           Settings.Development (development)
 import           Chat
 import           Mpd
+
+import Utils
 
 data ServeType = ServeTemp
                | ServeAuto
@@ -169,17 +170,19 @@ instance YesodAuth App where
         lift $ defaultLayout $ do
             setTitleI Msg.LoginTitle
             navigation "Login"
-            -- tm <- liftHandlerT $ lift getRouteToParent
             master <- liftHandlerT getYesod
-            [whamlet|
-<main>
-    ^{mapM_ (flip apLogin tm) (authPlugins master)}
-                |]
+            wrapMain $ mapM_ (flip apLogin tm) (authPlugins master)
+
+hashLogin :: (Route Auth -> Route App) -> Widget
+hashLogin tm  = $(widgetFile "login")
+  where route = tm $ PluginR "hashdb" ["login"]
 
 -- This instance is required to use forms. You can modify renderMessage to
 -- achieve customized and internationalized form validation messages.
 instance RenderMessage App FormMessage where
     renderMessage _ _ = defaultFormMessage
+
+-- * Extra
 
 -- | Get the 'Extra' value, used to hold data from the settings.yml file.
 getExtra :: Handler Extra
@@ -197,43 +200,15 @@ setStaticSettings (Static ss) = Static $ ss {
       | otherwise        = Nothing
     where endsWith x = x `T.isSuffixOf` (fromPiece $ fileName file)
 
--- * Subsites
-
--- ** Chat
-
-instance YesodChat master => YesodSubDispatch Chat (HandlerT master IO) where
-    yesodSubDispatch = $(mkYesodSubDispatch resourcesChat)
-
-instance YesodChat App where
-    data ChatMessage App = CMsg Chatmsg
-
-    chatIdent = liftM (fmap $ userUsername . entityVal) maybeAuth
-
-    chatCreateMsg poster content = do
-        time <- liftIO getCurrentTime
-        let msg = Chatmsg time poster content
-        _ <- runDB $ insert msg
-        return $ CMsg msg
-
-    chatGet = liftM (map $ CMsg . entityVal) $ runDB $ selectList [] []
-
-    chatRenderMsg (CMsg (Chatmsg time poster msg)) =
-        fromString ("<p><span class=date>" <> formatTime defaultTimeLocale "%H:%M" time <> "</span> ")
-            <> fromText ("<span class=poster> " <> poster <> "</span> ")
-            <> fromText msg
-
--- ** Mpd
-
-instance YesodMpd master => YesodSubDispatch Mpd (HandlerT master IO) where
-    yesodSubDispatch = $(mkYesodSubDispatch resourcesMpd)
-
-instance YesodMpd App where
-  mpdPort = return 6600
-  mpdHost = return "localhost"
-  mpdPass = return ""
-
+gServeroot :: Handler Text
+gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
 
 -- * Utils
+
+-- ** Auth
+
+routeToLogin :: Route App
+routeToLogin = AuthR LoginR
 
 isAdmin :: Handler AuthResult
 isAdmin = do
@@ -245,6 +220,9 @@ isAdmin = do
             else Unauthorized "You must be an admin!"
 --            | admin == (Key $ Database.Persist.Store.PersistInt64 3) -> Authorized
 --            | otherwise -> Unauthorized "You must be an admin"
+
+isAdmin' :: Handler Bool
+isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
 
 isValidLoggedIn :: Handler AuthResult
 isValidLoggedIn = do
@@ -260,10 +238,6 @@ isValidLoggedIn' = isValidLoggedIn >>= \x -> case x of
     AuthenticationRequired -> setMessage "That section requires authentication. Please login."
     _                      -> return ()
     >> return x
-
-hashLogin :: (Route Auth -> Route App) -> Widget
-hashLogin tm  = $(widgetFile "login")
-  where route = tm $ PluginR "hashdb" ["login"]
 
 homeIfLoggedIn :: Handler ()
 homeIfLoggedIn = maybeAuth >>= maybe (return ())
@@ -283,14 +257,26 @@ denyIfAnonUnPVL = do
         | "194.197.235." `T.isPrefixOf` x = True
         | otherwise = False
 
-last' :: Int -> [a] -> [a]
-last' n xs
-  | l >= n    = drop (l - n) xs
-  | otherwise = xs
-    where l = length xs
+-- ** Common widgets
 
-routeToLogin :: Route App
-routeToLogin = AuthR LoginR
+data MyNav = NavHome
+           | NavBlog
+           | NavLauta
+           | NavMedia
+           | NavMarket
+           | NavAdmin
+           | NavProfile
+           | NavOther Text
+           deriving (Eq)
+
+type NavElements = [(MyNav, Widget)]
+
+myNav :: NavElements
+myNav = [ (NavHome, [whamlet|Animu|]) ]
+
+navigation' :: MyNav -> Widget
+navigation' _current = do
+    undefined
 
 navigation :: Text -> Widget
 navigation active = do
@@ -360,20 +346,40 @@ $else
                <i>#{boardDescription val}
 |]
 
-cssMyTransition :: Mixin
-cssMyTransition = [luciusMixin|
--webkit-transition: opacity .4s ease-in-out;
--moz-transition: opacity .4s ease-in-out;
--ms-transition: opacity .4s ease-in-out;
--o-transition: opacity .4s ease-in-out;
-transition: opacity .4s ease-in-out;
-    |]
+myForm :: AppMessage -> Enctype -> Route App -> Widget -> Widget -> FormResult res -> MyForm App AppMessage res
+myForm = MyForm (MsgFormOneError, MsgFormNErrors, MsgFormSuccess)
 
-cssBorderRadius :: String -> Mixin
-cssBorderRadius val = [luciusMixin|
--webkit-border-radius: #{val};
--moz-border-radius: #{val};
--ms-border-radius: #{val};
--o-border-radius: #{val};
-border-radius: #{val};
-    |]
+-- * Subsites
+
+-- ** Chat
+
+instance YesodChat master => YesodSubDispatch Chat (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesChat)
+
+instance YesodChat App where
+    data ChatMessage App = CMsg Chatmsg
+
+    chatIdent = liftM (fmap $ userUsername . entityVal) maybeAuth
+
+    chatCreateMsg poster content = do
+        time <- liftIO getCurrentTime
+        let msg = Chatmsg time poster content
+        _ <- runDB $ insert msg
+        return $ CMsg msg
+
+    chatGet = liftM (map $ CMsg . entityVal) $ runDB $ selectList [] []
+
+    chatRenderMsg (CMsg (Chatmsg time poster msg)) =
+        fromString ("<p><span class=date>" <> formatTime defaultTimeLocale "%H:%M" time <> "</span> ")
+            <> fromText ("<span class=poster> " <> poster <> "</span> ")
+            <> fromText msg
+
+-- ** Mpd
+
+instance YesodMpd master => YesodSubDispatch Mpd (HandlerT master IO) where
+    yesodSubDispatch = $(mkYesodSubDispatch resourcesMpd)
+
+instance YesodMpd App where
+  mpdPort = return 6600
+  mpdHost = return "localhost"
+  mpdPass = return ""

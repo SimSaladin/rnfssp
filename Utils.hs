@@ -1,28 +1,32 @@
+{-# LANGUAGE RankNTypes #-}
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Oct 03 2013 [16:49:04]
+-- Last Modified: Oct 10 2013 [20:20:16]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
 
+import           Yesod
+import           Text.Lucius
+
+import           Prelude
+import           Control.Applicative
+import           Control.Monad
 import           Control.Monad.Random
 import           Data.Char
-import           Data.List (tail)
+import           Data.Text (Text)
 import qualified Data.Text as T
-import           Data.Time (getCurrentTime)
-import           Data.Time.Clock (UTCTime)
-import           Data.Time.Format (formatTime, FormatTime)
-import           Import
+import           Data.Time
 import           System.FilePath as F
 import           System.Locale (defaultTimeLocale)
 import           System.Posix (FileOffset)
 import           Text.Printf (printf)
-import           Yesod.Default.Config (appExtra)
-
-import Sections.Types
 
 -- * Combinators
+
+if' :: Bool -> a -> a -> a
+if' cond th el = if cond then th else el
 
 map3 :: (x -> a) -> (x -> b) -> (x -> c) -> x -> (a, b, c)
 map3 f g h = (,,) <$> f <*> g <*> h
@@ -30,64 +34,40 @@ map3 f g h = (,,) <$> f <*> g <*> h
 tryMaybe :: Monad m => m a -> Maybe a -> m a
 tryMaybe = flip maybe return
 
-if' :: Bool -> a -> a -> a
-if' cond th el = if cond then th else el
-
 removeByIndex :: Int -> [a] -> [a]
 removeByIndex i xs = let (ys,zs) = splitAt i xs in ys ++ tail zs
 
+last' :: Int -> [a] -> [a]
+last' n xs
+  | l >= n    = drop (l - n) xs
+  | otherwise = xs
+    where l = length xs
 
--- * Time utils
+-- * Date and time
 
--- | convienience
-timeNow :: Handler UTCTime
+timeNow :: MonadIO m => m UTCTime
 timeNow = liftIO getCurrentTime
 
-printfTime :: FormatTime t => String -> t -> String
-printfTime = formatTime defaultTimeLocale
+formatTimeZoned :: String -> UTCTime -> IO Text
+formatTimeZoned format time = liftM (T.pack . f) getCurrentTimeZone
+    where f = formatTime defaultTimeLocale format . flip utcToZonedTime time
 
-
--- * Auth
-
-isAdmin' :: Handler Bool
-isAdmin' = liftM (maybe False $ userAdmin . entityVal) maybeAuth
-
-denyIf :: Yesod master => Bool -> Text -> HandlerT master IO ()
-denyIf True  = permissionDenied
-denyIf False = const (return ())
-
-gServeroot :: Handler Text
-gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
-
-
--- * Filepath utils
-
-uniqueFilePath :: FilePath -- ^ directory
-               -> FilePath -- ^ template
-               -> IO FilePath
-uniqueFilePath dir template = fmap ((dir </>) . appendBaseName) (randomString 10)
-  where appendBaseName = replaceBaseName template . (takeBaseName template ++)
+-- * Text
 
 randomString :: Int -> IO String
 randomString n = liftM (map chr) (evalRandIO $ replicateM n rnd)
   where rnd = getRandomR (48, 57)
 
 randomText :: Int -> IO Text
-randomText n = liftM (T.pack . map chr) (evalRandIO $ replicateM n rnd)
-  where rnd = getRandomR (65, 90)
+randomText = liftM T.pack . randomString
 
-toPath :: [Text] -> Text
-toPath = T.pack . F.joinPath . map T.unpack
+-- * Files and filetypes
 
--- | Split text to filepath pieces
-splitPath' :: Text -> [Text]
-splitPath' = map T.pack . splitPath . T.unpack
-
-takeDirectory' :: Text -> Text
-takeDirectory' = T.dropWhileEnd (=='/') . fst . T.breakOnEnd "/"
-
-
--- * Text rendering
+uniqueFilePath :: FilePath -- ^ directory
+               -> FilePath -- ^ template
+               -> IO FilePath
+uniqueFilePath dir template = fmap ((dir </>) . appendBaseName) (randomString 10)
+  where appendBaseName = replaceBaseName template . (takeBaseName template ++)
 
 -- | File size prettified
 prettyFilesize :: FileOffset -> Text
@@ -110,8 +90,11 @@ guessFiletype fp
     | otherwise = "unknown"
     where ext = takeExtension fp
 
+-- * Utils
 
--- * Widgets
+denyIf :: Yesod master => Bool -> Text -> HandlerT master IO ()
+denyIf True  = permissionDenied
+denyIf False = const (return ())
 
 -- | Convert a widget to a whole page.
 widgetBodyToRepHtml :: Yesod master => WidgetT master IO () -> HandlerT master IO Html
@@ -126,7 +109,20 @@ layoutSplitH w1 w2 = [whamlet|
    <div .ym-g38 .ym-gl>^{w2}
    |]
 
+wrapMain :: WidgetT master IO () -> WidgetT master IO ()
+wrapMain w = [whamlet|<main>^{w}|]
+
 -- * Forms
+
+data MyForm master msg res = MyForm
+    { mfInfoMsg :: (msg, msg, msg)
+    , mfTitle   :: msg
+    , mfEnctype :: Enctype
+    , mfRoute   :: Route master
+    , mfFields  :: WidgetT master IO ()
+    , mfActions :: WidgetT master IO ()
+    , mfResult  :: FormResult res
+    }
 
 renderYaml :: Monad master => FormRender master a
 renderYaml aform fragment = do
@@ -148,62 +144,55 @@ $forall view <- views
 |]
     return (res, widget)
 
--- XXX: i18n the names
-
-submitButton :: Text -> Widget
-submitButton x = [whamlet|<input type=submit value=#{x}>|]
-
-submitButtonI :: RenderMessage App msg => msg -> Widget
-submitButtonI x = [whamlet|<input type=submit value=_{x}>|]
-
-replyButton :: Widget
-replyButton = [whamlet|<input type=submit value=Reply>|]
-
-renderForm :: RenderMessage App msg
-           => Widget  -- ^ Widget in the submit area.
-           -> msg                 -- ^ Form title
-           -> Route App           -- ^ Form action.
-           -> FormResult a
-           -> Widget  -- ^ Fields.
-           -> Enctype
-           -> Widget
+renderForm :: RenderMessage master msg => MyForm master msg res -> WidgetT master IO ()
 renderForm = renderForm' ""
 
-renderFormH :: RenderMessage App msg
-            => Widget -- ^ Widget in the submit area.
-            -> msg                -- ^ Form title
-            -> Route App          -- ^ Form action.
-            -> FormResult a
-            -> Widget -- ^ Fields.
-            -> Enctype
-            -> Widget
+renderFormH :: RenderMessage master msg => MyForm master msg res -> WidgetT master IO ()
 renderFormH = renderForm' "form-horizontal"
 
--- | Render a POST form.
-renderForm' :: RenderMessage App msg
-           => Text                -- ^ Extra class for <form>.
-           -> Widget  -- ^ Widget in the submit area.
-           -> msg                 -- ^ Form title
-           -> Route App           -- ^ Form action.
-           -> FormResult a
-           -> Widget  -- ^ Fields.
-           -> Enctype
-           -> Widget
-renderForm' extra buttons title route res widget encType = [whamlet|
-<form .#{extra} method=post action=@{route} enctype=#{encType}>
-  <legend>_{title}
-  $case res
-      $of FormFailure [_]
-        <div .alert .alert-error>_{MsgFormOneError}
-      $of FormFailure xs
-          <div .alert .alert-error>#{length xs} _{MsgFormNErrors}
-      $of FormSuccess _
-          <div .alert .alert-success>_{MsgFormSuccess}
-      $of _
-  ^{widget}
-  <div .form-actions>
-    ^{buttons}
-|]
+submitButton :: Text -> WidgetT master IO ()
+submitButton x = [whamlet|<input type=submit value=#{x}>|]
 
-wrapMain :: Widget -> Widget
-wrapMain w = [whamlet|<main>^{w}|]
+submitButtonI :: RenderMessage master msg
+              => msg -> WidgetT master IO ()
+submitButtonI x = [whamlet|<input type=submit value=_{x}>|]
+
+-- | Render a POST form.
+renderForm' :: RenderMessage master msg
+            => Text -> MyForm master msg res -> WidgetT master IO ()
+            -- buttons title route res widget encType = [whamlet|
+renderForm' extra settings = [whamlet|
+<form .#{extra} method=post action=@{mfRoute settings} enctype=#{mfEnctype settings}>
+  <legend>_{mfTitle settings}
+  $case mfResult settings
+      $of FormFailure [_]
+        <div .alert .alert-error>_{msgError}
+      $of FormFailure xs
+          <div .alert .alert-error>#{length xs} _{msgErrors}
+      $of FormSuccess _
+          <div .alert .alert-success>_{msgSuccess}
+      $of _
+  ^{mfFields settings}
+  <div .form-actions>^{mfActions settings}
+|] where
+    (msgError, msgErrors, msgSuccess) = mfInfoMsg settings
+
+-- * Mixins
+
+cssMyTransition :: Mixin
+cssMyTransition = [luciusMixin|
+-webkit-transition: opacity .4s ease-in-out;
+-moz-transition: opacity .4s ease-in-out;
+-ms-transition: opacity .4s ease-in-out;
+-o-transition: opacity .4s ease-in-out;
+transition: opacity .4s ease-in-out;
+    |]
+
+cssBorderRadius :: String -> Mixin
+cssBorderRadius val = [luciusMixin|
+-webkit-border-radius: #{val};
+-moz-border-radius: #{val};
+-ms-border-radius: #{val};
+-o-border-radius: #{val};
+border-radius: #{val};
+    |]

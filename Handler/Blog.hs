@@ -64,15 +64,14 @@ getBlogHomeR = do
 getBlogViewR :: Text -> Handler Html
 getBlogViewR path = do
     showHidden <- isAdmin'
-    e                 <- runDB . getBy404 $ UniqueBlogpost path
-    if (blogpostPublic $ entityVal e) || showHidden 
+    Entity k v <- runDB . getBy404 $ UniqueBlogpost path
+    if blogpostPublic v || showHidden 
       then do
-          (widget, encType) <- generateFormPost $ commentForm (entityKey e) Nothing
-          (post, comments)  <- generateView e
-          renderView (entityVal e) $(widgetFile "blog-view")
+          (widget, encType) <- generateFormPost $ commentForm k Nothing
+          (post, comments)  <- generateView (Entity k v)
+          let result = FormMissing
+              in renderView v $(widgetFile "blog-view")
       else permissionDenied "Need admin access to show hidden blog posts."
-  where
-    result = FormMissing
 
 -- | Post action in a view is for posting comments.
 postBlogViewR :: Text -> Handler Html
@@ -212,7 +211,10 @@ getBlogAddR :: Handler Html
 getBlogAddR = do
     Entity _ user <- requireAuth
     (widget, encType) <- generateFormPost (blogpostForm False user Nothing) -- new post form
-    renderPublish $ renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR FormMissing widget encType
+    renderPublish $ renderFormH $ myForm
+        MsgBlogPublish encType BlogAddR
+        widget (submitButton "Publish")
+        FormMissing
 
 postBlogAddR :: Handler Html
 postBlogAddR = do
@@ -224,7 +226,8 @@ postBlogAddR = do
             setMessage $ toHtml $ "Post " <> blogpostTitle post <> " published."
             redirect $ BlogViewR $ blogpostUrlpath post
         _ -> renderPublish $
-            renderFormH (submitButton "Publish") MsgBlogPublish BlogAddR result widget encType
+            renderFormH $ myForm MsgBlogPublish encType BlogAddR
+                                 widget (submitButton "Publish") result
 
 getBlogEditR :: Text -> Handler Html
 getBlogEditR path = do
@@ -233,10 +236,8 @@ getBlogEditR path = do
     (widget, encType) <- generateFormPost (blogpostForm True user (Just val))
     renderEdit val $ do
         [whamlet|<h1>Editing #{path}|]
-        renderFormH (submitButton "Publish")
-                    MsgBlogPublish
-                    (BlogEditR path)
-                    result widget encType
+        renderFormH $ myForm MsgBlogPublish encType (BlogEditR path)
+                             widget (submitButton "Publish") result
     where result = FormMissing
 
 postBlogEditR :: Text -> Handler Html
@@ -251,11 +252,9 @@ postBlogEditR path = do
                 updatePost post
                 setMessage "Succesfully edited."
                 redirect $ BlogViewR path
-        FormFailure _ -> renderEdit val $ renderFormH
-                (submitButton "Publish")
-                MsgBlogPublish
-                (BlogEditR path)
-                result widget encType
+        FormFailure _ -> renderEdit val $ renderFormH $ myForm
+                MsgBlogPublish encType (BlogEditR path)
+                widget (submitButton "Publish") result
         FormMissing -> redirect $ BlogEditR path
   where
     invalidUrl = do
@@ -275,7 +274,7 @@ blogpostForm editing poster mp = renderBootstrap $ mkBlogpost
     <*> areq boolField     "Public"             (blogpostPublic   <$> mp)
     <*> areq markdownField "Content (Markdown)" (blogpostMarkdown <$> mp)
   where
-    urlpathField   = if' editing id (checkM validUrlpart) $ textField
+    urlpathField   = if' editing id (checkM validUrlpart) textField
     mkBlogpost time title url tags public md = Blogpost
         (maybe                  time blogpostTime   mp)
         (maybe (userUsername poster) blogpostPoster mp)
@@ -335,3 +334,5 @@ $if length pages > 1
 getPreview :: Markdown -> Markdown
 getPreview = Markdown . fst . T.breakOn "\n\n" . unMarkdown
 
+replyButton :: Widget
+replyButton = submitButton "reply"
