@@ -1,7 +1,8 @@
+{-# LANGUAGE FlexibleInstances, TypeSynonymInstances #-}
 ------------------------------------------------------------------------------
 -- File:          MPDSection.hs
 -- Creation Date: Dec 24 2012 [00:26:24]
--- Last Modified: Oct 08 2013 [15:12:13]
+-- Last Modified: Oct 11 2013 [03:59:12]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 
@@ -28,6 +29,9 @@ data MPDSec = MPDSec
 
 mkMPDSec :: SectionId -> MediaConf -> MPDSec
 mkMPDSec section mc = MPDSec section (mcPath mc) (MediaContentR section)
+
+instance ToJSON (MElem App MPDSec) where -- TODO
+    toJSON = undefined
 
 instance MediaBrowsable App MPDSec where
     data MElem App MPDSec = MESong M.Song

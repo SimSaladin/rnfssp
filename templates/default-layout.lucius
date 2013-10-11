@@ -82,7 +82,7 @@ pre {
 /*}}}*/
 /* {{{ blockquotes */
 blockquote {
-   ^{cssBorderRadius "4"};
+   ^{cssBorderRadius "4px"};
    position:relative;
    padding:1em;
    margin-right:2em;

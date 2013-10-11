@@ -3,6 +3,8 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TupleSections #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
+-- | RnfSSP specific code for sections.
 module Sections
    ( module Sections.Types
    , onSection
@@ -18,10 +20,6 @@ import Utils
 import Sections.Types
 import Sections.Music
 import Sections.BackendGitAnnex
---import Sections.Film
-
-instance ToJSON (MElem App MPDSec) where -- TODO
-    toJSON = undefined
 
 instance MyMedia App AnnexSec
 instance MyMedia App MPDSec
