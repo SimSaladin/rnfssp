@@ -249,9 +249,9 @@ toGitElem = CL.mapMaybe $ f . T.words
 sepOnNull :: Monad m => Conduit BC.ByteString m Text
 sepOnNull = CL.concatMapAccum f BC.empty where
     f bs buffer = second (map decodeUtf8) $ case BC.split '\0' bs of
-            []              -> (buffer,   [])
-            (x : [])        -> (BC.empty, [buffer <> x])
-            (x : xs@(_:_) ) -> (last xs,  (buffer <> x) : init xs)
+            []              -> (buffer,      []) -- (buffer, results)
+            (x : [])        -> (buffer <> x, [])
+            (x : xs@(_:_) ) -> (last xs,     buffer <> x : init xs)
 
 sourceStdoutOf :: MonadIO m
                => FilePath -> String -> [String]
