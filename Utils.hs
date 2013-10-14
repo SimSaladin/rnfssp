@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File: Utils.hs
 -- Creation Date: Aug 04 2012 [02:54:37]
--- Last Modified: Oct 10 2013 [20:20:16]
+-- Last Modified: Oct 11 2013 [09:02:37]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Utils where
@@ -51,6 +51,9 @@ timeNow = liftIO getCurrentTime
 formatTimeZoned :: String -> UTCTime -> IO Text
 formatTimeZoned format time = liftM (T.pack . f) getCurrentTimeZone
     where f = formatTime defaultTimeLocale format . flip utcToZonedTime time
+
+formatTimeZoned' :: UTCTime -> IO Text
+formatTimeZoned' = formatTimeZoned "%H:%M %d.%m.%y"
 
 -- * Text
 

@@ -1,7 +1,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Market.hs
 -- Creation Date: May 28 2013 [17:49:23]
--- Last Modified: Oct 02 2013 [22:24:39]
+-- Last Modified: Oct 11 2013 [10:58:06]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Market where
@@ -82,21 +82,21 @@ buyForm muser = renderBootstrap $ BuyItem
   <$> areq textField  "Haluaisin ostaa:"{fsAttrs = [("list", "market-items")]} Nothing
   <*> areq intField   "Näin monta:"      (Just 1)
   <*> ((unTextarea <$>) <$> aopt textareaField "Lisätietoja:" Nothing)
-  <*> areq textField  "Olen" (userUsername <$> muser)
+  <*> areq textField  "Olen"             (userUsername <$> muser)
   <*> aopt emailField "Sähköpostiosoite" (Just . userEmail <$> muser)
-  <*> aopt textField  "Puhelinnumero"           (Nothing)
-  <*> aopt textField  "IRC-nick"          (userIrcnick <$> muser)
+  <*> aopt textField  "Puhelinnumero"    (Nothing)
+  <*> aopt textField  "IRC-nick"         (userIrcnick <$> muser)
 
 sellForm :: (Maybe User) -> Form SaleItem
 sellForm muser = renderBootstrap $ SaleItem
-  <$> areq textField  "Myyn:"{fsAttrs = [("list", "market-items")]} Nothing
-  <*> areq intField   "Näin monta:" (Just 1)
-  <*> areq doubleField "Hinta (€)"  Nothing
-  <*> ((unTextarea <$>) <$> aopt textareaField  "Lisätietoja:" Nothing)
-  <*> areq textField  "Olen"                    (userUsername <$> muser)
+  <$> areq textField   "Myyn:"{fsAttrs = [("list", "market-items")]} Nothing
+  <*> areq intField    "Näin monta:" (Just 1)
+  <*> areq doubleField "Hinta (€)"   Nothing
+  <*> ((unTextarea <$>) <$> aopt textareaField "Lisätietoja:" Nothing)
+  <*> areq textField   "Olen"            (userUsername <$> muser)
   <*> aopt emailField "Sähköpostiosoite" (Just . userEmail <$> muser)
-  <*> aopt textField  "Puhelinnumero"           (Nothing)
-  <*> aopt textField  "IRC-nick"          (userIrcnick <$> muser)
+  <*> aopt textField   "Puhelinnumero"   (Nothing)
+  <*> aopt textField   "IRC-nick"        (userIrcnick <$> muser)
 
 buy, sale :: Widget
 buy = do

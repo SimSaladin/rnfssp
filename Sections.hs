@@ -40,12 +40,11 @@ onSections f = do
 
 -- | Take a MediaConf and run an action on it.
 runMediaConf :: SectionId -> MediaConf -> MediaHandler b -> Handler b
-#define build(mk) (return . f $ mk sec mc)
+#define build(mk) return . f $ mk sec mc
 runMediaConf sec mc f = case mcType mc of
         "mpd"   -> build(mkMPDSec)
---      "film"  -> build(mkFilmSec)
         "annex" -> build(mkAnnexSec)
-        x -> invalid $ "Requested section type not supported: " <> x
+        x       -> invalid $ "Requested section type not supported: " <> x
 #undef build
 
 -- * Navigation
@@ -72,8 +71,7 @@ getSections = liftM extraSections getExtra
 updateAllMedia :: Handler [RecentlyAdded]
 updateAllMedia = getSections >>= liftM join . sequence . Map.elems . Map.mapWithKey f
     where f s mc = do
-            xs <- join $ runMediaConf s mc
-                     (updateMedia :: forall s. MyMedia App s => s -> Handler [(FPS, Html)])
+            xs <- join $ runMediaConf s mc (updateMedia :: MediaHandler (Handler [(FPS, Html)]))
             time <- timeNow
             return $ map (uncurry $ RecentlyAdded time s) (xs :: [(FPS, Html)])
 

@@ -20,23 +20,23 @@ import Data.Maybe (fromMaybe, isNothing)
 
 import Utils
 
+type Thread = (Entity Boardpost, [Entity Boardpost])
+
 -- [/board] 
 getBoardHomeR :: Handler Html
 getBoardHomeR = do
-    boards <- runDB $ selectList ([] :: [Filter Board]) []
+    boards <- runDB $ selectList [] [Asc BoardName]
     defaultLayout $ do
         setTitle "Lauta"
         navigation "Lauta"
         $(widgetFile "board-home")
 
-type Thread = (Entity Boardpost, [Entity Boardpost])
-
 renderThreads :: Entity Board
               -> Either Thread [Thread]
-              -> ((FormResult D1, Widget), Enctype) -- 
+              -> ((FormResult (Maybe String -> Maybe Text -> Boardpost, Maybe FileInfo), Widget), Enctype) -- 
               -> Handler Html
 renderThreads (Entity _ bval) content ((result, formWidget), encType) = defaultLayout $ do
-    setTitle $ toHtml $ T.concat ["/", boardName bval, "/"]
+    setTitle . toHtml $ "/" <> boardName bval <> "/"
     navigation "Lauta"
     $(widgetFile "board")
 
@@ -46,12 +46,11 @@ getBoardR bname = do
     (board, threads) <- runDB $ do
         b   <- getBy404 $ UniqueBoard bname
         ops <- selectList [ BoardpostLocation ==. entityKey b
-                          , BoardpostParent   ==. Nothing
-                          ]
+                          , BoardpostParent   ==. Nothing ]
                           [Asc BoardpostTime]
         replies <- mapM (\op -> selectList [BoardpostParent ==. Just (entityKey op)] []) ops
         return (b, zip ops replies)
-    form <- runFormPost (postForm (entityKey board) Nothing)
+    form <- runFormPost $ postForm (entityKey board) Nothing
     renderThreads board (Right threads) form
 
 -- /board/<board> - starting new thread.
@@ -60,17 +59,16 @@ postBoardR bname = do
     Entity bid _ <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost $ postForm bid Nothing
     case result of
-      FormSuccess replyD -> d1toBoardPost replyD >>= runDB . insert
-                                                 >>= redirect . ThreadR bname
-      FormFailure _ -> getBoardR bname -- redirect (BoardR bname)
-      FormMissing -> notFound -- setMessage "Postaus failasi"
+      FormSuccess post -> handlePost post >>= runDB . insert >>= redirect . ThreadR bname
+      FormFailure _ -> getBoardR bname
+      FormMissing   -> setMessage "Tyhjä!" >> redirect (BoardR bname)
 
 -- /board/b/1
 getThreadR :: Text -> BoardpostId -> Handler Html
 getThreadR bname opKey = do
     (board, thread) <- runDB $ do
-        board <- getBy404 $ UniqueBoard bname
-        op <- get404 opKey
+        board   <- getBy404 $ UniqueBoard bname
+        op      <- get404 opKey
         replies <- selectList [BoardpostParent ==. Just opKey] [Asc BoardpostTime]
         return (board, (Entity opKey op, replies))
     form <- runFormPost (postForm (entityKey board) (Just opKey))
@@ -81,9 +79,9 @@ postThreadR bname opKey = do
     board <- runDB $ getBy404 $ UniqueBoard bname
     ((result, _), _) <- runFormPost (postForm (entityKey board) (Just opKey))
     case result of
-        FormSuccess replyD -> d1toBoardPost replyD >>= runDB . insert >> return ()
+        FormSuccess post   -> handlePost post >>= void . runDB . insert
         -- TODO: failures in the form instead
-        FormFailure fails  -> setMessage $ toHtml $ toHtml <$> T.append "\n" <$> fails
+        FormFailure fails  -> setMessage $ toHtml $ T.intercalate "\n" fails
         FormMissing        -> setMessage "no POST data was received."
     redirect $ ThreadR bname opKey
 
@@ -103,60 +101,33 @@ widgetThreadPost bname n reply = do
 getFilesPath :: Handler FilePath
 getFilesPath = fmap ((</> "board") . extraDirDyn) getExtra
 
-key2text :: Key Boardpost -> String
+key2text :: Key v -> String
 key2text n = case fromPersistValue $ unKey n :: Either Text Int64 of
-                Left _ -> "fail!"
+                Left _    -> error "key2text: no parse"
                 Right num -> show num
 
+handlePost :: (Maybe String -> Maybe Text -> Boardpost, Maybe FileInfo) -> Handler Boardpost
+handlePost (topost, Nothing)   = return (topost Nothing Nothing)
+handlePost (topost, Just info)
+    | T.null fname             = return (topost Nothing Nothing)
+    | otherwise                = do
+        dir <- getFilesPath
+        liftM (flip topost (Just fname) . Just . takeFileName) . liftIO $ do
+            time <- liftM (show . toModifiedJulianDay . utctDay) getCurrentTime
+            here <- uniqueFilePath dir (time ++ '_' : T.unpack fname)
+            fileMove info here
+            return here
+    where fname = fileName info
 
--- TODO: write a single monadic form for the following stuff
-
-data D1 = D1
-    { d1location :: BoardId
-    , d1parent :: Maybe BoardpostId
-    , d1time :: UTCTime
-    , d1fileinfo :: Maybe FileInfo
-    , d1poster :: Maybe Text
-    , d1email :: Maybe Text
-    , d1title :: Maybe Text
-    , d1content :: Maybe Textarea
-    , d1pass :: Text
-    }
-
-d1toBoardPost :: D1 -> Handler Boardpost
-d1toBoardPost d = do
-    (fname, info) <- case d1fileinfo d of
-      Nothing -> return (Nothing, Nothing)
-      Just fi | T.null $ fileName fi -> return (Nothing, Nothing)
-              | otherwise -> do
-          dir <- getFilesPath
-          to <- liftIO $ do
-              t <- getCurrentTime
-              to <- uniqueFilePath dir $ (++'_':T.unpack fname) $ showTime t
-              putStrLn $ "--to-------------_>     " ++ to
-              putStrLn $ " <--- dir -->           " ++ dir
-              putStrLn $ " ---time--_>            " ++ showTime t
-              putStrLn $ "--------->              " ++ T.unpack fname
-              fileMove fi to >> return to
-          return (Just $ takeFileName to, Just fname)
-          where fname = fileName fi
-
-    return $ Boardpost
-            (d1location d) (d1parent d) (d1time d)
-            (d1poster d) (d1email d) (d1title d)
-            (d1content d) (d1pass d) fname info
-  where
-    showTime = show . toModifiedJulianDay . utctDay
-
-postForm :: BoardId -> Maybe BoardpostId -> Form D1
-postForm bid mpid = renderBootstrap $ D1
+postForm :: BoardId -> Maybe BoardpostId -> Form (Maybe String -> Maybe Text -> Boardpost, Maybe FileInfo)
+postForm bid mpid = renderBootstrap $ 
+    (\x1 x2 x3 x4 x5 x6 x7 x9 x8 -> (Boardpost x1 x2 x3 x4 x5 x6 x7 x8, x9) )
     <$> pure bid
     <*> pure mpid
     <*> lift (liftIO getCurrentTime)
-    <*> fileAFormOpt "Liite"
     <*> aopt textField "Nimimerkki" Nothing
     <*> aopt emailField "Sähköposti" Nothing
     <*> aopt textField "Aihe" Nothing
     <*> aopt textareaField "Viesti" Nothing
+    <*> fileAFormOpt "Liite"
     <*> areq passwordField "Salasana" (Just "salasana")
-

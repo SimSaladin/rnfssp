@@ -11,7 +11,6 @@ import Data.List (head, tail)
 
 import Haikubot.Plugins.Runot
 
-
 getHomePageR :: Handler Html
 getHomePageR = do
     haiku <- liftIO $ getRandomHaiku "/home/sim/docs/haikut.txt" >>= format

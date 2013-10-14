@@ -2,7 +2,7 @@
 ------------------------------------------------------------------------------
 -- File:          Handler/Playlists.hs
 -- Creation Date: Dec 23 2012 [22:08:10]
--- Last Modified: Oct 10 2013 [03:29:57]
+-- Last Modified: Oct 11 2013 [11:09:30]
 -- Created By: Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 ------------------------------------------------------------------------------
 module Handler.Playlists
@@ -27,7 +27,6 @@ import           Sections
 -- | GET actions on playlists. 'action' is based on
 --  * get.*       : Get the active playlist with @solvePlaylist@ and send it as
 --    m3u.
---
 --  * get.*-force : include force-download -header.
 -- 
 getPlaylistR :: Text -> Handler RepPlain
@@ -38,7 +37,7 @@ getPlaylistR action = do
         "download" -> do
             addHeader "Content-Disposition" "attachment; filename=\"playlist.m3u\""
             sendFile "application/force-download" x
-        _ -> invalidArgs ["Invalid or unsupported action: " `T.append` action]
+        _ -> invalidArgs ["Invalid or unsupported action: " <> action]
 
 -- | JSON interface and perform actions on playlists. action is the first part
 -- in the uri.
@@ -114,10 +113,7 @@ generateM3U :: Playlist -> Handler FilePath
 generateM3U pl = do
     resolved <- gServeroot
     yesod    <- getYesod
-
-    let render a p t = yesodRender
-          yesod resolved (MediaServeR ServeTemp a (t : FS.splitPath p)) []
-
+    let render a p t = yesodRender yesod resolved (MediaServeR ServeTemp a (t : FS.splitPath p)) []
         -- write single file entry to handle. calculate a temporary name.
         write h (area, path) = do
             temp <- randomText 32
@@ -125,16 +121,15 @@ generateM3U pl = do
             return (temp, path)
 
     (path, temps) <- liftIO $ do
-      (path, handle) <- getTemporaryDirectory >>= flip openTempFile "playlist.m3u"
-      hPutStrLn handle "#EXTM3U\n"
-      temps <- mapM (write handle) $ playlistElems pl
-      hClose handle
-      return (path, temps)
+        (path, handle) <- getTemporaryDirectory >>= flip openTempFile "playlist.m3u"
+        hPutStrLn handle "#EXTM3U\n"
+        temps <- mapM (write handle) $ playlistElems pl
+        hClose handle
+        return (path, temps)
 
     time <- timeNow
     mapM_ (\(ident, realpath) -> runDB $ insert $ DlTemp time (T.unpack ident) realpath) temps
     return path
-
 
 -- * Actions
 
@@ -142,10 +137,8 @@ generateM3U pl = do
 -- XXX: doesn't check for duplicates(!)
 addDefaultPlaylist :: UserId -> Handler (Entity Playlist)
 addDefaultPlaylist uid = do
-    t <- timeNow
-    let pl = Playlist "" uid [] t t
-    k <- runDB $ insert pl
-    return $ Entity k pl
+    pl <- liftM (\t -> Playlist "" uid [] t t) timeNow
+    liftM (flip Entity pl) . runDB $ insert pl
 
 -- | Get all playlists (whose == Nothing) or a user's (whose == Just UserId) playlists.
 plGet :: Maybe UserId -> Handler [Entity Playlist]
