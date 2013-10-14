@@ -42,8 +42,7 @@ instance ToJSON (MElem App AnnexSec) where
 instance MediaBrowsable App AnnexSec where
     data MElem App AnnexSec = GAElem Bool FilePath (Maybe Text) -- ^ Directory? ...
     browsableBanner         s = [whamlet|
-<i .icon-white .icon-link>&nbsp;
-&nbsp;#{sScreenname s}
+<i .icon-white .icon-link>#{sScreenname s}
 |]
     browsableServerRender     = renderElements
     browsableFetchElems       = fetchElements
