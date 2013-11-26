@@ -5,7 +5,7 @@
 ------------------------------------------------------------------------------
 -- File:          Chat.hs
 -- Creation Date: Jul 15 2012 [15:27:50]
--- Last Modified: Sep 17 2013 [04:10:21]
+-- Last Modified: Oct 20 2013 [00:33:59]
 -- Created By:    Samuli Thomasson [SimSaladin] samuli.thomassonAtpaivola.fi
 --
 -- Credits:       http://www.yesodweb.com/book/wiki-chat-example
@@ -45,17 +45,13 @@ class (Yesod master, RenderMessage master FormMessage) => YesodChat master where
 
     -- | The message datatype
     data ChatMessage master
-
     chatRenderMsg :: ChatMessage master -> Builder
-
     chatCreateMsg :: Text -> Text -> HandlerT master IO (ChatMessage master)
 
     -- | Retrieve the chat ident, nick, for the user. Nothing if no nick is
     -- available (=> chat is disabled)
     chatIdent :: HandlerT master IO (Maybe Text)
-
     chatGet   :: HandlerT master IO [ChatMessage master]
-
 
 -- *
 
@@ -66,8 +62,8 @@ postSendR :: YesodChat master => Handler master ()
 postSendR = lift chatIdent >>= traverse_ f
     where f ident = do
                 Chat chan <- getYesod
-                body <- lift (runInputGet $ ireq textField "message")
-                message <- lift $ chatCreateMsg ident body
+                body      <- lift (runInputGet $ ireq textField "message")
+                message   <- lift $ chatCreateMsg ident body
 
                 -- Set nginx-specific header for eventsource to work.
                 addHeader "X-Accel-Buffering" "no"
@@ -80,9 +76,9 @@ postSendR = lift chatIdent >>= traverse_ f
 getReceiveR :: Handler master ()
 getReceiveR = do
     Chat chan0 <- getYesod
-    chan <- liftIO $ dupChan chan0
-    req <- waiRequest
-    res <- liftResourceT $ eventSourceAppChan chan req
+    chan       <- liftIO $ dupChan chan0
+    req        <- waiRequest
+    res        <- liftResourceT $ eventSourceAppChan chan req
     let (stat, hs, src) = responseSource res
 
     -- for nginx reverse-proxying to work, we add the header X-Accel-Buffering
@@ -106,10 +102,8 @@ chatWidget toMaster = do
 |]
     mident <- liftHandlerT chatIdent -- check if we're already logged in
     flip (maybe disabledChat) mident $ \_ -> do
-
         recent  <- liftHandlerT chatGet
         chat    <- liftHandlerT newIdent   -- the containing div
-
         [whamlet|
 <h1 .icon-chat> Chat
 <div.clearfix ##{chat}>
