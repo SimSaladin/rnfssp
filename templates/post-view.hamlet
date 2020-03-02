@@ -1,0 +1,41 @@
+<article .post :preview:.preview>
+   <header>
+      <div .date-wrapper>
+         <div .date-box>
+            <div .year>#{year}
+            <div .month>#{month}
+            <div .day>#{day}
+      <h1>
+         $if preview
+            <a href=@{PostsViewR pid}>#{postTitle post}
+         $else
+            #{postTitle post}
+
+   <div .content-align>
+      $if preview
+         $maybe htmlPreview <- userContentPreview (postContent post)
+            #{htmlPreview}
+            <a href="@{PostsViewR pid}">
+               <i>Read more...
+         $nothing
+            #{userContentHtml $ postContent post}
+      $else
+         #{userContentHtml $ postContent post}
+
+   <footer .clearfix .text-center>
+      <a .icon-user href="#">&nbsp;#{postAuthor post}
+      $if preview
+         <a href="@{PostsViewR pid}#comments" .icon-comment>&nbsp;To comments
+      <span .icon-tag .tags> #
+         $case postTags post
+            $of []
+            $of xs
+               <a href=@{PostsTagR $ L.head xs}>#{L.head xs}
+               $forall tag <- L.tail xs
+                  <span .balloon>
+                  <a href=@{PostsTagR tag}>#{tag}
+      <a .icon-edit href=@{PostsEditR pid}>&nbsp;_{MsgPostEdit}
+      <a .icon-pencil href=@{PostsAddR}>&nbsp;_{MsgPostPublish}
+
+   <div #comments>
+      ^{comments}

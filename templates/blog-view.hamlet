@@ -1,3 +1,0 @@
-<div .blog-wrapper>^{post}
-   <div #comments>^{comments}
-   ^{renderFormH $ myForm MsgBlogComment encType (BlogViewR path) widget replyButton result}

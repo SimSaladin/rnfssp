@@ -32,15 +32,17 @@ MediaModified: Modified
 
 LabelImportant: Note
 
-BlogPublish:   Publish a new post
-BlogEdit:      Edit post
-BlogComment:   Leave a comment
-BlogActionPublish:   Publish
-BlogActionComment:   Comment
-BlogCommentsNone: No comments
-BlogCommentsOne:  One comment
-BlogCommentsN:    Comments
+PostPublish:   Publish a new post
+PostEdit:      Edit post
+PostComment:   Leave a comment
+PostActionPublish:   Publish
+PostActionComment:   Comment
+PostCommentsNone: No comments
+PostCommentsOne:  One comment
+PostCommentsN:    Comments
 
 FormOneError: An error was encountered. Please, fix it.
 FormNErrors:  Errors were encountered. Please, fix them.
 FormSuccess:  Form was succesfully submitted.
+
+Unknown: This text message has no value set!

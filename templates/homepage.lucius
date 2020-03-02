@@ -1,0 +1,17 @@
+h1 {
+    text-align: center
+}
+h2##{aDomId} {
+    color: #990
+}
+
+.ym-col1 {
+   width:250px;
+}
+.ym-col2 {
+   width:200px;
+}
+.ym-col3 {
+   margin-left:250px;
+   margin-right:200px;
+}

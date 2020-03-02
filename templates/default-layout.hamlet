@@ -1,9 +1,18 @@
 <div #container>
- ^{widget}
- <footer>
-   <div>
-      <b>Bugs for Hugs
-      <br>
-      Jos löydät bugin, jota ei vielä ole listattu esim.
-      <a href="http://github.com/SimSaladin/rnfssp/issues">täällä
-      &mdash; raportoi se
+
+   <header #main-header>
+      ^{navigation}
+
+   <main>
+      $maybe msg <- mmsg
+         <div #message .box .info>#{msg}
+      ^{widget}
+
+   <footer>
+     <div>
+        <b>Bugs for Hugs
+        <br>
+        Jos löydät bugin, jota ei vielä ole listattu esim.
+        <a href="http://github.com/SimSaladin/rnfssp/issues">täällä
+        &mdash; raportoi se
+        <i>#{extraCopyright $ appExtra $ settings master}

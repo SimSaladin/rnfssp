@@ -1,146 +1,48 @@
--- vim:foldmethod=indent:foldlevel=0:
-
 User
-   username Text Eq
-   email    Text Eq
-   ircnick  Text Eq Maybe default='' Update
-   password Text
-   salt     Text
-   admin    Bool default=false Update
-   valid    Bool default=false Update
-   currentplaylist Text Maybe
-   comment  Textarea
-   UniqueUser username
-   deriving Typeable
+    ident Text
+    password Text Maybe
+    admin Bool
+    UniqueUser ident
+    deriving Typeable
+Email
+    email Text
+    user UserId Maybe
+    verkey Text Maybe
+    UniqueEmail email
 
-Chatmsg
-   chatTime   UTCTime
-   chatPoster Text
-   chatMsg    Text
-
--- * Blog
-Blogpost
-   time     UTCTime
-   poster   Text
-   title    Text
-   urlpath  Text
-   tags     [Text]
-   public   Bool   default=true Update
+UserContent
    markdown Markdown
-   rendered          Html
-   renderedPreview   Html
-   previewSame       Bool default=true Update
-   UniqueBlogpost urlpath
-Blogcomment
-   post     BlogpostId
-   parent   BlogcommentId Maybe
+   html     Html
+   preview  Html Maybe
+
+Post
+   added    UTCTime
+   expires  UTCTime
+   title    Text
+   author   Text
+   tags     [Text]
+   content  UserContent
+
+Comment
+   parent   CommentId Maybe
    time     UTCTime
    user     UserId Maybe
    author   Text
-   website  Text Maybe
-   content  Textarea
+   content  UserContent
 
--- * Board
-Board
-   name Text
-   description Text
-   UniqueBoard name
-Boardpost
-   location BoardId
-   parent BoardpostId Maybe
-   time UTCTime
-   poster Text Maybe
-   email Text Maybe
-   title Text Maybe
-   content Textarea Maybe
-   pass Text
-   filepath String Maybe
-   fileinfo Text Maybe
+PostComment
+   post PostId
+   comment CommentId
 
--- Media/Sections
-Playlist
-   title Text
-   owner UserId
-   elems [PlaylistElem]
-   created UTCTime
-   modified UTCTime
-   UniquePlaylist owner title
+Link
+   added  UTCTime
+   author Text
+   url    Text
+   desc   Text Maybe
+   UniqueLink url
 
-Filenode
-   area Text
-   parent FilenodeId Maybe
-   isdir Bool
-   path Text
-   size Text
-   modTime UTCTime
-   details Text Maybe
-   UniqueFilenode area path
+Shout
+   added UTCTime
+   content Text
 
-DNode
-   area        Text
-   parent      DNodeId Maybe
-   path        FilePath
-   UniqueDNode area path
-
-FNode
-   area        Text
-   parent      DNodeId  Maybe
-   path        FilePath
-   details     Text     Maybe
-   UniqueFNode area path
-
--- Media/temp/log
-LogDownload
-   time UTCTime
-   user UserId
-   section Text
-   fps FPS
-DlTemp
-   date     UTCTime
-   ident    String
-   realpath FilePath
-   UniqueDlTemp ident
-
-RecentlyAdded
-   date     UTCTime
-   section  Text
-   parts    FPS
-   desc     Html
-
--- Other
-Bettarget
-   date UTCTime
-   running Bool
-   owner UserId
-   title Text
-   factors (Map Text Int)
-Bet
-   owner UserId
-   amount Int
-   target Text
-
--- * Market
-SaleItem
-   name     Text
-   count    Int   default=1
-   price    Double
-   desc     Text  Maybe
-   -- contact
-   seller   Text
-   email    Text  Maybe
-   phone    Text Maybe
-   irc      Text  Maybe
-BuyItem
-   what     Text
-   count    Int   default=1
-   desc     Text Maybe
-   -- contact info
-   buyer    Text
-   email    Text Maybe
-   phone    Text Maybe
-   irc      Text Maybe
-SaleMessage
-   from Text
-   to   Text
-   msg  Text
 

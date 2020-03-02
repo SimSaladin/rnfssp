@@ -13,10 +13,6 @@ import Data.Map (Map)
 import Database.Persist.Quasi
 import Data.Typeable (Typeable)
 
-import Sections.Types
-
-type PlaylistElem = (SectionId, FilePath)
-
 -- You can define all of your database entities in the entities file.
 -- You can find more information on persistent and how to declare entities
 -- at:
@@ -30,20 +26,3 @@ instance HashDBUser User where
     setSaltAndPasswordHash s h p = p { userSalt     = s
                                      , userPassword = h
                                      }
-
-instance ToJSON Playlist where
-    toJSON (Playlist title owner elems create modified) = object
-        [ "title" .= title
-        , "owner" .= owner
-        , "elems" .= elems
-        , "created" .= create
-        , "modified" .= modified
-        ]
-
-instance FromJSON Playlist where
-  parseJSON (Object v) = Playlist <$> v .: "title"
-                                  <*> v .: "owner"
-                                  <*> v .: "elems"
-                                  <*> v .: "created"
-                                  <*> v .: "modified"
-  parseJSON          _ = undefined

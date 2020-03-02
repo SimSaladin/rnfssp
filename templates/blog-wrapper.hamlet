@@ -1,6 +1,0 @@
-<main .ym-grid .ym-equalize .linearize-level-1>
-   <div .ym-g62 .ym-gl>
-      <section .site-block-h>^{content}
-   <div .ym-g38 .ym-gr>
-      <section .site-block-h>^{chatWidget ChatR}
-      ^{renderTagcloud current}

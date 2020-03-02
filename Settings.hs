@@ -18,9 +18,6 @@ import Settings.Development
 import Data.Default (def)
 import Text.Hamlet
 import Text.Coffee
-import Data.Map (Map)
-
-import Sections.Types
 
 -- | Which Persistent backend this site is using.
 type PersistConf = PostgresConf
@@ -72,7 +69,8 @@ data Extra = Extra
     , extraServeroot :: Text
     , extraAnalytics :: Maybe Text -- ^ Google Analytics
     , extraDirDyn    :: FilePath
-    , extraSections  :: Map SectionId MediaConf
+--    , extraSections  :: Map SectionId MediaConf
+    , extraHaikuFile :: FilePath
     } deriving Show
 
 parseExtra :: DefaultEnv -> Object -> Parser Extra
@@ -82,4 +80,6 @@ parseExtra _ o = Extra
     <*> o .:  "serveroot"
     <*> o .:? "analytics"
     <*> o .: "dyndir"
-    <*> o .: "mediasections"
+    <*> o .:  "haikufile"
+
+--    <*> o .: "mediasections"

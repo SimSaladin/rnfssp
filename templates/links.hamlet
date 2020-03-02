@@ -1,0 +1,7 @@
+<section .site-block>
+   <h1>Linkkejä
+   <ul>
+      $forall Entity _ link <- links
+         <li>
+            <a href="#{linkUrl link}">#{fromMaybe (linkUrl link) (linkDesc link)}
+   <a .btn href=@{LinkAddR}>Lisää linkki

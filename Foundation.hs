@@ -43,21 +43,6 @@ import           Mpd
 
 import Utils
 
-data ServeType = ServeTemp
-               | ServeAuto
-               | ServeForceDownload
-               deriving (Show, Read, Eq)
-
-instance PathPiece ServeType where
-  toPathPiece ServeTemp          = "temp"
-  toPathPiece ServeAuto          = "auto"
-  toPathPiece ServeForceDownload = "force"
-
-  fromPathPiece "temp"  = Just ServeTemp
-  fromPathPiece "auto"  = Just ServeAuto
-  fromPathPiece "force" = Just ServeForceDownload
-  fromPathPiece       _ = Nothing
-
 -- * Application
 
 data App = App
@@ -67,8 +52,8 @@ data App = App
     , httpManager   :: Manager
     , persistConfig :: Settings.PersistConf
     , appLogger     :: Logger
-    , getChat       :: Chat
-    , getMpd        :: Mpd
+    , getMediaSub   :: MediaSub
+    , getMarketSub  :: MarketSub
     }
 
 -- Set up i18n messages. See the message folder.
@@ -82,23 +67,26 @@ instance Yesod App where
     approot = ApprootMaster $ appRoot . settings
 
     makeSessionBackend _ = fmap Just $ defaultClientSessionBackend
-        (24 * 60 * 60)
+        (72 * 60 * 60)
         "config/client_session_key.aes"
 
     defaultLayout widget = do
         master <- getYesod
-        pc <- widgetToPageContent $ do
-            addStylesheet $ StaticR $ if development
-                then yaml_core_base_css
-                else yaml_core_base_min_css
-            addStylesheet $ StaticR yaml_screen_typography_css
-            addStylesheet $ StaticR css_fontello_css
+        mmsg <- getMessage
 
-            -- TODO: theme changer
+        pc <- widgetToPageContent $ do
+
+            $(combineStylesheets' development def 'StaticR
+                [ css_yaml_base_css
+                , css_yaml_typography_css
+                ])
+
+            $(combineScripts' development def 'StaticR
+                [ js_json2_js ])
+
             $(widgetFile "theme_senjougahara")
-            addScript $ StaticR js_json2_js
-            addScript $ StaticR js_zepto_min_js
             $(widgetFile "default-layout")
+
         giveUrlRenderer $(hamletFile "templates/default-layout-wrapper.hamlet")
 
     -- This is done to provide an optimization for serving static files from
@@ -109,13 +97,6 @@ instance Yesod App where
 
     -- The page to be redirected to when authentication is required.
     authRoute _ = Just $ AuthR LoginR
-
-    isAuthorized BlogHomeR        True = isAdmin           -- Blog
-    isAuthorized MediaHomeR          _ = isValidLoggedIn'  -- Media
-    isAuthorized (MediaContentR _ _) _ = isValidLoggedIn'
-    isAuthorized MediaAdminR         _ = isAdmin
-    isAuthorized AdminR              _ = isAdmin           -- Misc
-    isAuthorized _                   _ = return Authorized
 
     addStaticContent =
         addStaticContentExternal minifier genFileName Settings.staticDir (StaticR . flip StaticRoute [])
@@ -136,13 +117,6 @@ instance Yesod App where
 
     makeLogger = return . appLogger
 
--- XXX: TODO
---    errorHandler _ = defaultLayout $ do
---        setTitle "Error"
---        navigation ""
---        [whamlet|
--- <main>
---            |]
 
 
 -- How to run database actions.
@@ -155,9 +129,9 @@ instance YesodPersistRunner App where
 instance YesodAuth App where
     type AuthId App = UserId
 
-    loginDest         _ = HomePageR
-    logoutDest        _ = HomePageR
-    redirectToReferer _ = True 
+    loginDest         _ = HomeR
+    logoutDest        _ = HomeR
+    redirectToReferer _ = True
     onLogout            = setMessageI MsgLoggedOut
 
     getAuthId       = getAuthIdHashDB AuthR (Just . UniqueUser)
@@ -182,6 +156,14 @@ hashLogin tm  = $(widgetFile "login")
 instance RenderMessage App FormMessage where
     renderMessage _ _ = defaultFormMessage
 
+instance MarketSubClass App where
+    checkDeleteRights = return ()
+
+    marketHeader = [whamlet|
+<i>
+    Täällä voit ilmoittaa myytäviä sekä ostettavia kohteita (kuten lukiokirjoja), #
+    päivöliiniltä päivöliinille -periaatteella.
+
 -- * Extra
 
 -- | Get the 'Extra' value, used to hold data from the settings.yml file.
@@ -204,8 +186,6 @@ gServeroot :: Handler Text
 gServeroot = liftM (extraServeroot . appExtra . settings) getYesod
 
 -- * Utils
-
--- ** Auth
 
 routeToLogin :: Route App
 routeToLogin = AuthR LoginR
@@ -257,129 +237,32 @@ denyIfAnonUnPVL = do
         | "194.197.235." `T.isPrefixOf` x = True
         | otherwise = False
 
--- ** Common widgets
+instance YesodMediaSub App where
+        mediaIdent = liftM (userIdent . entityVal) requireAuth
+        mediaGetSections = return [("anime", undefined)]
 
-data MyNav = NavHome
-           | NavBlog
-           | NavLauta
-           | NavMedia
-           | NavMarket
-           | NavAdmin
-           | NavProfile
-           | NavOther Text
-           deriving (Eq)
+-- | Get the 'Extra' value, used to hold data from the settings.yml file.
+getExtra :: Handler Extra
+getExtra = fmap (appExtra . settings) getYesod
 
-type NavElements = [(MyNav, Widget)]
+-- https://github.com/yesodweb/yesod/wiki/Sending-email
 
-myNav :: NavElements
-myNav = [ (NavHome, [whamlet|Animu|]) ]
+outsideLinks :: [(Text, Text)]
+outsideLinks =
+        [ ("Kemia",    "http://kemia.ssdesk.paivola.fi")
+        , ("Gitlist",  "http://gitlist.ssdesk.paivola.fi")
+        , ("Projects", "http://projects.ssdesk.paivola.fi")
+        ]
+ 
+topBarLinks :: [(Text, Route App)]
+topBarLinks =
+      [ ("Dashboard", HomeR)
+      , ("Market", MarketSubR MarketHomeR)
+      , ("Media", MediaSubR MediaHomeR)
+      ]
 
-navigation' :: MyNav -> Widget
-navigation' _current = do
-    undefined
-
-navigation :: Text -> Widget
-navigation active = do
-    ma <- liftHandlerT maybeAuth
-    boards <- liftM boards2widget $ liftHandlerT $ runDB $ selectList [] []
-    mmsg <- liftHandlerT getMessage
-    let es =
-          [ ("Animu", Right HomePageR)
-          , ("Blog",  Right BlogHomeR)
-          , ("Lauta", Left (BoardHomeR, boards))
-          , ("Media", Right MediaHomeR)
-          , ("Market",Right MarketHomeR)
-          ]
-
-    let es' = [ ("Kemia",    "http://kemia.ssdesk.paivola.fi")
-              , ("Gitlist",  "http://gitlist.ssdesk.paivola.fi")
-              , ("Projects", "http://projects.ssdesk.paivola.fi")
-              ] :: [ (Text, Text) ]
-    [whamlet|
-<header>
-    <nav .ym-wrapper>
-        <ul>
-          $forall (topic, e) <- es
-            $with isactive <- topic == active
-              <li :isactive:.active>
-                $case e
-                  $of Left stuff
-                    $with (route, w) <- stuff
-                        <a href=@{route}>#{topic}
-                        ^{w}
-                  $of Right route
-                    <a href=@{route}>#{topic}
-          $forall (topic, href) <- es'
-            <li>
-              <a href="#{href}">
-                <i>#{topic}
-                <sup>&#8689;
-        <ul .pull-right>
-          $maybe authent <- ma
-            $if userAdmin $ entityVal authent
-              $with isactive <- active == "Admin"
-                <li :isactive:.active>
-                  <a href=@{AdminR}>Admin
-            <li>
-              $with isactive <- active == "Profile"
-                <a href=@{ProfileR} :isactive:.active>#{userUsername $ entityVal authent}
-            <li .divider-vertical>
-            <li>
-              <a href=@{AuthR LogoutR}>_{MsgLogout}
-          $nothing
-            $with isactive <- active == "Register"
-              <li :isactive:.active>
-                <a href=@{RegisterR}>_{MsgRegister}
-            $with isactive <- active == "Login"
-              <li :isactive:.active>
-                <a href=@{AuthR LoginR}>_{MsgLogin}
-$maybe msg <- mmsg
- <p #message .box .info>#{msg}
-  |] where boards2widget boards = [whamlet|$newline never
-$if null boards
-$else
-   <ul>
-      $forall Entity _ val <- boards
-         <li>
-            <a href=@{BoardR (boardName val)}>
-               <b>/#{boardName val}/ #
-               <i>#{boardDescription val}
-|]
-
-myForm :: AppMessage -> Enctype -> Route App -> Widget -> Widget -> FormResult res -> MyForm App AppMessage res
-myForm = MyForm (MsgFormOneError, MsgFormNErrors, MsgFormSuccess)
-
--- * Subsites
-
--- ** Chat
-
-instance YesodChat master => YesodSubDispatch Chat (HandlerT master IO) where
-    yesodSubDispatch = $(mkYesodSubDispatch resourcesChat)
-
-instance YesodChat App where
-    data ChatMessage App = CMsg Chatmsg
-
-    chatIdent = liftM (fmap $ userUsername . entityVal) maybeAuth
-
-    chatCreateMsg poster content = do
-        time <- liftIO getCurrentTime
-        let msg = Chatmsg time poster content
-        _ <- runDB $ insert msg
-        return $ CMsg msg
-
-    chatGet = liftM (map $ CMsg . entityVal) $ runDB $ selectList [] []
-
-    chatRenderMsg (CMsg (Chatmsg time poster msg)) =
-        fromString ("<p><span class=date>" <> formatTime defaultTimeLocale "%H:%M" time <> "</span> ")
-            <> fromText ("<span class=poster> " <> poster <> "</span> ")
-            <> fromText msg
-
--- ** Mpd
-
-instance YesodMpd master => YesodSubDispatch Mpd (HandlerT master IO) where
-    yesodSubDispatch = $(mkYesodSubDispatch resourcesMpd)
-
-instance YesodMpd App where
-  mpdPort = return 6600
-  mpdHost = return "localhost"
-  mpdPass = return ""
+navigation :: Widget
+navigation = do
+    current <- getCurrentRoute
+    ma      <- liftHandlerT maybeAuth
+    $(widgetFile "top-navigation")

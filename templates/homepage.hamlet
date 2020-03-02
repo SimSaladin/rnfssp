@@ -1,0 +1,23 @@
+<div .ym-grid>
+  <div .ym-column>
+    <div .ym-col1>
+      <div .ym-cbox>
+         ^{linksWidget}
+         ^{haikuQuoteWidget}
+    <div .ym-col2>
+      <div .ym-cbox .site-block>
+         <h1>Huutoloota
+         ^{shoutbox}
+    <div .ym-col3>
+      <div .ym-cbox>
+         ^{dashboardWidget}
+
+<hr>
+
+<p>And last but not least, Testing. In <em>tests/main.hs</em> you will find a #
+   test suite that performs tests on this page. #
+   You can run your tests by doing: <pre>yesod test</pre>
+
+<p>Let's test out some Fay! Enter a number in this box and we'll calculate the Fibonacci value.
+    <input #fibindex placeholder="Fibonacci Index">
+    <span #fibresult>

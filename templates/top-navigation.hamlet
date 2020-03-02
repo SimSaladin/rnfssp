@@ -1,0 +1,27 @@
+<nav .ym-wrapper>
+  <ul>
+    $forall (displayName, route) <- topBarLinks
+      $with isCurrent <- Just route == current
+        <li :isCurrent:.active>
+          <a href=@{route}>#{displayName}
+    $forall (topic, href) <- outsideLinks
+      <li>
+        <a href="#{href}">
+          <i>#{topic}
+          <sup>&#8689;
+  <ul .pull-right>
+    $maybe Entity key val <- ma
+      $if userAdmin val
+        $with isCurrent <- Just AdminR == current
+          <li :isCurrent:.active>
+            <a href=@{AdminR}>Administration
+      <li .divider-vertical>
+      <li>
+        <a href=@{AuthR LogoutR}>_{MsgLogout}
+    $nothing
+      $with isCurrent <- current == Just RegisterR
+        <li :isCurrent:.active>
+          <a href=@{RegisterR}>_{MsgRegister}
+      $with isCurrent <- current == Just (AuthR LoginR)
+        <li :isCurrent:.active>
+          <a href=@{AuthR LoginR}>_{MsgLogin}

@@ -1,0 +1,14 @@
+
+<code>.site-block > h1
+<div .site-block>
+   <h1>Header
+   ^{loremIpsum}
+
+<hr>
+
+<code>.site-block, .site-block section
+<div .site-block>
+   <h1>Section 1
+   <section>
+      <h2>Subsection 2
+      <p>Inner section content.

@@ -1,0 +1,28 @@
+/static StaticR Static getStatic
+/auth   AuthR   Auth   getAuth
+/chat   ChatR   Chat   getChat
+/mpd    MpdR    Mpd    getMpd
+
+/favicon.ico   FaviconR       GET
+/robots.txt    RobotsR        GET
+/register      RegisterR      GET POST
+/profile       ProfileR       GET POST
+/admin         AdminR         GET POST
+
+/                                      HomePageR      GET
+/blog                                  BlogHomeR      GET
+/blog/#Text                            BlogViewR      GET POST
+/blog-edit/#Text                       BlogEditR      GET POST
+/blog-add                              BlogAddR       GET POST
+/blog-by-tag/#Text                     BlogTagR       GET
+
+/board                                 BoardHomeR     GET
+/board/#Text                           BoardR         GET POST
+/board/#Text/#BoardpostId              ThreadR        GET POST
+/files/board/#String                   BoardFileR     GET
+
+/market              MarketHomeR          GET
+/market/buy-items    MarketNewBuyItemR        POST
+/market/sale-items   MarketNewSaleItemR       POST
+/market/buy-del/#BuyItemId MarketDeleteBuyR   POST
+/market/sale-del/#SaleItemId MarketDeleteSaleR   POST

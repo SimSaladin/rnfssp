@@ -1,36 +1,24 @@
-/static StaticR Static getStatic
-/auth   AuthR   Auth   getAuth
-/chat   ChatR   Chat   getChat
-/mpd    MpdR    Mpd    getMpd
+/static      StaticR  Static  getStatic
+/auth        AuthR    Auth    getAuth
+/fay-command FaySiteR FaySite getFaySite
 
-/favicon.ico   FaviconR       GET
-/robots.txt    RobotsR        GET
+/favicon.ico FaviconR GET
+/robots.txt RobotsR GET
+
+/              HomeR          GET POST
 /register      RegisterR      GET POST
-/profile       ProfileR       GET POST
 /admin         AdminR         GET POST
-/admin/media   MediaAdminR        POST
+/links      LinkAddR GET POST
 
-/                                      HomePageR      GET
-/blog                                  BlogHomeR      GET
-/blog/#Text                            BlogViewR      GET POST
-/blog-edit/#Text                       BlogEditR      GET POST
-/blog-add                              BlogAddR       GET POST
-/blog-by-tag/#Text                     BlogTagR       GET
+/styles StyleTestR GET
 
-/board                                 BoardHomeR     GET
-/board/#Text                           BoardR         GET POST
-/board/#Text/#BoardpostId              ThreadR        GET POST
-/files/board/#String                   BoardFileR     GET
+/media  MediaSubR    MediaSub   getMediaSub
+/market MarketSubR   MarketSub  getMarketSub
 
-/media                                 MediaHomeR     GET
-/media/#Text/*FPS                      MediaContentR  GET
-/search/media                          MediaSearchAllR GET
-/search/media/#Text                    MediaSearchR   GET
-/playlists/#Text                       PlaylistR      GET POST
-/files/media/#ServeType/#Text/*FPS     MediaServeR    GET
+/shout  ShoutR POST
 
-/market              MarketHomeR          GET
-/market/buy-items    MarketNewBuyItemR        POST
-/market/sale-items   MarketNewSaleItemR       POST
-/market/buy-del/#BuyItemId MarketDeleteBuyR   POST
-/market/sale-del/#SaleItemId MarketDeleteSaleR   POST
+/posts/newest                           PostNewestR     GET
+/posts/add                              PostsAddR       GET POST
+/posts/view/#PostId                     PostsViewR      GET POST
+/posts/edit/#PostId                     PostsEditR      GET POST
+/posts/tagged/#Text                     PostsTagR       GET

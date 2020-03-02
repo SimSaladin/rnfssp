@@ -1,21 +1,9 @@
 Default: &defaults
-  host:      "*4"
-  port:      3000
-  approot:   "http://localhost:3000"
-  serveroot: "http://localhost:3000"
-  copyright: "BPS"
-  dyndir:    "/home/sim/rnfssp/files"
-  mediasections:
-    anime:
-      view: "Anime"
-      type: "annex"
-      icon: "annex"
-      path: "/home/media/anime"
-    music:
-      view: "Music"
-      type: "mpd"
-      icon: "music"
-      path: "/home/media/music"
+  host: "*4"
+  port: 3000
+  approot: "http://localhost:3000"
+  copyright: Insert copyright statement here
+  haikufile: "/home/sim/docs/haikut.txt"
 
 Development:
   <<: *defaults
@@ -29,8 +17,8 @@ Staging:
 Production:
   host:      "*4"
   port:      3001
-  approot:   "https://ssdesk.paivola.fi"
-  serveroot: "http://ssdesk.paivola.fi"
+  approot:   "https://animu.paivola.fi"
+  serveroot: "http://animu.paivola.fi"
   dyndir:    "/srv/sites/rnfssp/files"
   mediasections:
     anime:
@@ -74,4 +62,3 @@ Production:
       icon: "picture"
       path: "/home/media/images"
   <<: *defaults
-

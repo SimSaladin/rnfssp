@@ -1,0 +1,28 @@
+<nav .site-block .site-block-h>
+   <h1 .icon-tags> _{MsgByTags}
+   <p>
+      $case tagcloud
+         $of []
+            <i>No tags
+         $of _
+            $forall tag <- tagcloud
+               <a href=@{PostsTagR tag}>#{tag}
+
+<nav .site-block .site-block-h>
+   <h1 .icon-calendar> _{MsgByDate}
+   $case posts
+      $of []
+         <p>
+            <i>No archives
+      $of _
+         $forall (month, posts') <- posts
+            <h6>#{month}
+            <ul .list-clean>
+               $forall Entity pid post <- posts'
+                  <li>
+                     $with title <- postTitle post
+                       $if current == title
+                           <a>#{title}
+                       $else
+                           <a href=@{PostsViewR pid}>#{title}
+

@@ -1,0 +1,125 @@
+name:                rnfssp-media
+version:             0.1.0.0
+-- synopsis:            
+-- description:         
+license:             MIT
+license-file:        LICENSE
+author:              Samuli Thomasson
+maintainer:          simsaladin@paivola.fi
+-- copyright:           
+-- category:            
+build-type:          Simple
+-- extra-source-files:  
+cabal-version:       >=1.10
+
+Flag dev
+   Description: Development settings
+   Default: False
+
+Flag library-only
+   Description: Only build the library
+   Default: True
+
+library
+  exposed-modules:     MediaSub
+                     , MediaSub.Data
+                     , MediaSub.Media
+                     , MediaSub.Playlist
+                     , MediaSub.Browser
+                     , MediaSub.PlainAnnex
+                     , MediaSub.Music
+                     , MediaSub.GitTools
+                     , MediaSub.Import
+                     , MediaSub.Standalone
+
+  if flag(dev) || flag(library-only)
+    cpp-options: -DDEVELOPMENT
+    ghc-options: -Wall -O0
+  else
+    ghc-options: -Wall -O2
+
+  default-extensions:  NoImplicitPrelude
+                     , OverloadedStrings
+                     , GADTs
+                     , FlexibleInstances
+                     , FlexibleContexts
+                     , MultiParamTypeClasses
+                     , TypeSynonymInstances
+                     , TypeFamilies
+                     , ConstraintKinds
+                     , RankNTypes
+                     , ExistentialQuantification
+                     , ScopedTypeVariables
+                     , TemplateHaskell
+                     , QuasiQuotes
+                     , EmptyDataDecls
+                     , TupleSections
+                     , DoAndIfThenElse
+
+  build-depends:       base            >=4.6    && <4.7
+                     , yesod           >=1.2    && <1.3
+                     , warp            >= 2.0   && < 2.1
+                     , wai-extra
+                     , wai-logger
+                     , fast-logger
+                     , yesod-core
+                     , containers      >=0.5    && <0.6
+                     , libmpd          >=0.8    && <0.9
+                     , text            >=0.11   && <0.12
+                     , filepath        >=1.3    && <1.4
+                     , conduit         >=1.0    && <1.1
+                     , shakespeare-js  >=1.2    && <1.3
+                     , persistent      >=1.3    && <1.4
+                     , persistent-sqlite
+                     , persistent-template
+                     , unix            >=2.6    && <2.7
+                     , time            >=1.4    && <1.5
+                     , process         >=1.1    && <1.2
+                     , bytestring      >=0.10   && <0.11
+                     , directory       >=1.2    && <1.3
+                     , temporary       >=1.2    && <1.3
+                     , yesod-auth
+                     , filemanip
+                     , hamlet
+                     , shakespeare-js
+                     , data-default
+                     , template-haskell
+                     , rnfssp-util
+                     , classy-prelude
+  -- hs-source-dirs:      
+  default-language:    Haskell2010
+
+executable rnfssp-media
+   if flag(library-only)
+      Buildable: False
+
+   main-is:          warped.hs
+   hs-source-dirs:   tests
+   build-depends: base
+                , rnfssp-media
+                , yesod-test
+                , yesod-core
+                , yesod
+                , persistent
+                , persistent-sqlite
+                , resourcet
+                , monad-logger
+                , transformers
+                , hspec
+
+test-suite test
+   type:             exitcode-stdio-1.0
+   main-is:          main.hs
+   hs-source-dirs:   tests
+   ghc-options:      -Wall
+   build-depends: base
+                , rnfssp-media
+                , yesod-test
+                , yesod-core
+                , yesod
+                , persistent
+                , persistent-sqlite
+                , resourcet
+                , monad-logger
+                , transformers
+                , hspec

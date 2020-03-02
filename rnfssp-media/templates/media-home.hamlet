@@ -1,0 +1,22 @@
+
+$forall (secid, _) <- secs
+   <a href=@{MediaContentR secid []}>#{secid}
+
+^{userPlaylistWidget}
+
+^{searchWidget Nothing}
+
+<section .site-block>
+   <h1>TODO of media section
+   <ul>
+      <li>Section navigation: browsing listings via url
+      <li>Download single files.
+      <li>Add single files to playlist
+      <li>Add directories recursively to playlist
+      <li>Browse changes per section (use git commits)
+      <li>Email/shoutbox notifications
+      <li>Show stats of repos and disk usage
+      <li>Commenting on files/directories
+      <li>Upload torrents to local rtorrent
+      <li>Allow git-annex access configuration: upload public keys. Howto's for
+         every section.

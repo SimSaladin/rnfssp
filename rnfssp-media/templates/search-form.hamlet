@@ -1,0 +1,4 @@
+<form .bare .text-center action=@{route} type=get>
+  <input .input-search type="search" name="q" placeholder="Search" autofocus pattern="..*" required>
+  <button .btn type="submit">Go
+

@@ -1,4 +1,0 @@
-.ym-col1 { width: 75%; float:left; margin-left: 0; } /* center column */
-.ym-col2 { width: 20%; float:left;  margin-left: -75%; } /* left column */
-.ym-col3 { float:right; width: 25%; margin-left: -5px; margin-right: 0%; } /* right column */
-.ym-cbox:first-child { margin-top:2em; }

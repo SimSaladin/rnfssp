@@ -68,7 +68,7 @@ body {
    background-image: -ms-linear-gradient(    left, rgba(0,0,0,0) 50%, rgba(0,0,0,0.1) 50%); /* IE10+ */
    background-image: linear-gradient(    to right, rgba(0,0,0,0) 50%, rgba(0,0,0,0.1) 50%); /* W3C */
 }
-section, .site-block {
+.site-block {
    background-color: #{shadow_more};
    background-image:
      -moz-linear-gradient(45deg,  #{shadow_less} 25%, transparent 25%), 
@@ -88,34 +88,25 @@ section, .site-block {
    background-position:0 0, 50px 0, 50px -50px, 0px 50px;
 
    box-shadow: #{block_box_shadow};
+
+   border-bottom-right-radius: 15px;
 }
-section section,
-section .site-block,
-.site-block section {
+.site-block section, .site-block div {
+   box-shadow:none;
    background-image: none;
    background-color: #{shadow_less};
 }
-.site-block-h {
-   margin-top: 2em !important;
-   border-bottom-right-radius: 15px;
-}
-.site-block-h > h1 {
+.site-block > h1 {
+   float:right;
+   padding:5px;
    margin-top: -0.8em;
+   font-size:1.4em;
    color: #CCC;
    text-shadow: 2px 2px #{block};
-   float:right;
-   font-size:1.4em;
-   padding:5px;
 }
-.site-block-h > *:nth-child(2) {
-   margin-top:1em;
-}
-section section {
-   background-color: transparent;
-   box-shadow:none;
-}
+/* {{{ Quote */
 #haiku-quote {
-   margin: 17px 4px 1px 6px;
+   margin: 1.2em 0 0 0;
    box-shadow: #{block_box_shadow};
 }
 blockquote {
@@ -135,12 +126,15 @@ blockquote:after {
    border-style:solid;
    border-color:transparent transparent #{block} transparent;
 }
+/* }}} */
+/* Code */
 pre {
    background:#{dark_half};
 }
 pre, code {
    color:#{dark_text};
 }
+/* }}} */
 hr {
   height: 1px;
   margin:0.5em 1em 0 1em;

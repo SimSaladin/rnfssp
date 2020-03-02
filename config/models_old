@@ -1,0 +1,76 @@
+-- vim:foldmethod=indent:foldlevel=0:
+
+User
+   username Text Eq
+   email    Text Eq
+   ircnick  Text Eq Maybe default='' Update
+   password Text
+   salt     Text
+   admin    Bool default=false Update
+   valid    Bool default=false Update
+   currentplaylist Text Maybe
+   comment  Textarea
+   UniqueUser username
+   deriving Typeable
+
+Chatmsg
+   chatTime   UTCTime
+   chatPoster Text
+   chatMsg    Text
+
+-- * Blog
+
+-- * Board
+Board
+   name Text
+   description Text
+   UniqueBoard name
+Boardpost
+   location BoardId
+   parent BoardpostId Maybe
+   time UTCTime
+   poster Text Maybe
+   email Text Maybe
+   title Text Maybe
+   content Textarea Maybe
+   pass Text
+   filepath String Maybe
+   fileinfo Text Maybe
+
+-- Other
+Bettarget
+   date UTCTime
+   running Bool
+   owner UserId
+   title Text
+   factors (Map Text Int)
+Bet
+   owner UserId
+   amount Int
+   target Text
+
+-- * Market
+SaleItem
+   name     Text
+   count    Int   default=1
+   price    Double
+   desc     Text  Maybe
+   -- contact
+   seller   Text
+   email    Text  Maybe
+   phone    Text Maybe
+   irc      Text  Maybe
+BuyItem
+   what     Text
+   count    Int   default=1
+   desc     Text Maybe
+   -- contact info
+   buyer    Text
+   email    Text Maybe
+   phone    Text Maybe
+   irc      Text Maybe
+SaleMessage
+   from Text
+   to   Text
+   msg  Text
+

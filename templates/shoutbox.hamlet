@@ -1,0 +1,8 @@
+<p>
+   $forall (time, shout) <- xs
+      <code>#{shout}
+      <i .pull-right>#{time}
+      <br>
+
+<form .bare action=@{ShoutR} method=post>
+   <input type=text name=shout>

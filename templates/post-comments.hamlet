@@ -1,0 +1,13 @@
+$forall Entity key val <- parents
+   <section .site-block .comment-thread >
+      <div .avatar .icon-comment>&nbsp;
+      <div .content>
+         <div .info-block>
+            #{commentAuthor val}
+            <i .balloon> #
+            <span .date>
+               #{formatTime defaultTimeLocale "%H:%M %d-%m-%Y" $ commentTime val}
+         <p>#{userContentHtml $ commentContent val}
+         <footer>
+            <span .reply>reply TODO
+         ^{commentsWidget' (Just key) children}

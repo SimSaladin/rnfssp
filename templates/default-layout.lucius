@@ -1,15 +1,19 @@
 /* vim: set foldmethod=marker: */
 
-/* {{{ Main elements */
-html, body { height:100%; }
-main, #container > header { min-width:380px; }
-#container {
-   min-height:100%;
-   position:relative;
+/* {{{ General :: Main elements */
+html, body {
+   height:100%;
 }
 main {
    padding-top:10px !important;
    padding-bottom:14em !important;
+}
+main, #container > header {
+   min-width:720px;
+}
+#container {
+   min-height:100%;
+   position:relative;
 }
 #container > footer {
    position:absolute;
@@ -50,8 +54,7 @@ main {
    }
 }
 /*}}}*/
-/* {{{ Elements */
-/* {{{ Boxes */
+/* {{{ General :: Boxes */
 .standout {
    padding:1.5em;
 }
@@ -64,9 +67,12 @@ main {
    min-width:380px;
    max-width:40em;
 }
-section, .site-block {
-   margin: 6px 4px 1px 6px;
-   padding: 1px 8px 8px;
+.site-block {
+   min-height:2em;
+   margin: 1.2em 0;
+   padding: 3px 8px 13px;
+   /* Note that if top padding = 0px here then margins of inner elems are
+    * calculated wrong */
 }
 @media screen and ( max-width: 480px ) {
    .standout { padding:2em 1em; }
@@ -80,7 +86,7 @@ pre {
    margin:0.5em;
 }
 /*}}}*/
-/* {{{ blockquotes */
+/* {{{ General :: Blockquotes */
 blockquote {
    ^{cssBorderRadius "4px"};
    position:relative;
@@ -88,13 +94,13 @@ blockquote {
    margin-right:2em;
 }
 /*}}}*/
-/*{{{ Lists */
+/*{{{ General :: Lists */
 ul.list-clean {
    list-style:none;
    margin:1em 0 0 0;
 }
 /*}}}*/
-/* {{{ Tables */
+/* {{{ General :: Tables */
 table {
    margin-bottom:0.5em;
    td {
@@ -103,9 +109,7 @@ table {
    }
 }
 /*}}}*/
-hr { border:0; padding:0; }
-/*}}}*/
-/*{{{ Text elements */
+/*{{{ General :: Typograhy */
 h3 { margin-bottom:0.5em; }
 h1, h2, h3, h4, h5, h6 {
    .icon-pin { opacity:0; }
@@ -130,137 +134,7 @@ section section h1 {
 .align-right { text-align:right; }
 .pull-left   { float:left; }
 /*}}}*/
-/* {{{ Navigation */
-/* {{{ Main navbar */
-#container > header {
-   overflow:hidden;
-   box-sizing:border-box;
-   padding: 0 1em 0 2em;
-   nav { overflow:visible; width:100%; line-height:1em; }
-   ul { margin:0; padding:0; display:inline; float:left; }
-	ul li {
-		display:inline;
-		float:left;
-		list-style-type:none;
-		margin: 0 .25em 0 0;
-		padding: 0.25em 0;
-	}
-	ul li a, ul li strong {
-		display:block;
-		padding: 0 0.5em;
-		line-height: 2em;
-		font-weight:normal;
-		text-decoration:none;
-		text-shadow: 0 1px 1px rgba(0,0,0,.5);
-		background:transparent;
-		width:auto;
-		color:#aaa;
-	}
-	ul li a:focus, ul li a:hover, ul li a:active  {
-		text-decoration:none;
-		outline: 0 none;
-		-webkit-border-radius: 0.2em;
-		-moz-border-radius: 0.2em;
-		border-radius: 0.2em;
-   }
-	ul li.active a {
-		background:#666;
-		background: rgba(255,255,255,.3);
-		-webkit-border-radius: 0.2em;
-		-moz-border-radius: 0.2em;
-		border-radius: 0.2em;
-		color: #fff;
-	}
-	ul li.active strong, ul li.active a:focus,
-	ul li.active a:hover, ul li.active a:active {
-		background:transparent;
-		text-decoration:none;
-		color:#fff;
-	}
-
-   /* sub menu */
-   ul ul {
-      position:absolute;
-      top:-99999px;
-      left:0;
-      z-index:497;
-      padding: 2px;
-      opacity:0;
-
-      ^{cssMyTransition}
-
-      background:#333;
-      border:1px solid #444;
-      border-top:none;
-      box-shadow:#111 0 3px 4px;
-      border-bottom-left-radius:6px;
-      border-bottom-right-radius:6px;
-   }
-   ul li:hover > ul { opacity: 1; top:3em; }
-   ul ul li:hover > ul { opacity: 1; top:0; left:100%; }
-}
-
-/* Navigation: Small screens */
-@media screen and ( max-width: 760px ) {
-   #container > header {
-      nav, nav > ul { position:static !important }
-      ul { float:left; }
-      li {
-         display:block;
-         float:none;
-         padding:0 !important;
-      }
-      ul ul {
-         position:static !important;
-         display:none;
-         overflow:hidden;
-      }
-      ul li.active a, ul li a,
-      ul li a:focus, ul li a:hover, ul li a:active  {
-         ^{cssBorderRadius "0"}
-      }
-      ul li:hover > ul { opacity: 1 }
-      ul ul li:hover > ul { opacity: 1; }
-   }
-}
-/*}}}*/
-
-/* Navigation: Large screen */
-@media screen and ( min-width: 761px ) {
-   .pull-right {
-      float:right !important;
-   }
-}
-
-.top-nav > * {
-   text-align:center;
-   box-sizing:border-box;
-   -moz-box-sizing:border-box;
-   display:inline-block;
-   width:33%;
-   margin:1em 0em;
-}
-/* Media: pagination */
-.subnavbar {
-   margin:0.5em;
-   ul { list-style:none; margin:0;}
-   li { display:inline; }
-   li:first-child { margin:0 }
-}
-.breadcrumb {
-   list-style:none;
-   li {
-      margin:0;
-      display:inline-block;
-      max-width:20em;
-      white-space:nowrap;
-      text-overflow:ellipsis;
-      overflow:hidden;
-   }
-   li:last-child { max-width:100%; }
-}
-/*}}}*/
-/*{{{ Forms & Inputs */
+/*{{{ General :: Forms & Inputs */
 /* {{{ Layout */
 form {
    margin:0.5em 0.2em;
@@ -346,8 +220,20 @@ input[type="radio"] + label {
 }
 /* }}} */
 /* }}} */
-/* {{{ Hacks */
-/* {{{ clearfix */
+/* {{{ General :: Misc. */
+.balloon:before {
+   content:'•';
+}
+div > i:only-child {
+   display:inline-block;
+   padding:1em 2em;
+}
+.help-block {
+   float:right;
+}
+hr { border:0; padding:0; }
+/*}}}*/
+/* {{{ General :: clearfix hack */
 .clearfix:after {
   content: ".";
   display: block;
@@ -366,6 +252,125 @@ html[xmlns] .clearfix {
    height: 1%;
 }
 /*}}}*/
+/* {{{ Navigation :: Top navbar */
+#main-header {
+   overflow:hidden;
+   box-sizing:border-box;
+   padding: 0 1em 0 2em;
+   nav { overflow:visible; width:100%; line-height:1em; }
+   ul { margin:0; padding:0; display:inline; float:left; }
+	ul li {
+		display:inline;
+		float:left;
+		list-style-type:none;
+		margin: 0 .25em 0 0;
+		padding: 0.25em 0;
+	}
+	ul li a, ul li strong {
+		display:block;
+		padding: 0 0.5em;
+		line-height: 2em;
+		font-weight:normal;
+		text-decoration:none;
+		text-shadow: 0 1px 1px rgba(0,0,0,.5);
+		background:transparent;
+		width:auto;
+		color:#aaa;
+	}
+	ul li a:focus, ul li a:hover, ul li a:active  {
+		text-decoration:none;
+		outline: 0 none;
+		-webkit-border-radius: 0.2em;
+		-moz-border-radius: 0.2em;
+		border-radius: 0.2em;
+   }
+	ul li.active a {
+		background:#666;
+		background: rgba(255,255,255,.3);
+		-webkit-border-radius: 0.2em;
+		-moz-border-radius: 0.2em;
+		border-radius: 0.2em;
+		color: #fff;
+	}
+	ul li.active strong, ul li.active a:focus,
+	ul li.active a:hover, ul li.active a:active {
+		background:transparent;
+		text-decoration:none;
+		color:#fff;
+	}
+
+   /* sub menu */
+   ul ul {
+      position:absolute;
+      top:-99999px;
+      left:0;
+      z-index:497;
+      padding: 2px;
+      opacity:0;
+
+      ^{cssMyTransition}
+
+      background:#333;
+      border:1px solid #444;
+      border-top:none;
+      box-shadow:#111 0 3px 4px;
+      border-bottom-left-radius:6px;
+      border-bottom-right-radius:6px;
+   }
+   ul li:hover > ul { opacity: 1; top:3em; }
+   ul ul li:hover > ul { opacity: 1; top:0; left:100%; }
+}
+
+/* On small screens */
+@media screen and ( max-width: 760px ) {
+   #main-header {
+      nav, nav > ul { position:static !important }
+      ul { float:left; }
+      li {
+         display:block;
+         float:none;
+         padding:0 !important;
+      }
+      ul ul {
+         position:static !important;
+         display:none;
+         overflow:hidden;
+      }
+      ul li.active a, ul li a,
+      ul li a:focus, ul li a:hover, ul li a:active  {
+         ^{cssBorderRadius "0"}
+      }
+      ul li:hover > ul { opacity: 1 }
+      ul ul li:hover > ul { opacity: 1; }
+   }
+}
+
+/* Large screen */
+@media screen and ( min-width: 761px ) {
+   .pull-right {
+      float:right !important;
+   }
+}
+/*}}}*/
+/* {{{ Media :: Pagination */
+.subnavbar {
+   margin:0.5em;
+   ul { list-style:none; margin:0;}
+   li { display:inline; }
+   li:first-child { margin:0 }
+}
+.breadcrumb {
+   list-style:none;
+   li {
+      margin:0;
+      display:inline-block;
+      max-width:20em;
+      white-space:nowrap;
+      text-overflow:ellipsis;
+      overflow:hidden;
+   }
+   li:last-child { max-width:100%; }
+}
 /*}}}*/
 /* {{{ Media :: Navigation */
 .subnavbar {
@@ -512,21 +517,11 @@ html[xmlns] .clearfix {
    .day { position:absolute; bottom:0; left:0; font-size:1.5em }
 }
 /*}}}*/
-/* {{{ Misc. */
+/* {{{ Chat */
 .chat-output {
    max-height:12em;
 }
 .chat-output p {
    margin:0;
-}
-.balloon:before {
-   content:'•';
-}
-div > i:only-child {
-   display:inline-block;
-   padding:1em 2em;
-}
-.help-block {
-   float:right;
 }
 /*}}}*/
